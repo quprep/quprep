@@ -44,7 +44,7 @@ class DatasetProfile:
 
     def __str__(self) -> str:
         lines = [
-            f"DatasetProfile",
+            "DatasetProfile",
             f"  samples   : {self.n_samples}",
             f"  features  : {self.n_features}",
         ]

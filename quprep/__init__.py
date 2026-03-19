@@ -35,24 +35,76 @@ __all__ = [
 ]
 
 
-def prepare(source, *, encoding: str = "angle", framework: str = "qiskit", **kwargs):
+def prepare(source, *, encoding: str = "angle", framework: str = "qasm", **kwargs):
     """
-    Convert a dataset to a quantum circuit in one call.
+    Convert a dataset to quantum circuits in one call.
 
     Parameters
     ----------
     source : str, Path, np.ndarray, or pd.DataFrame
         Input data — file path or in-memory array/frame.
     encoding : str
-        Encoding method: 'angle', 'amplitude', 'basis', 'iqp', 'reupload', 'hamiltonian'.
+        Encoding method: 'angle' (default), 'amplitude', 'basis'.
     framework : str
-        Export target: 'qiskit', 'pennylane', 'cirq', 'tket', 'qasm'.
+        Export target: 'qasm' (default, no deps), 'qiskit', 'pennylane', 'cirq', 'tket'.
     **kwargs
-        Passed to the underlying Pipeline components.
+        Extra keyword arguments:
+        - rotation : str — 'ry' (default), 'rx', 'rz'. Only for 'angle' encoding.
+        - pad : bool — zero-pad to power of two. Only for 'amplitude' encoding.
+        - threshold : float — binarization cutoff. Only for 'basis' encoding.
 
     Returns
     -------
-    ExportResult
-        Object with a `.circuit` attribute and `.draw()` method.
+    PipelineResult
+        Object with `.circuits`, `.encoded`, `.dataset`, and `.circuit` (first sample).
     """
-    raise NotImplementedError("prepare() — coming in v0.1.0")
+    from quprep.encode.amplitude import AmplitudeEncoder
+    from quprep.encode.angle import AngleEncoder
+    from quprep.encode.basis import BasisEncoder
+    from quprep.export.qasm_export import QASMExporter
+
+    _encoders = {
+        "angle": lambda: AngleEncoder(rotation=kwargs.get("rotation", "ry")),
+        "amplitude": lambda: AmplitudeEncoder(pad=kwargs.get("pad", True)),
+        "basis": lambda: BasisEncoder(threshold=kwargs.get("threshold", 0.5)),
+    }
+    if encoding not in _encoders:
+        raise ValueError(
+            f"Unknown encoding '{encoding}'. Choose from: {sorted(_encoders)}"
+        )
+
+    _exporters = {
+        "qasm": lambda: QASMExporter(),
+        "qiskit": _lazy_qiskit_exporter,
+        "pennylane": _lazy_pennylane_exporter,
+        "cirq": _lazy_cirq_exporter,
+        "tket": _lazy_tket_exporter,
+    }
+    if framework not in _exporters:
+        raise ValueError(
+            f"Unknown framework '{framework}'. Choose from: {sorted(_exporters)}"
+        )
+
+    encoder = _encoders[encoding]()
+    exporter = _exporters[framework]()
+    return Pipeline(encoder=encoder, exporter=exporter).fit_transform(source)
+
+
+def _lazy_qiskit_exporter():
+    from quprep.export.qiskit_export import QiskitExporter
+    return QiskitExporter()
+
+
+def _lazy_pennylane_exporter():
+    from quprep.export.pennylane_export import PennyLaneExporter
+    return PennyLaneExporter()
+
+
+def _lazy_cirq_exporter():
+    from quprep.export.cirq_export import CirqExporter
+    return CirqExporter()
+
+
+def _lazy_tket_exporter():
+    from quprep.export.tket_export import TKETExporter
+    return TKETExporter()

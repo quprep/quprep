@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
+
+if TYPE_CHECKING:
+    from quprep.qubo.ising import IsingResult
 
 
 class QUBOResult:
@@ -25,7 +30,7 @@ class QUBOResult:
         self.offset = offset
         self.variable_map = variable_map or {}
 
-    def to_ising(self) -> "IsingResult":
+    def to_ising(self) -> IsingResult:
         """Convert QUBO to Ising (h, J) form."""
         from quprep.qubo.ising import qubo_to_ising
         return qubo_to_ising(self)
@@ -35,7 +40,11 @@ class QUBOResult:
         return f"QUBOResult(n_variables={n}, offset={self.offset:.4f})"
 
 
-def to_qubo(cost_matrix: np.ndarray, constraints: list | None = None, penalty: float = 10.0) -> QUBOResult:
+def to_qubo(
+    cost_matrix: np.ndarray,
+    constraints: list | None = None,
+    penalty: float = 10.0,
+) -> QUBOResult:
     """
     Convert a cost matrix and optional constraints to a QUBO problem.
 

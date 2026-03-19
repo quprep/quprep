@@ -23,6 +23,14 @@ QuPrep uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Clean:** `FeatureSelector` — correlation, mutual information, and variance-based feature selection with optional qubit budget cap
 - **Normalize:** `Scaler` — seven strategies: `l2`, `minmax`, `minmax_pi`, `minmax_pm_pi`, `zscore`, `binary`, `pm_one`
 - **Normalize:** `auto_normalizer(encoding)` — returns the correct `Scaler` for a given encoding automatically
+- **Encode:** `AngleEncoder` — maps features to single-qubit Ry/Rx/Rz rotation gates; depth O(1), NISQ-safe
+- **Encode:** `AmplitudeEncoder` — embeds vectors as quantum state amplitudes; validates unit L2 norm; zero-pads to power of two
+- **Encode:** `BasisEncoder` — binarizes features to computational basis states via X gates; depth O(1)
+- **Export:** `QASMExporter` — OpenQASM 3.0 output for angle and basis encodings; no optional dependencies required
+- **Export:** `QiskitExporter` — Qiskit `QuantumCircuit` output for angle, basis, and amplitude encodings (requires `pip install quprep[qiskit]`)
+- **Pipeline:** `Pipeline.fit_transform()` — chains all stages with auto-normalization per encoding
+- **Pipeline:** `prepare(source, encoding, framework)` — one-liner API; defaults to QASM output with no optional dependencies
+- **CLI:** `quprep convert <file>` — converts CSV datasets to quantum circuits; supports `--encoding`, `--framework`, `--rotation`, `--output`, `--samples`
 
 ### Changed
 - `Dataset` now carries `categorical_data` dict for non-numeric columns not yet encoded; `feature_names` and `feature_types` reflect numeric columns only
@@ -35,11 +43,6 @@ QuPrep uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 > First public alpha. Target: Phase 1 (Weeks 1–4).
 
 ### Planned
-- Normalization: Min-Max, Z-score, L2 with auto-selection per encoding
-- Core encoders: Angle (Ry), Amplitude, Basis
-- Exporters: Qiskit, OpenQASM 3.0
-- Pipeline: wire all stages together
-- CLI: `quprep convert`
 - PyPI release
 
 ---

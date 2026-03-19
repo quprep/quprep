@@ -11,7 +11,6 @@ from quprep.ingest.csv_ingester import CSVIngester
 from quprep.ingest.numpy_ingester import NumpyIngester
 from quprep.ingest.profiler import DatasetProfile, profile
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -205,12 +204,16 @@ class TestProfiler:
     @pytest.fixture
     def simple_dataset(self):
         arr = np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]])
-        return Dataset(data=arr, feature_names=["a", "b"], feature_types=["continuous", "continuous"])
+        return Dataset(
+            data=arr, feature_names=["a", "b"], feature_types=["continuous", "continuous"]
+        )
 
     @pytest.fixture
     def dataset_with_nan(self):
         arr = np.array([[1.0, np.nan], [3.0, 4.0], [np.nan, 6.0]])
-        return Dataset(data=arr, feature_names=["a", "b"], feature_types=["continuous", "continuous"])
+        return Dataset(
+            data=arr, feature_names=["a", "b"], feature_types=["continuous", "continuous"]
+        )
 
     def test_returns_profile(self, simple_dataset):
         p = profile(simple_dataset)

@@ -40,7 +40,7 @@ ENCODING_NORMALIZER_MAP: dict[str, str] = {
 }
 
 
-def auto_normalizer(encoding: str) -> "Scaler":
+def auto_normalizer(encoding: str) -> Scaler:
     """
     Return the correct Scaler for a given encoding name.
 

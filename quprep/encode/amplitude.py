@@ -53,6 +53,44 @@ class AmplitudeEncoder(BaseEncoder):
         """
         Encode x as amplitude vector.
 
-        Validates ‖x‖₂ = 1 (within numerical tolerance).
+        Validates ‖x‖₂ = 1 (within numerical tolerance). If d is not a power
+        of two, pads with zeros and re-normalizes (when pad=True).
         """
-        raise NotImplementedError("AmplitudeEncoder.encode() — coming in v0.1.0")
+        x = np.asarray(x, dtype=float)
+        if x.ndim != 1:
+            raise ValueError(f"Expected 1D input, got shape {x.shape}")
+        if len(x) == 0:
+            raise ValueError("Input vector must not be empty")
+
+        norm = np.linalg.norm(x)
+        if not np.isclose(norm, 1.0, atol=1e-6):
+            raise ValueError(
+                f"AmplitudeEncoder requires L2-normalized input (‖x‖₂ = 1), "
+                f"got ‖x‖₂ = {norm:.6f}. Use Scaler('l2') first."
+            )
+
+        d = len(x)
+        next_pow2 = 1 << (d - 1).bit_length() if d > 1 else 1
+        if d != next_pow2:
+            if not self.pad:
+                raise ValueError(
+                    f"d={d} is not a power of two. Set pad=True to zero-pad, "
+                    f"or reduce dimensions to d={next_pow2}."
+                )
+            padded = np.zeros(next_pow2, dtype=float)
+            padded[:d] = x
+            padded /= np.linalg.norm(padded)  # re-normalize after padding
+        else:
+            padded = x.copy()
+
+        n_qubits = int(np.log2(len(padded)))
+        return EncodedResult(
+            parameters=padded,
+            metadata={
+                "encoding": "amplitude",
+                "n_qubits": n_qubits,
+                "depth": "O(2^n)",
+                "padded": d != next_pow2,
+                "original_dim": d,
+            },
+        )

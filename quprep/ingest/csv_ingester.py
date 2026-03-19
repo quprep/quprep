@@ -85,7 +85,10 @@ class CSVIngester:
         all_feature_types = _detect_feature_types(df)
 
         numeric_mask = [
-            not (isinstance(df[col].dtype, pd.CategoricalDtype) or pd.api.types.is_object_dtype(df[col]))
+            not (
+                isinstance(df[col].dtype, pd.CategoricalDtype)
+                or pd.api.types.is_object_dtype(df[col])
+            )
             for col in df.columns
         ]
         numeric_cols = [col for col, keep in zip(df.columns, numeric_mask) if keep]

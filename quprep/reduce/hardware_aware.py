@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-
 BACKEND_PROFILES: dict[str, dict] = {
     # IBM
     "ibm_brisbane": {"qubits": 127, "architecture": "superconducting"},

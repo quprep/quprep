@@ -23,6 +23,7 @@ env/
 .coverage
 coverage.xml
 htmlcov/
+.hypothesis/
 
 # Type checking
 .mypy_cache/

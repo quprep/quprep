@@ -24,7 +24,7 @@ class BaseEncoder(ABC):
     """
 
     @abstractmethod
-    def encode(self, x: np.ndarray) -> "EncodedResult":
+    def encode(self, x: np.ndarray) -> EncodedResult:
         """
         Encode a single normalized feature vector.
 
@@ -38,7 +38,7 @@ class BaseEncoder(ABC):
         EncodedResult
         """
 
-    def encode_batch(self, dataset: Dataset) -> list["EncodedResult"]:
+    def encode_batch(self, dataset: Dataset) -> list[EncodedResult]:
         """Encode all samples in a Dataset."""
         return [self.encode(row) for row in dataset.data]
 

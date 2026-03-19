@@ -47,4 +47,25 @@ class BasisEncoder(BaseEncoder):
         return 1
 
     def encode(self, x: np.ndarray) -> EncodedResult:
-        raise NotImplementedError("BasisEncoder.encode() — coming in v0.1.0")
+        """
+        Binarize x and encode as computational basis state.
+
+        Values >= threshold → 1 (qubit |1⟩ via X gate).
+        Values <  threshold → 0 (qubit |0⟩, identity).
+        """
+        x = np.asarray(x, dtype=float)
+        if x.ndim != 1:
+            raise ValueError(f"Expected 1D input, got shape {x.shape}")
+        if len(x) == 0:
+            raise ValueError("Input vector must not be empty")
+
+        bits = (x >= self.threshold).astype(float)
+        return EncodedResult(
+            parameters=bits,
+            metadata={
+                "encoding": "basis",
+                "threshold": self.threshold,
+                "n_qubits": len(bits),
+                "depth": 1,
+            },
+        )

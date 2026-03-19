@@ -11,7 +11,6 @@ from quprep.clean.outlier import OutlierHandler
 from quprep.clean.selector import FeatureSelector
 from quprep.core.dataset import Dataset
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -347,7 +346,9 @@ class TestFeatureSelector:
         noise = rng.standard_normal(20)
         data = np.column_stack([signal, noise])
         ds = make_dataset(data)
-        result = FeatureSelector(method="mutual_info", threshold=0.1).fit_transform(ds, labels=labels)
+        result = FeatureSelector(
+            method="mutual_info", threshold=0.1
+        ).fit_transform(ds, labels=labels)
         # signal feature should be selected, noise might not be
         assert result.n_features >= 1
 

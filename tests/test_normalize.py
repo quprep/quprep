@@ -8,7 +8,6 @@ import pytest
 from quprep.core.dataset import Dataset
 from quprep.normalize.scalers import ENCODING_NORMALIZER_MAP, Scaler, auto_normalizer
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

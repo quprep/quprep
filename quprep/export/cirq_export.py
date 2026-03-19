@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import cirq
+
 
 class CirqExporter:
     """
@@ -21,5 +26,5 @@ class CirqExporter:
                 "Cirq is not installed. Run: pip install quprep[cirq]"
             ) from None
 
-    def export(self, encoded) -> "cirq.Circuit":
+    def export(self, encoded) -> cirq.Circuit:  # type: ignore[return]
         raise NotImplementedError("CirqExporter.export() — coming in v0.2.0")

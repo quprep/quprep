@@ -8,8 +8,9 @@ Transformation: s_i = 2x_i − 1  ⟺  x_i = (s_i + 1) / 2
 
 from __future__ import annotations
 
-import numpy as np
 from dataclasses import dataclass
+
+import numpy as np
 
 
 @dataclass
@@ -32,7 +33,6 @@ class IsingResult:
 
     def to_qubo(self):
         """Convert back to QUBO form."""
-        from quprep.qubo.converter import QUBOResult
         raise NotImplementedError("IsingResult.to_qubo() — coming in v0.3.0")
 
 

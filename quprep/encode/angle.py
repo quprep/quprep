@@ -53,4 +53,17 @@ class AngleEncoder(BaseEncoder):
         x must be pre-normalized to [0, π] for 'ry', or [−π, π] for 'rx'/'rz'.
         Use quprep.normalize.auto_normalizer(encoding) to apply correct scaling.
         """
-        raise NotImplementedError("AngleEncoder.encode() — coming in v0.1.0")
+        x = np.asarray(x, dtype=float)
+        if x.ndim != 1:
+            raise ValueError(f"Expected 1D input, got shape {x.shape}")
+        if len(x) == 0:
+            raise ValueError("Input vector must not be empty")
+        return EncodedResult(
+            parameters=x.copy(),
+            metadata={
+                "encoding": "angle",
+                "rotation": self.rotation,
+                "n_qubits": len(x),
+                "depth": 1,
+            },
+        )

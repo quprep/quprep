@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import pytket
+
 
 class TKETExporter:
     """
@@ -21,5 +26,5 @@ class TKETExporter:
                 "pytket is not installed. Run: pip install quprep[tket]"
             ) from None
 
-    def export(self, encoded) -> "pytket.Circuit":
+    def export(self, encoded) -> pytket.Circuit:  # type: ignore[return]
         raise NotImplementedError("TKETExporter.export() — coming in v0.2.0")

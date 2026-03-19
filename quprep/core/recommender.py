@@ -31,14 +31,16 @@ class EncodingRecommendation:
     depth: int | str
     nisq_safe: bool
     reason: str
-    alternatives: list["EncodingRecommendation"] | None = None
+    alternatives: list[EncodingRecommendation] | None = None
 
     def apply(self, source, *, framework: str = "qiskit"):
         """Apply this recommendation to source data and export a circuit."""
         raise NotImplementedError("EncodingRecommendation.apply() — coming in v0.1.0")
 
 
-def recommend(source, *, task: str = "classification", qubits: int | None = None, **kwargs) -> EncodingRecommendation:
+def recommend(
+    source, *, task: str = "classification", qubits: int | None = None, **kwargs
+) -> EncodingRecommendation:
     """
     Recommend the best encoding for a dataset and task.
 
