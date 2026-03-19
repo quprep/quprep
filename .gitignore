@@ -46,6 +46,7 @@ docs/_build/
 # Jupyter
 .ipynb_checkpoints/
 *.ipynb
+!examples/*.ipynb
 
 # Distribution
 MANIFEST

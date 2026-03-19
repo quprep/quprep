@@ -20,17 +20,15 @@ CSV / DataFrame / NumPy  →  QuPrep  →  circuit-ready output for your framewo
 
 ## What QuPrep does
 
-- Ingest CSV, JSON, Parquet, Excel, NumPy arrays, Pandas DataFrames
+- Ingest CSV, NumPy arrays, and Pandas DataFrames
 - Clean missing values, outliers, and categorical features
-- Reduce dimensions with PCA, LDA, t-SNE, UMAP, DFT, and autoencoders
-- Normalize data correctly per encoding method (automatically)
-- Encode data using angle, amplitude, basis, IQP, Hamiltonian, and re-upload encodings
-- Export circuit code for Qiskit, PennyLane, Cirq, TKET, and OpenQASM 3.0
-- Convert optimization problems to QUBO / Ising format
+- Normalize data correctly per encoding method — automatically
+- Encode data using angle, amplitude, and basis encodings
+- Export circuit code for Qiskit and OpenQASM 3.0
 
 ## What QuPrep does NOT do
 
-It does not train models, simulate circuits, run on quantum hardware, optimize variational parameters, or replace any existing framework. No hype, no overpromising.
+It does not train models, simulate circuits, run on quantum hardware, optimize variational parameters, or replace any existing framework.
 
 ---
 
@@ -40,17 +38,13 @@ It does not train models, simulate circuits, run on quantum hardware, optimize v
 pip install quprep
 ```
 
-With a specific framework export:
+With Qiskit export support:
 
 ```bash
 pip install quprep[qiskit]
-pip install quprep[pennylane]
-pip install quprep[cirq]
-pip install quprep[tket]
-pip install quprep[all]   # everything
 ```
 
-**Requirements:** Python ≥ 3.9. Core dependencies: `numpy`, `scipy`, `pandas`, `scikit-learn`. Framework packages are optional.
+**Requirements:** Python ≥ 3.10. Core dependencies: `numpy`, `scipy`, `pandas`, `scikit-learn`.
 
 ---
 
@@ -61,65 +55,68 @@ pip install quprep[all]   # everything
 ```python
 import quprep
 
-circuit = quprep.prepare("data.csv", encoding="angle", framework="qiskit")
-circuit.draw()
+result = quprep.prepare("data.csv", encoding="angle", framework="qasm")
+print(result.circuit)
 ```
 
 ### Pipeline API
 
 ```python
-import quprep
+from quprep import Pipeline
+from quprep.clean.imputer import Imputer
+from quprep.encode.angle import AngleEncoder
+from quprep.export.qasm_export import QASMExporter
 
-pipeline = quprep.Pipeline(
-    cleaner=quprep.Cleaner(impute="knn", outliers="clip"),
-    reducer=quprep.LDAReducer(n_components=4),
-    encoder=quprep.AngleEncoder(rotation="ry"),
-    exporter=quprep.QiskitExporter(),
+pipeline = Pipeline(
+    cleaner=Imputer(strategy="knn"),
+    encoder=AngleEncoder(rotation="ry"),
+    exporter=QASMExporter(),
 )
-result = pipeline.fit_transform(df)
-result.circuit.draw()
+result = pipeline.fit_transform("data.csv")
+print(result.circuit)        # first sample QASM string
+print(result.circuits)       # all samples
 ```
 
-### Encoding recommendation
+### Qiskit export
 
 ```python
-rec = quprep.recommend(df, task="classification", qubits=8)
-print(rec)
-# EncodingRecommendation(method='angle_ry', qubits=8, depth=1, ...)
+from quprep import Pipeline
+from quprep.encode.angle import AngleEncoder
+from quprep.export.qiskit_export import QiskitExporter  # pip install quprep[qiskit]
 
-circuit = rec.apply(df, framework="pennylane")
-```
+result = Pipeline(
+    encoder=AngleEncoder(),
+    exporter=QiskitExporter(),
+).fit_transform("data.csv")
 
-### QUBO / Ising
-
-```python
-qubo = quprep.to_qubo(cost_matrix, constraints, penalty=10.0)
-ising = qubo.to_ising()
+result.circuit.draw()   # Qiskit QuantumCircuit
 ```
 
 ### CLI
 
 ```bash
-quprep convert data.csv --encoding angle --framework qiskit
-quprep recommend data.csv --task classification --qubits 8
+quprep convert data.csv --encoding angle --framework qasm
+quprep convert data.csv --encoding basis --output circuits/
 ```
 
 ---
 
-## Supported encodings
+## Supported encodings (v0.1.0)
 
 | Encoding | Qubits | Depth | NISQ-safe | Best for |
 |---|---|---|---|---|
-| Angle (Ry) | n = d | O(1) | Excellent | Most QML tasks |
-| Amplitude | log₂(d) | O(2ⁿ) | Poor | Qubit-limited scenarios |
-| Basis | n = d | O(1) | Excellent | Binary / QAOA |
-| IQP | n = d | O(d²) | Medium | Kernel methods |
-| Data Re-upload | n = d | O(d·L) | Medium | High-expressivity QNNs |
-| Hamiltonian | n = d | O(d·T) | Poor | Physics simulations |
+| Angle (Ry/Rx/Rz) | n = d | O(1) | Excellent | Most QML tasks |
+| Amplitude | ⌈log₂ d⌉ | O(2ⁿ) | Poor | Qubit-limited scenarios |
+| Basis | n = d | O(1) | Excellent | Binary features / QAOA |
 
-## Supported frameworks
+## Supported export frameworks (v0.1.0)
 
-Qiskit · PennyLane · Cirq · TKET/pytket · OpenQASM 3.0 · QUBO/Ising (D-Wave, QAOA)
+| Framework | Install | Output |
+|---|---|---|
+| OpenQASM 3.0 | _(included)_ | `str` |
+| Qiskit | `pip install quprep[qiskit]` | `QuantumCircuit` |
+
+PennyLane, Cirq, and TKET exporters are planned for v0.2.0.
 
 ---
 
@@ -127,10 +124,16 @@ Qiskit · PennyLane · Cirq · TKET/pytket · OpenQASM 3.0 · QUBO/Ising (D-Wave
 
 Full documentation at **[quprep.readthedocs.io](https://quprep.readthedocs.io)**
 
-- [Quickstart guide](https://quprep.readthedocs.io/quickstart)
+- [Installation](https://quprep.readthedocs.io/getting-started/installation)
+- [Quickstart guide](https://quprep.readthedocs.io/getting-started/quickstart)
+- [Encoding guide](https://quprep.readthedocs.io/guides/encodings)
 - [API reference](https://quprep.readthedocs.io/api)
-- [Encoding guide](https://quprep.readthedocs.io/encodings)
-- [Tutorials](https://quprep.readthedocs.io/tutorials)
+
+---
+
+## Examples
+
+See the [`examples/`](examples/) directory for worked examples as Python scripts and Jupyter notebooks.
 
 ---
 
@@ -140,7 +143,6 @@ Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) before
 
 - [Open an issue](https://github.com/quprep/quprep/issues) for bugs or feature requests
 - [Start a discussion](https://github.com/quprep/quprep/discussions) for questions or ideas
-- See the [roadmap](https://github.com/quprep/quprep/discussions) for planned features
 
 ---
 

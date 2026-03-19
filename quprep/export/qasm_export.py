@@ -61,7 +61,7 @@ class QASMExporter:
             f"qubit[{n}] q;",
         ]
         for i, angle in enumerate(encoded.parameters):
-            lines.append(f"{rotation}({angle!r}) q[{i}];")
+            lines.append(f"{rotation}({float(angle)}) q[{i}];")
         return "\n".join(lines) + "\n"
 
     def _export_basis(self, encoded) -> str:
