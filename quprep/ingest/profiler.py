@@ -25,6 +25,8 @@ class DatasetProfile:
         Number of missing values per feature.
     means : np.ndarray
     stds : np.ndarray
+    mins : np.ndarray
+    maxs : np.ndarray
     class_balance : dict or None
         Class frequencies for classification datasets.
     """
@@ -36,9 +38,60 @@ class DatasetProfile:
     missing_counts: np.ndarray | None = None
     means: np.ndarray | None = None
     stds: np.ndarray | None = None
+    mins: np.ndarray | None = None
+    maxs: np.ndarray | None = None
     class_balance: dict | None = None
+
+    def __str__(self) -> str:
+        lines = [
+            f"DatasetProfile",
+            f"  samples   : {self.n_samples}",
+            f"  features  : {self.n_features}",
+        ]
+        if self.feature_names:
+            lines.append(f"  names     : {self.feature_names}")
+        if self.feature_types:
+            counts = {}
+            for t in self.feature_types:
+                counts[t] = counts.get(t, 0) + 1
+            lines.append(f"  types     : {counts}")
+        if self.missing_counts is not None:
+            total_missing = int(self.missing_counts.sum())
+            lines.append(f"  missing   : {total_missing} total")
+        return "\n".join(lines)
 
 
 def profile(dataset: Dataset) -> DatasetProfile:
-    """Compute a DatasetProfile for the given Dataset."""
-    raise NotImplementedError("profile() — coming in v0.1.0")
+    """
+    Compute a DatasetProfile for a Dataset.
+
+    Parameters
+    ----------
+    dataset : Dataset
+
+    Returns
+    -------
+    DatasetProfile
+    """
+    data = dataset.data
+    n_samples, n_features = data.shape
+
+    missing_counts = np.isnan(data).sum(axis=0)
+
+    with np.errstate(invalid="ignore"):
+        means = np.nanmean(data, axis=0)
+        stds = np.nanstd(data, axis=0)
+        mins = np.nanmin(data, axis=0)
+        maxs = np.nanmax(data, axis=0)
+
+    return DatasetProfile(
+        n_samples=n_samples,
+        n_features=n_features,
+        feature_names=list(dataset.feature_names),
+        feature_types=list(dataset.feature_types),
+        missing_counts=missing_counts,
+        means=means,
+        stds=stds,
+        mins=mins,
+        maxs=maxs,
+    )
