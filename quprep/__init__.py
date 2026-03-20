@@ -20,7 +20,7 @@ The missing preprocessing layer between classical datasets and quantum computing
     rec = quprep.recommend(df, task="classification", qubits=8)
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __author__ = "Hasarindu Perera"
 __license__ = "Apache-2.0"
 

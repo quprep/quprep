@@ -5,9 +5,10 @@ All notable changes to QuPrep will be documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 QuPrep uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
 ---
 
-## [Unreleased]
+## [0.2.0] — 2026-03-21
 
 ### Added
 
@@ -44,6 +45,9 @@ QuPrep uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `QASMExporter` now supports entangled angle, IQP, re-upload, and Hamiltonian encodings
 - `Pipeline` auto-normalizes IQP/re-upload → `minmax_pm_pi`, Hamiltonian → `zscore`
 - `prepare()` accepts `encoding='iqp'`, `'reupload'`, `'hamiltonian'` with matching kwargs
+
+### Fixed
+- `HamiltonianEncoder` via `prepare()` and `Pipeline` was broken — `_encoding_key()` returned `"zscore"` (a strategy name) instead of `"hamiltonian"`, causing `auto_normalizer()` to raise `ValueError`
 
 ---
 
@@ -96,5 +100,6 @@ First public release. Covers the full ingest → clean → normalize → encode 
 
 ---
 
-[Unreleased]: https://github.com/quprep/quprep/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/quprep/quprep/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/quprep/quprep/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/quprep/quprep/releases/tag/v0.1.0

@@ -37,7 +37,31 @@ result = quprep.prepare("data.csv", encoding="amplitude")
 
 # Basis encoding — binary features to computational basis states
 result = quprep.prepare("data.csv", encoding="basis")
+
+# IQP — Havlíček et al. 2019 feature map (kernel methods)
+result = quprep.prepare("data.csv", encoding="iqp", reps=2)
+
+# Entangled angle — angle encoding with CNOT entangling layers
+result = quprep.prepare("data.csv", encoding="entangled_angle", entanglement="circular")
+
+# Data re-uploading — Pérez-Salinas et al. 2020 (high expressivity)
+result = quprep.prepare("data.csv", encoding="reupload", layers=3)
+
+# Hamiltonian — Trotterized time evolution (physics simulation)
+result = quprep.prepare("data.csv", encoding="hamiltonian", trotter_steps=4)
 ```
+
+### Encoding recommendation
+
+Not sure which encoding to use? Let QuPrep decide:
+
+```python
+rec = quprep.recommend("data.csv", task="classification", qubits=8)
+print(rec)                  # ranked table with reasoning
+result = rec.apply("data.csv")
+```
+
+Tasks: `classification`, `regression`, `kernel`, `qaoa`, `simulation`.
 
 ---
 
@@ -107,6 +131,22 @@ result = pipeline.fit_transform(df)
 
 ---
 
+## Visualization
+
+```python
+# ASCII diagram — no dependencies required
+print(quprep.draw_ascii(result.encoded[0]))
+
+# matplotlib diagram
+fig = quprep.draw_matplotlib(result.encoded[0])
+fig.savefig("circuit.png")
+
+# or save directly
+quprep.draw_matplotlib(result.encoded[0], filename="circuit.pdf")
+```
+
+---
+
 ## CLI
 
 ```bash
@@ -116,14 +156,14 @@ quprep convert data.csv
 # Save to file
 quprep convert data.csv --output circuit.qasm
 
-# Choose encoding and rotation
-quprep convert data.csv --encoding angle --rotation rx
+# IQP encoding with PennyLane export
+quprep convert data.csv --encoding iqp --framework pennylane
 
 # Limit to first 5 samples
 quprep convert data.csv --samples 5
 
-# Basis encoding
-quprep convert data.csv --encoding basis
+# Get encoding recommendation
+quprep recommend data.csv --task classification --qubits 8
 ```
 
 ---
@@ -136,7 +176,11 @@ When you call `prepare()` or `Pipeline.fit_transform()`, QuPrep automatically ap
 |---|---|
 | `angle` (Ry) | Scale features to [0, π] |
 | `angle` (Rx/Rz) | Scale features to [−π, π] |
+| `entangled_angle` | Same as `angle` by rotation |
 | `amplitude` | L2-normalize each sample (‖x‖₂ = 1) |
 | `basis` | Binarize features to {0, 1} |
+| `iqp` | Scale features to [−π, π] |
+| `reupload` | Scale features to [−π, π] |
+| `hamiltonian` | Z-score normalize |
 
 You never need to think about this unless you want to override it.

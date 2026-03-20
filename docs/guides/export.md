@@ -38,7 +38,7 @@ Export a full batch:
 qasm_strings = exp.export_batch(encoded_list)
 ```
 
-**Supported encodings:** `angle`, `basis`. Amplitude encoding requires exponential-depth state preparation — use Qiskit for that.
+**Supported encodings:** `angle`, `entangled_angle`, `basis`, `iqp`, `reupload`, `hamiltonian`. Amplitude encoding requires exponential-depth state preparation — use Qiskit for that.
 
 ---
 
@@ -93,10 +93,83 @@ print(result.circuits[3])     # fourth sample
 
 ---
 
-## Coming in v0.2.0
+## PennyLane
 
-| Framework | Install | Notes |
-|---|---|---|
-| **PennyLane** | `pip install quprep[pennylane]` | torch/jax/tf autodiff interfaces |
-| **Cirq** | `pip install quprep[cirq]` | Google QPU compatible |
-| **TKET/pytket** | `pip install quprep[tket]` | Multi-vendor: IBM, IonQ, Quantinuum |
+```bash
+pip install quprep[pennylane]
+```
+
+Returns a callable `qml.QNode`. Supports `torch`, `jax`, and `tf` autodiff interfaces.
+
+```python
+from quprep.export.pennylane_export import PennyLaneExporter
+
+exp = PennyLaneExporter(interface="torch", device="default.qubit")
+qnode = exp.export(encoded_result)   # callable qml.QNode
+output = qnode()                     # run the circuit
+```
+
+**Supported encodings:** all 7 encodings including amplitude (`qml.AmplitudeEmbedding`).
+
+---
+
+## Cirq
+
+```bash
+pip install quprep[cirq]
+```
+
+Returns a `cirq.Circuit` using `cirq.LineQubit`.
+
+```python
+from quprep.export.cirq_export import CirqExporter
+
+exp = CirqExporter()
+circuit = exp.export(encoded_result)   # cirq.Circuit
+print(circuit)
+```
+
+**Supported encodings:** `angle`, `entangled_angle`, `basis`, `iqp`, `reupload`, `hamiltonian`. Amplitude raises `NotImplementedError` — use QiskitExporter.
+
+---
+
+## TKET / pytket
+
+```bash
+pip install quprep[tket]
+```
+
+Returns a `pytket.Circuit`. Angles are automatically converted from radians to pytket half-turns (angle/π).
+
+```python
+from quprep.export.tket_export import TKETExporter
+
+exp = TKETExporter()
+circuit = exp.export(encoded_result)   # pytket.Circuit
+```
+
+**Supported encodings:** same as Cirq.
+
+---
+
+## Visualization
+
+Draw circuit diagrams without any additional dependencies:
+
+```python
+import quprep
+
+encoded = result.encoded[0]
+
+# ASCII — always available
+print(quprep.draw_ascii(encoded))
+
+# matplotlib — requires pip install quprep[viz]
+fig = quprep.draw_matplotlib(encoded)
+fig.savefig("circuit.png")
+
+# or save directly
+quprep.draw_matplotlib(encoded, filename="circuit.pdf")
+```
+
+Supports all 7 encodings. The matplotlib diagram shows qubit wires, gate boxes, and CNOT/ZZ connectors.

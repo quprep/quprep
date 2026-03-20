@@ -47,10 +47,32 @@ All encoders:
 
 ---
 
-## Coming in v0.2.0
+## EntangledAngleEncoder
 
-| Encoder | Module | Reference |
-|---|---|---|
-| `IQPEncoder` | `quprep.encode.iqp` | Havlíček et al., Nature 2019 |
-| `ReUploadEncoder` | `quprep.encode.reupload` | Pérez-Salinas et al., Quantum 2020 |
-| `HamiltonianEncoder` | `quprep.encode.hamiltonian` | — |
+::: quprep.encode.entangled_angle.EntangledAngleEncoder
+    options:
+      show_source: true
+
+---
+
+## IQPEncoder
+
+::: quprep.encode.iqp.IQPEncoder
+    options:
+      show_source: true
+
+---
+
+## ReUploadEncoder
+
+::: quprep.encode.reupload.ReUploadEncoder
+    options:
+      show_source: true
+
+---
+
+## HamiltonianEncoder
+
+::: quprep.encode.hamiltonian.HamiltonianEncoder
+    options:
+      show_source: true

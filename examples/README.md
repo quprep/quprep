@@ -1,13 +1,15 @@
 # Examples
 
-Each example is available as a runnable Python script and a Jupyter notebook.
+Each example is a runnable Python script.
 
-| # | Topic | Script | Notebook |
-|---|---|---|---|
-| 01 | Quickstart — `prepare()` one-liner | `01_quickstart.py` | `01_quickstart.ipynb` |
-| 02 | Full pipeline — clean → encode → export | `02_pipeline.py` | `02_pipeline.ipynb` |
-| 03 | Encoders compared — Angle, Amplitude, Basis | `03_encoders.py` | `03_encoders.ipynb` |
-| 04 | Qiskit export — `QuantumCircuit` output | `04_qiskit_export.py` | `04_qiskit_export.ipynb` |
+| # | Topic | Script |
+|---|---|---|
+| 01 | Quickstart — `prepare()` one-liner | `01_quickstart.py` |
+| 02 | Full pipeline — clean → encode → export | `02_pipeline.py` |
+| 03 | All encoders — Angle, Amplitude, Basis, IQP, EntangledAngle, ReUpload, Hamiltonian | `03_encoders.py` |
+| 04 | Framework export — QASM, Qiskit, PennyLane, Cirq, TKET | `04_export.py` |
+| 05 | Encoding recommendation — `recommend()` | `05_recommend.py` |
+| 06 | Circuit visualization — ASCII + matplotlib | `06_visualization.py` |
 
 ## Run a script
 
@@ -16,17 +18,14 @@ pip install quprep
 python examples/01_quickstart.py
 ```
 
-## Run a notebook
+## Optional dependencies
 
 ```bash
-pip install quprep jupyter
-jupyter notebook examples/01_quickstart.ipynb
+pip install quprep[qiskit]     # example 04
+pip install quprep[pennylane]  # example 04
+pip install quprep[cirq]       # example 04
+pip install quprep[tket]       # example 04
+pip install quprep[viz]        # example 06 (matplotlib diagrams)
 ```
 
-## Qiskit examples
-
-Example 04 requires the Qiskit extra:
-
-```bash
-pip install quprep[qiskit]
-```
+Examples skip any framework that isn't installed rather than crashing.

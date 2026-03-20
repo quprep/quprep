@@ -17,11 +17,14 @@ Framework-specific exporters are optional. Install only what you need:
 
 ```bash
 pip install quprep[qiskit]     # Qiskit QuantumCircuit export
-pip install quprep[pennylane]  # PennyLane QNode export (v0.2.0)
-pip install quprep[cirq]       # Cirq Circuit export (v0.2.0)
-pip install quprep[tket]       # TKET/pytket Circuit export (v0.2.0)
-pip install quprep[all]        # All framework exports
+pip install quprep[pennylane]  # PennyLane QNode export
+pip install quprep[cirq]       # Cirq Circuit export
+pip install quprep[tket]       # TKET/pytket Circuit export
+pip install quprep[viz]        # matplotlib circuit diagrams
+pip install quprep[all]        # All framework exports + visualization
 ```
+
+`draw_ascii()` is always available with no extra dependencies.
 
 ## Verify
 

@@ -50,3 +50,8 @@ docs/_build/
 
 # Distribution
 MANIFEST
+
+# Generated circuit diagrams
+circuit_*.png
+circuit_*.pdf
+circuit_*.svg

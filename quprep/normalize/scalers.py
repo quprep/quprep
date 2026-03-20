@@ -37,6 +37,7 @@ ENCODING_NORMALIZER_MAP: dict[str, str] = {
     "iqp": "minmax_pm_pi",
     "qubo": "binary",
     "ising": "pm_one",
+    "hamiltonian": "zscore",
 }
 
 

@@ -29,28 +29,40 @@ Requires `pip install quprep[qiskit]`.
 
 ---
 
-## Coming in v0.2.0
+## PennyLaneExporter
 
-### PennyLaneExporter
+Requires `pip install quprep[pennylane]`.
 
-```bash
-pip install quprep[pennylane]
-```
+::: quprep.export.pennylane_export.PennyLaneExporter
+    options:
+      show_source: true
 
-Produces PennyLane QNode templates. Supports `torch`, `jax`, and `tf` autodiff interfaces via the `interface` parameter.
+---
 
-### CirqExporter
+## CirqExporter
 
-```bash
-pip install quprep[cirq]
-```
+Requires `pip install quprep[cirq]`.
 
-Produces `cirq.Circuit` objects. Compatible with Google Quantum Computing Service.
+::: quprep.export.cirq_export.CirqExporter
+    options:
+      show_source: true
 
-### TKETExporter
+---
 
-```bash
-pip install quprep[tket]
-```
+## TKETExporter
 
-Produces `pytket.Circuit` objects. Multi-vendor: IBM, IonQ, Quantinuum, and more.
+Requires `pip install quprep[tket]`.
+
+::: quprep.export.tket_export.TKETExporter
+    options:
+      show_source: true
+
+---
+
+## Visualization
+
+No dependencies for `draw_ascii`. Requires `pip install quprep[viz]` for `draw_matplotlib`.
+
+::: quprep.export.visualize.draw_ascii
+
+::: quprep.export.visualize.draw_matplotlib

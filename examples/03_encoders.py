@@ -1,82 +1,142 @@
 """
 03 — Encoders Compared
 ======================
-AngleEncoder, AmplitudeEncoder, and BasisEncoder side by side.
+All 7 encoders side by side: Angle, Amplitude, Basis,
+EntangledAngle, IQP, ReUpload, Hamiltonian.
 
     uv run python examples/03_encoders.py
 """
 
 import numpy as np
 
+import quprep
 from quprep.encode.amplitude import AmplitudeEncoder
 from quprep.encode.angle import AngleEncoder
 from quprep.encode.basis import BasisEncoder
+from quprep.encode.entangled_angle import EntangledAngleEncoder
+from quprep.encode.hamiltonian import HamiltonianEncoder
+from quprep.encode.iqp import IQPEncoder
+from quprep.encode.reupload import ReUploadEncoder
 from quprep.export.qasm_export import QASMExporter
 
 exporter = QASMExporter()
 
-# ── Shared input ─────────────────────────────────────────────────────────────
-
 feature_vector = np.array([0.1, 0.9, 0.4, 0.6])
+x3 = np.array([0.5, 1.2, 0.75])
 
 # ── 1. Angle encoding ────────────────────────────────────────────────────────
 #
 #   Each feature maps to a rotation angle on one qubit.
-#   Encoder expects values in [0, π] for Ry, [-π, π] for Rx/Rz.
-#   The Pipeline applies the correct normalization automatically.
-#   Here we scale manually for illustration.
+#   Pipeline auto-normalizes to [0, π] for Ry, [−π, π] for Rx/Rz.
 
-print("=" * 50)
+print("=" * 55)
 print("AngleEncoder (Ry)")
-print("=" * 50)
+print("=" * 55)
 
-angle_input = feature_vector * np.pi          # scale to [0, π]
+angle_input = feature_vector * np.pi
 enc_angle = AngleEncoder(rotation="ry").encode(angle_input)
 print(f"Input      : {angle_input.round(4)}")
-print(f"Parameters : {enc_angle.parameters.round(4)}")
 print(f"Metadata   : {enc_angle.metadata}")
 print(exporter.export(enc_angle))
 
-# ── 2. Amplitude encoding ────────────────────────────────────────────────────
+# ── 2. Amplitude encoding ─────────────────────────────────────────────────────
 #
-#   The state vector |ψ⟩ = Σ xᵢ |i⟩ where ‖x‖₂ = 1.
-#   Encodes 2ⁿ features into n qubits.
+#   |ψ(x)⟩ = Σ xᵢ|i⟩  where ‖x‖₂ = 1. Uses log₂(d) qubits.
 
-print("=" * 50)
+print("=" * 55)
 print("AmplitudeEncoder")
-print("=" * 50)
+print("=" * 55)
 
-unit_vec = feature_vector / np.linalg.norm(feature_vector)   # must be unit norm
+unit_vec = feature_vector / np.linalg.norm(feature_vector)
 enc_amp = AmplitudeEncoder().encode(unit_vec)
 print(f"Input      : {unit_vec.round(4)}  (‖x‖ = {np.linalg.norm(unit_vec):.4f})")
-print(f"Parameters : {enc_amp.parameters.round(4)}")
-print(f"Metadata   : {enc_amp.metadata}")
-print("(QASM export not supported for amplitude — use QiskitExporter)")
+print(f"n_qubits   : {enc_amp.metadata['n_qubits']}  (log₂(4) = 2)")
+print(f"padded     : {enc_amp.metadata['padded']}")
+print("(QASM not supported for amplitude — use QiskitExporter)")
 print()
 
-# ── 3. Basis encoding ────────────────────────────────────────────────────────
+# ── 3. Basis encoding ─────────────────────────────────────────────────────────
 #
-#   Each feature is binarized: 1 → X gate (flip qubit), 0 → leave |0⟩.
+#   Binarizes features: value ≥ threshold → X gate (|1⟩), else |0⟩.
 
-print("=" * 50)
+print("=" * 55)
 print("BasisEncoder (threshold=0.5)")
-print("=" * 50)
+print("=" * 55)
 
 enc_basis = BasisEncoder(threshold=0.5).encode(feature_vector)
 print(f"Input      : {feature_vector}")
 print(f"Parameters : {enc_basis.parameters}  (binary)")
-print(f"Metadata   : {enc_basis.metadata}")
 print(exporter.export(enc_basis))
 
-# ── 4. Padding in AmplitudeEncoder ───────────────────────────────────────────
+# ── 4. Entangled angle encoding ───────────────────────────────────────────────
+#
+#   Rotation layer + CNOT entangling layer, repeated `layers` times.
+#   Topologies: linear, circular, full.
 
-print("=" * 50)
-print("AmplitudeEncoder — auto-padding to power of two")
-print("=" * 50)
+print("=" * 55)
+print("EntangledAngleEncoder  (circular, 2 layers)")
+print("=" * 55)
 
-vec5 = np.array([0.4, 0.3, 0.5, 0.6, 0.4])          # 5 features → pad to 8
-vec5 = vec5 / np.linalg.norm(vec5)
-enc5 = AmplitudeEncoder(pad=True).encode(vec5)
-print(f"Input length  : 5 → padded to {len(enc5.parameters)}")
-print(f"n_qubits      : {enc5.metadata['n_qubits']}")
-print(f"‖padded vec‖  : {np.linalg.norm(enc5.parameters):.6f}")
+enc_ent = EntangledAngleEncoder(rotation="ry", layers=2, entanglement="circular").encode(
+    x3 * np.pi
+)
+print(f"n_qubits   : {enc_ent.metadata['n_qubits']}")
+print(f"cnot_pairs : {enc_ent.metadata['cnot_pairs']}")
+print(f"depth      : {enc_ent.metadata['depth']}")
+print(exporter.export(enc_ent))
+
+# ── 5. IQP encoding ───────────────────────────────────────────────────────────
+#
+#   Havlíček et al. 2019. Hadamard + Rz + ZZ interactions.
+#   Best for kernel methods.
+
+print("=" * 55)
+print("IQPEncoder  (reps=1)")
+print("=" * 55)
+
+enc_iqp = IQPEncoder(reps=1).encode(x3 * np.pi)
+print(f"n_qubits   : {enc_iqp.metadata['n_qubits']}")
+print(f"n_pairs    : {enc_iqp.metadata['n_pairs']}")
+print(f"depth      : {enc_iqp.metadata['depth']}")
+print(exporter.export(enc_iqp))
+
+# ── 6. Data re-uploading ──────────────────────────────────────────────────────
+#
+#   Pérez-Salinas et al. 2020. Same rotation layer repeated L times.
+#   Universal approximator with enough layers.
+
+print("=" * 55)
+print("ReUploadEncoder  (layers=3)")
+print("=" * 55)
+
+enc_ru = ReUploadEncoder(layers=3, rotation="ry").encode(x3 * np.pi)
+print(f"n_qubits   : {enc_ru.metadata['n_qubits']}")
+print(f"layers     : {enc_ru.metadata['layers']}")
+print(f"depth      : {enc_ru.metadata['depth']}")
+print(exporter.export(enc_ru))
+
+# ── 7. Hamiltonian encoding ───────────────────────────────────────────────────
+#
+#   Trotterized Z Hamiltonian: e^{-iH(x)T}. Best for physics simulation / VQE.
+
+print("=" * 55)
+print("HamiltonianEncoder  (trotter_steps=4)")
+print("=" * 55)
+
+enc_ham = HamiltonianEncoder(evolution_time=1.0, trotter_steps=4).encode(x3)
+print(f"n_qubits       : {enc_ham.metadata['n_qubits']}")
+print(f"trotter_steps  : {enc_ham.metadata['trotter_steps']}")
+print(f"depth          : {enc_ham.metadata['depth']}")
+print(exporter.export(enc_ham))
+
+# ── 8. prepare() one-liner ────────────────────────────────────────────────────
+
+print("=" * 55)
+print("prepare() one-liner")
+print("=" * 55)
+
+data = np.random.default_rng(0).uniform(0, 1, size=(10, 3))
+for enc_name in ("angle", "basis", "iqp", "reupload", "hamiltonian"):
+    result = quprep.prepare(data, encoding=enc_name, framework="qasm")
+    meta = result.encoded[0].metadata
+    print(f"  {enc_name:20s}  qubits={meta['n_qubits']}  depth={meta['depth']}")
