@@ -29,6 +29,8 @@ QuPrep uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `PennyLaneExporter` — returns a callable `qml.QNode`; supports all encodings; `interface` and `device` parameters (`pip install quprep[pennylane]`)
 - `CirqExporter` — returns a `cirq.Circuit`; supports angle, basis, IQP, re-upload, Hamiltonian encodings (`pip install quprep[cirq]`)
 - `TKETExporter` — returns a `pytket.Circuit`; angles auto-converted to pytket half-turns (`pip install quprep[tket]`)
+- `draw_ascii(encoded)` — no-dependency ASCII circuit diagram for any `EncodedResult`; returns a printable string
+- `draw_matplotlib(encoded, filename=None)` — matplotlib circuit diagram; returns a `Figure` or saves to PNG/PDF/SVG (`pip install quprep[viz]`)
 
 **Recommend**
 - `recommend(source, task, qubits)` — scores all encodings against dataset profile and task; returns `EncodingRecommendation` with ranked alternatives

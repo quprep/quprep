@@ -26,12 +26,15 @@ __license__ = "Apache-2.0"
 
 from quprep.core.pipeline import Pipeline
 from quprep.core.recommender import recommend
+from quprep.export.visualize import draw_ascii, draw_matplotlib
 
 __all__ = [
     "__version__",
     "Pipeline",
     "recommend",
     "prepare",
+    "draw_ascii",
+    "draw_matplotlib",
 ]
 
 
