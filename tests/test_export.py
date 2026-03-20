@@ -245,11 +245,33 @@ class TestQiskitExporter:
 
 
 # ---------------------------------------------------------------------------
-# Phase 2 exporter stubs
+# Phase 2 exporter helpers
 # ---------------------------------------------------------------------------
 
-class TestPhase2ExporterStubs:
-    def test_pennylane_missing_dep_raises(self):
+def _iqp_result(d=3):
+    from quprep.encode.iqp import IQPEncoder
+    x = np.linspace(0.1, 1.0, d)
+    return IQPEncoder(reps=1).encode(x)
+
+
+def _reupload_result(d=3):
+    from quprep.encode.reupload import ReUploadEncoder
+    x = np.linspace(0.1, 1.0, d)
+    return ReUploadEncoder(layers=2).encode(x)
+
+
+def _hamiltonian_result(d=3):
+    from quprep.encode.hamiltonian import HamiltonianEncoder
+    x = np.linspace(0.1, 1.0, d)
+    return HamiltonianEncoder(evolution_time=1.0, trotter_steps=2).encode(x)
+
+
+# ---------------------------------------------------------------------------
+# PennyLaneExporter
+# ---------------------------------------------------------------------------
+
+class TestPennyLaneExporter:
+    def test_missing_dep_raises(self):
         try:
             import pennylane  # noqa: F401
             pytest.skip("pennylane installed")
@@ -258,7 +280,87 @@ class TestPhase2ExporterStubs:
             with pytest.raises(ImportError, match="pip install quprep"):
                 PennyLaneExporter()
 
-    def test_cirq_missing_dep_raises(self):
+    def test_angle_export_returns_callable(self):
+        pytest.importorskip("pennylane")
+        from quprep.export.pennylane_export import PennyLaneExporter
+        circuit = PennyLaneExporter().export(_angle_result(n=3))
+        assert callable(circuit)
+
+    def test_angle_circuit_executes(self):
+        pytest.importorskip("pennylane")
+        from quprep.export.pennylane_export import PennyLaneExporter
+        circuit = PennyLaneExporter().export(_angle_result(n=3))
+        state = circuit()
+        assert len(state) == 2**3
+
+    def test_angle_rx_circuit_executes(self):
+        pytest.importorskip("pennylane")
+        from quprep.export.pennylane_export import PennyLaneExporter
+        circuit = PennyLaneExporter().export(_angle_result(n=2, rotation="rx"))
+        state = circuit()
+        assert len(state) == 4
+
+    def test_basis_circuit_executes(self):
+        pytest.importorskip("pennylane")
+        from quprep.export.pennylane_export import PennyLaneExporter
+        circuit = PennyLaneExporter().export(_basis_result([0.0, 1.0, 0.0]))
+        state = circuit()
+        assert len(state) == 8
+
+    def test_amplitude_circuit_executes(self):
+        pytest.importorskip("pennylane")
+        from quprep.export.pennylane_export import PennyLaneExporter
+        circuit = PennyLaneExporter().export(_amplitude_result(d=4))
+        import numpy as np
+        state = circuit()
+        assert abs(np.linalg.norm(state) - 1.0) < 1e-6
+
+    def test_iqp_circuit_executes(self):
+        pytest.importorskip("pennylane")
+        from quprep.export.pennylane_export import PennyLaneExporter
+        circuit = PennyLaneExporter().export(_iqp_result(d=3))
+        state = circuit()
+        assert len(state) == 8
+
+    def test_reupload_circuit_executes(self):
+        pytest.importorskip("pennylane")
+        from quprep.export.pennylane_export import PennyLaneExporter
+        circuit = PennyLaneExporter().export(_reupload_result(d=3))
+        state = circuit()
+        assert len(state) == 8
+
+    def test_hamiltonian_circuit_executes(self):
+        pytest.importorskip("pennylane")
+        from quprep.export.pennylane_export import PennyLaneExporter
+        circuit = PennyLaneExporter().export(_hamiltonian_result(d=3))
+        state = circuit()
+        assert len(state) == 8
+
+    def test_unknown_encoding_raises(self):
+        pytest.importorskip("pennylane")
+        from quprep.encode.base import EncodedResult
+        from quprep.export.pennylane_export import PennyLaneExporter
+        fake = EncodedResult(
+            parameters=np.array([0.1, 0.2]),
+            metadata={"encoding": "totally_unknown", "n_qubits": 2},
+        )
+        with pytest.raises(ValueError, match="Unknown encoding"):
+            PennyLaneExporter().export(fake)
+
+    def test_export_batch(self):
+        pytest.importorskip("pennylane")
+        from quprep.export.pennylane_export import PennyLaneExporter
+        circuits = PennyLaneExporter().export_batch([_angle_result(n=2) for _ in range(3)])
+        assert len(circuits) == 3
+        assert all(callable(c) for c in circuits)
+
+
+# ---------------------------------------------------------------------------
+# CirqExporter
+# ---------------------------------------------------------------------------
+
+class TestCirqExporter:
+    def test_missing_dep_raises(self):
         try:
             import cirq  # noqa: F401
             pytest.skip("cirq installed")
@@ -267,7 +369,91 @@ class TestPhase2ExporterStubs:
             with pytest.raises(ImportError, match="pip install quprep"):
                 CirqExporter()
 
-    def test_tket_missing_dep_raises(self):
+    def test_angle_export_returns_circuit(self):
+        cirq = pytest.importorskip("cirq")
+        from quprep.export.cirq_export import CirqExporter
+        circuit = CirqExporter().export(_angle_result(n=3))
+        assert isinstance(circuit, cirq.Circuit)
+
+    def test_angle_circuit_qubit_count(self):
+        pytest.importorskip("cirq")
+        from quprep.export.cirq_export import CirqExporter
+        circuit = CirqExporter().export(_angle_result(n=4))
+        assert len(circuit.all_qubits()) == 4
+
+    def test_angle_rx_export(self):
+        cirq = pytest.importorskip("cirq")
+        from quprep.export.cirq_export import CirqExporter
+        circuit = CirqExporter().export(_angle_result(n=2, rotation="rx"))
+        assert isinstance(circuit, cirq.Circuit)
+
+    def test_basis_export(self):
+        cirq = pytest.importorskip("cirq")
+        from quprep.export.cirq_export import CirqExporter
+        circuit = CirqExporter().export(_basis_result([0.0, 1.0, 0.0]))
+        assert isinstance(circuit, cirq.Circuit)
+
+    def test_basis_x_gate_count(self):
+        pytest.importorskip("cirq")
+        import cirq
+
+        from quprep.export.cirq_export import CirqExporter
+        circuit = CirqExporter().export(_basis_result([1.0, 0.0, 1.0]))
+        x_ops = [
+            op for op in circuit.all_operations()
+            if isinstance(op.gate, cirq.XPowGate) and op.gate.exponent == 1
+        ]
+        assert len(x_ops) == 2
+
+    def test_amplitude_raises(self):
+        pytest.importorskip("cirq")
+        from quprep.export.cirq_export import CirqExporter
+        with pytest.raises(NotImplementedError, match="QiskitExporter"):
+            CirqExporter().export(_amplitude_result(d=4))
+
+    def test_iqp_export(self):
+        cirq = pytest.importorskip("cirq")
+        from quprep.export.cirq_export import CirqExporter
+        circuit = CirqExporter().export(_iqp_result(d=3))
+        assert isinstance(circuit, cirq.Circuit)
+
+    def test_reupload_export(self):
+        cirq = pytest.importorskip("cirq")
+        from quprep.export.cirq_export import CirqExporter
+        circuit = CirqExporter().export(_reupload_result(d=3))
+        assert isinstance(circuit, cirq.Circuit)
+
+    def test_hamiltonian_export(self):
+        cirq = pytest.importorskip("cirq")
+        from quprep.export.cirq_export import CirqExporter
+        circuit = CirqExporter().export(_hamiltonian_result(d=3))
+        assert isinstance(circuit, cirq.Circuit)
+
+    def test_unknown_encoding_raises(self):
+        pytest.importorskip("cirq")
+        from quprep.encode.base import EncodedResult
+        from quprep.export.cirq_export import CirqExporter
+        fake = EncodedResult(
+            parameters=np.array([0.1, 0.2]),
+            metadata={"encoding": "totally_unknown", "n_qubits": 2},
+        )
+        with pytest.raises(ValueError, match="Unknown encoding"):
+            CirqExporter().export(fake)
+
+    def test_export_batch(self):
+        cirq = pytest.importorskip("cirq")
+        from quprep.export.cirq_export import CirqExporter
+        circuits = CirqExporter().export_batch([_angle_result(n=2) for _ in range(3)])
+        assert len(circuits) == 3
+        assert all(isinstance(c, cirq.Circuit) for c in circuits)
+
+
+# ---------------------------------------------------------------------------
+# TKETExporter
+# ---------------------------------------------------------------------------
+
+class TestTKETExporter:
+    def test_missing_dep_raises(self):
         try:
             import pytket  # noqa: F401
             pytest.skip("pytket installed")
@@ -275,3 +461,69 @@ class TestPhase2ExporterStubs:
             from quprep.export.tket_export import TKETExporter
             with pytest.raises(ImportError, match="pip install quprep"):
                 TKETExporter()
+
+    def test_angle_export_returns_circuit(self):
+        pytket = pytest.importorskip("pytket")
+        from quprep.export.tket_export import TKETExporter
+        circuit = TKETExporter().export(_angle_result(n=3))
+        assert isinstance(circuit, pytket.Circuit)
+
+    def test_angle_circuit_qubit_count(self):
+        pytest.importorskip("pytket")
+        from quprep.export.tket_export import TKETExporter
+        circuit = TKETExporter().export(_angle_result(n=4))
+        assert circuit.n_qubits == 4
+
+    def test_angle_rx_export(self):
+        pytket = pytest.importorskip("pytket")
+        from quprep.export.tket_export import TKETExporter
+        circuit = TKETExporter().export(_angle_result(n=2, rotation="rx"))
+        assert isinstance(circuit, pytket.Circuit)
+
+    def test_basis_export(self):
+        pytket = pytest.importorskip("pytket")
+        from quprep.export.tket_export import TKETExporter
+        circuit = TKETExporter().export(_basis_result([0.0, 1.0, 0.0]))
+        assert isinstance(circuit, pytket.Circuit)
+
+    def test_amplitude_raises(self):
+        pytest.importorskip("pytket")
+        from quprep.export.tket_export import TKETExporter
+        with pytest.raises(NotImplementedError, match="QiskitExporter"):
+            TKETExporter().export(_amplitude_result(d=4))
+
+    def test_iqp_export(self):
+        pytket = pytest.importorskip("pytket")
+        from quprep.export.tket_export import TKETExporter
+        circuit = TKETExporter().export(_iqp_result(d=3))
+        assert isinstance(circuit, pytket.Circuit)
+
+    def test_reupload_export(self):
+        pytket = pytest.importorskip("pytket")
+        from quprep.export.tket_export import TKETExporter
+        circuit = TKETExporter().export(_reupload_result(d=3))
+        assert isinstance(circuit, pytket.Circuit)
+
+    def test_hamiltonian_export(self):
+        pytket = pytest.importorskip("pytket")
+        from quprep.export.tket_export import TKETExporter
+        circuit = TKETExporter().export(_hamiltonian_result(d=3))
+        assert isinstance(circuit, pytket.Circuit)
+
+    def test_unknown_encoding_raises(self):
+        pytest.importorskip("pytket")
+        from quprep.encode.base import EncodedResult
+        from quprep.export.tket_export import TKETExporter
+        fake = EncodedResult(
+            parameters=np.array([0.1, 0.2]),
+            metadata={"encoding": "totally_unknown", "n_qubits": 2},
+        )
+        with pytest.raises(ValueError, match="Unknown encoding"):
+            TKETExporter().export(fake)
+
+    def test_export_batch(self):
+        pytket = pytest.importorskip("pytket")
+        from quprep.export.tket_export import TKETExporter
+        circuits = TKETExporter().export_batch([_angle_result(n=2) for _ in range(3)])
+        assert len(circuits) == 3
+        assert all(isinstance(c, pytket.Circuit) for c in circuits)

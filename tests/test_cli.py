@@ -76,10 +76,15 @@ class TestConvertPhase2Stubs:
         rc = main(["convert", csv_file, "--encoding", "iqp"])
         assert rc == 0
 
-    def test_pennylane_framework_rejected(self, csv_file, capsys):
-        rc = main(["convert", csv_file, "--framework", "pennylane"])
-        assert rc == 1
-        assert "v0.2.0" in capsys.readouterr().err
+    def test_pennylane_framework_missing_dep(self, csv_file, capsys):
+        try:
+            import pennylane  # noqa: F401
+            import pytest
+            pytest.skip("pennylane installed")
+        except ImportError:
+            rc = main(["convert", csv_file, "--framework", "pennylane"])
+            assert rc == 1
+            assert "Missing dependency" in capsys.readouterr().err
 
 
 # ---------------------------------------------------------------------------

@@ -19,9 +19,7 @@ _PHASE1_ENCODINGS = ["angle", "amplitude", "basis"]
 _PHASE2_ENCODINGS = ["iqp", "reupload", "hamiltonian"]
 _ALL_ENCODINGS = _PHASE1_ENCODINGS + _PHASE2_ENCODINGS
 
-_PHASE1_FRAMEWORKS = ["qasm", "qiskit"]
-_PHASE2_FRAMEWORKS = ["pennylane", "cirq", "tket"]
-_ALL_FRAMEWORKS = _PHASE1_FRAMEWORKS + _PHASE2_FRAMEWORKS
+_ALL_FRAMEWORKS = ["qasm", "qiskit", "pennylane", "cirq", "tket"]
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -93,14 +91,6 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def cmd_convert(args) -> int:
-    if args.framework in _PHASE2_FRAMEWORKS:
-        print(
-            f"[quprep] '{args.framework}' export is coming in v0.2.0. "
-            f"Available now: {_PHASE1_FRAMEWORKS}",
-            file=sys.stderr,
-        )
-        return 1
-
     try:
         import quprep
         result = quprep.prepare(
