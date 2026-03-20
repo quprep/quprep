@@ -61,6 +61,7 @@ def prepare(source, *, encoding: str = "angle", framework: str = "qasm", **kwarg
     from quprep.encode.amplitude import AmplitudeEncoder
     from quprep.encode.angle import AngleEncoder
     from quprep.encode.basis import BasisEncoder
+    from quprep.encode.entangled_angle import EntangledAngleEncoder
     from quprep.encode.hamiltonian import HamiltonianEncoder
     from quprep.encode.iqp import IQPEncoder
     from quprep.encode.reupload import ReUploadEncoder
@@ -68,6 +69,11 @@ def prepare(source, *, encoding: str = "angle", framework: str = "qasm", **kwarg
 
     _encoders = {
         "angle": lambda: AngleEncoder(rotation=kwargs.get("rotation", "ry")),
+        "entangled_angle": lambda: EntangledAngleEncoder(
+            rotation=kwargs.get("rotation", "ry"),
+            layers=kwargs.get("layers", 1),
+            entanglement=kwargs.get("entanglement", "linear"),
+        ),
         "amplitude": lambda: AmplitudeEncoder(pad=kwargs.get("pad", True)),
         "basis": lambda: BasisEncoder(threshold=kwargs.get("threshold", 0.5)),
         "iqp": lambda: IQPEncoder(reps=kwargs.get("reps", 2)),

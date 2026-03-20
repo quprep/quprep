@@ -6,13 +6,14 @@ portability when you don't need framework-specific features.
 
 Supported encodings
 -------------------
-- angle       : one rotation gate (ry/rx/rz) per qubit.
-- basis       : X gates on qubits where the bit is 1.
-- iqp         : Hadamards + Rz(x_i) + ZZ(x_i·x_j) interactions, repeated reps times.
-- reupload    : rotation gate repeated `layers` times per qubit.
-- hamiltonian : Rz(2·x_i·T/S) per qubit, repeated trotter_steps times.
-- amplitude   : not supported — exponential-depth state preparation
-                has no simple QASM representation. Use QiskitExporter instead.
+- angle           : one rotation gate (ry/rx/rz) per qubit.
+- entangled_angle : rotation layer + CNOT entangling layer, repeated layers times.
+- basis           : X gates on qubits where the bit is 1.
+- iqp             : Hadamards + Rz(x_i) + ZZ(x_i·x_j) interactions, repeated reps times.
+- reupload        : rotation gate repeated `layers` times per qubit.
+- hamiltonian     : Rz(2·x_i·T/S) per qubit, repeated trotter_steps times.
+- amplitude       : not supported — exponential-depth state preparation
+                    has no simple QASM representation. Use QiskitExporter instead.
 """
 
 from __future__ import annotations
@@ -42,6 +43,8 @@ class QASMExporter:
         encoding = encoded.metadata.get("encoding", "unknown")
         if encoding == "angle":
             return self._export_angle(encoded)
+        if encoding == "entangled_angle":
+            return self._export_entangled_angle(encoded)
         if encoding == "basis":
             return self._export_basis(encoded)
         if encoding == "iqp":
@@ -58,7 +61,7 @@ class QASMExporter:
             )
         raise ValueError(
             f"Unknown encoding '{encoding}'. "
-            "Supported: angle, basis, iqp, reupload, hamiltonian."
+            "Supported: angle, entangled_angle, basis, iqp, reupload, hamiltonian."
         )
 
     def _export_angle(self, encoded) -> str:
@@ -71,6 +74,24 @@ class QASMExporter:
         ]
         for i, angle in enumerate(encoded.parameters):
             lines.append(f"{rotation}({float(angle)}) q[{i}];")
+        return "\n".join(lines) + "\n"
+
+    def _export_entangled_angle(self, encoded) -> str:
+        rotation = encoded.metadata.get("rotation", "ry")
+        layers = encoded.metadata.get("layers", 1)
+        cnot_pairs = encoded.metadata.get("cnot_pairs", [])
+        n = encoded.metadata["n_qubits"]
+        x = encoded.parameters
+        lines = [
+            "OPENQASM 3.0;",
+            'include "stdgates.inc";',
+            f"qubit[{n}] q;",
+        ]
+        for _ in range(layers):
+            for i, angle in enumerate(x):
+                lines.append(f"{rotation}({float(angle)}) q[{i}];")
+            for ctrl, tgt in cnot_pairs:
+                lines.append(f"cx q[{ctrl}], q[{tgt}];")
         return "\n".join(lines) + "\n"
 
     def _export_basis(self, encoded) -> str:

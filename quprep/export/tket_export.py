@@ -69,6 +69,19 @@ class TKETExporter:
             for i, angle in enumerate(params):
                 gate_fn(float(angle) / math.pi, i)
 
+        elif encoding == "entangled_angle":
+            rotation = encoded.metadata.get("rotation", "ry")
+            layers = encoded.metadata.get("layers", 1)
+            cnot_pairs = encoded.metadata.get("cnot_pairs", [])
+            gate_fn = {"ry": circuit.Ry, "rx": circuit.Rx, "rz": circuit.Rz}.get(rotation)
+            if gate_fn is None:
+                raise ValueError(f"Unknown rotation '{rotation}'.")
+            for _ in range(layers):
+                for i, angle in enumerate(params):
+                    gate_fn(float(angle) / math.pi, i)
+                for ctrl, tgt in cnot_pairs:
+                    circuit.CX(ctrl, tgt)
+
         elif encoding == "basis":
             for i, bit in enumerate(params):
                 if bit == 1.0:
@@ -119,7 +132,7 @@ class TKETExporter:
         else:
             raise ValueError(
                 f"Unknown encoding '{encoding}'. "
-                "Supported: angle, basis, iqp, reupload, hamiltonian."
+                "Supported: angle, entangled_angle, basis, iqp, reupload, hamiltonian."
             )
 
         return circuit

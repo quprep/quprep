@@ -66,6 +66,19 @@ class CirqExporter:
             for i, angle in enumerate(params):
                 ops.append(gate_cls(rads=float(angle))(qubits[i]))
 
+        elif encoding == "entangled_angle":
+            rotation = encoded.metadata.get("rotation", "ry")
+            layers = encoded.metadata.get("layers", 1)
+            cnot_pairs = encoded.metadata.get("cnot_pairs", [])
+            gate_cls = {"ry": cirq.Ry, "rx": cirq.Rx, "rz": cirq.Rz}.get(rotation)
+            if gate_cls is None:
+                raise ValueError(f"Unknown rotation '{rotation}'.")
+            for _ in range(layers):
+                for i, angle in enumerate(params):
+                    ops.append(gate_cls(rads=float(angle))(qubits[i]))
+                for ctrl, tgt in cnot_pairs:
+                    ops.append(cirq.CNOT(qubits[ctrl], qubits[tgt]))
+
         elif encoding == "basis":
             for i, bit in enumerate(params):
                 if bit == 1.0:
@@ -114,7 +127,7 @@ class CirqExporter:
         else:
             raise ValueError(
                 f"Unknown encoding '{encoding}'. "
-                "Supported: angle, basis, iqp, reupload, hamiltonian."
+                "Supported: angle, entangled_angle, basis, iqp, reupload, hamiltonian."
             )
 
         return cirq.Circuit(ops)

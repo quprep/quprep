@@ -171,11 +171,12 @@ class Pipeline:
         from quprep.encode.amplitude import AmplitudeEncoder
         from quprep.encode.angle import AngleEncoder
         from quprep.encode.basis import BasisEncoder
+        from quprep.encode.entangled_angle import EntangledAngleEncoder
         from quprep.encode.hamiltonian import HamiltonianEncoder
         from quprep.encode.iqp import IQPEncoder
         from quprep.encode.reupload import ReUploadEncoder
 
-        if isinstance(self.encoder, AngleEncoder):
+        if isinstance(self.encoder, (AngleEncoder, EntangledAngleEncoder)):
             return f"angle_{self.encoder.rotation}"
         if isinstance(self.encoder, AmplitudeEncoder):
             return "amplitude"

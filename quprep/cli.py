@@ -15,9 +15,9 @@ import sys
 
 from quprep import __version__
 
-_PHASE1_ENCODINGS = ["angle", "amplitude", "basis"]
-_PHASE2_ENCODINGS = ["iqp", "reupload", "hamiltonian"]
-_ALL_ENCODINGS = _PHASE1_ENCODINGS + _PHASE2_ENCODINGS
+_ALL_ENCODINGS = [
+    "angle", "entangled_angle", "amplitude", "basis", "iqp", "reupload", "hamiltonian",
+]
 
 _ALL_FRAMEWORKS = ["qasm", "qiskit", "pennylane", "cirq", "tket"]
 

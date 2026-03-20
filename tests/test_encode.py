@@ -399,3 +399,113 @@ class TestPhase2Encoders:
         from quprep.encode.hamiltonian import HamiltonianEncoder
         with pytest.raises(ValueError):
             HamiltonianEncoder(evolution_time=-1.0)
+
+
+# ---------------------------------------------------------------------------
+# EntangledAngleEncoder
+# ---------------------------------------------------------------------------
+
+class TestEntangledAngleEncoder:
+    def test_encodes_basic(self):
+        from quprep.encode.entangled_angle import EntangledAngleEncoder
+        x = np.array([0.1, 0.5, 0.9])
+        result = EntangledAngleEncoder().encode(x)
+        assert result.metadata["encoding"] == "entangled_angle"
+        assert result.metadata["n_qubits"] == 3
+        np.testing.assert_array_equal(result.parameters, x)
+
+    def test_parameters_are_copy(self):
+        from quprep.encode.entangled_angle import EntangledAngleEncoder
+        x = np.array([0.1, 0.5, 0.9])
+        result = EntangledAngleEncoder().encode(x)
+        x[0] = 999.0
+        assert result.parameters[0] != 999.0
+
+    def test_linear_cnot_pairs(self):
+        from quprep.encode.entangled_angle import EntangledAngleEncoder
+        result = EntangledAngleEncoder(entanglement="linear").encode(np.ones(4))
+        assert result.metadata["cnot_pairs"] == [(0, 1), (1, 2), (2, 3)]
+
+    def test_circular_cnot_pairs(self):
+        from quprep.encode.entangled_angle import EntangledAngleEncoder
+        result = EntangledAngleEncoder(entanglement="circular").encode(np.ones(4))
+        assert result.metadata["cnot_pairs"] == [(0, 1), (1, 2), (2, 3), (3, 0)]
+
+    def test_full_cnot_pairs(self):
+        from quprep.encode.entangled_angle import EntangledAngleEncoder
+        result = EntangledAngleEncoder(entanglement="full").encode(np.ones(3))
+        assert result.metadata["cnot_pairs"] == [(0, 1), (0, 2), (1, 2)]
+
+    def test_single_qubit_no_cnot_pairs(self):
+        from quprep.encode.entangled_angle import EntangledAngleEncoder
+        result = EntangledAngleEncoder().encode(np.array([0.5]))
+        assert result.metadata["cnot_pairs"] == []
+
+    def test_layers_stored_in_metadata(self):
+        from quprep.encode.entangled_angle import EntangledAngleEncoder
+        result = EntangledAngleEncoder(layers=3).encode(np.ones(4))
+        assert result.metadata["layers"] == 3
+
+    def test_rotation_stored_in_metadata(self):
+        from quprep.encode.entangled_angle import EntangledAngleEncoder
+        result = EntangledAngleEncoder(rotation="rx").encode(np.ones(3))
+        assert result.metadata["rotation"] == "rx"
+
+    def test_invalid_rotation_raises(self):
+        from quprep.encode.entangled_angle import EntangledAngleEncoder
+        with pytest.raises(ValueError, match="rotation"):
+            EntangledAngleEncoder(rotation="rw")
+
+    def test_invalid_layers_raises(self):
+        from quprep.encode.entangled_angle import EntangledAngleEncoder
+        with pytest.raises(ValueError, match="layers"):
+            EntangledAngleEncoder(layers=0)
+
+    def test_invalid_entanglement_raises(self):
+        from quprep.encode.entangled_angle import EntangledAngleEncoder
+        with pytest.raises(ValueError, match="entanglement"):
+            EntangledAngleEncoder(entanglement="star")
+
+    def test_empty_input_raises(self):
+        from quprep.encode.entangled_angle import EntangledAngleEncoder
+        with pytest.raises(ValueError):
+            EntangledAngleEncoder().encode(np.array([]))
+
+    def test_2d_input_raises(self):
+        from quprep.encode.entangled_angle import EntangledAngleEncoder
+        with pytest.raises(ValueError):
+            EntangledAngleEncoder().encode(np.ones((3, 3)))
+
+    def test_deterministic(self):
+        from quprep.encode.entangled_angle import EntangledAngleEncoder
+        x = np.array([0.1, 0.5, 0.9])
+        enc = EntangledAngleEncoder()
+        assert np.array_equal(enc.encode(x).parameters, enc.encode(x).parameters)
+
+    def test_qasm_export(self):
+        from quprep.encode.entangled_angle import EntangledAngleEncoder
+        from quprep.export.qasm_export import QASMExporter
+        result = EntangledAngleEncoder(layers=2, entanglement="linear").encode(np.ones(3))
+        qasm = QASMExporter().export(result)
+        assert "OPENQASM 3.0;" in qasm
+        assert qasm.count("cx") == 2 * 2  # 2 pairs × 2 layers
+        assert qasm.count("ry(") == 3 * 2  # 3 qubits × 2 layers
+
+    def test_pipeline_integration(self):
+        from quprep.core.dataset import Dataset
+        from quprep.core.pipeline import Pipeline
+        from quprep.encode.entangled_angle import EntangledAngleEncoder
+        from quprep.export.qasm_export import QASMExporter
+        data = np.random.default_rng(0).standard_normal((10, 4))
+        ds = Dataset(data=data, feature_names=["a","b","c","d"],
+                     feature_types=["continuous"]*4, metadata={}, categorical_data={})
+        result = Pipeline(
+            encoder=EntangledAngleEncoder(), exporter=QASMExporter()
+        ).fit_transform(ds)
+        assert len(result.circuits) == 10
+
+    def test_prepare_one_liner(self):
+        import quprep
+        data = np.random.default_rng(0).standard_normal((5, 3))
+        result = quprep.prepare(data, encoding="entangled_angle")
+        assert len(result.circuits) == 5

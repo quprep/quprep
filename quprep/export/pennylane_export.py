@@ -87,6 +87,23 @@ class PennyLaneExporter:
                     gate(float(angle), wires=i)
                 return qml.state()
 
+        elif encoding == "entangled_angle":
+            rotation = encoded.metadata.get("rotation", "ry")
+            layers = encoded.metadata.get("layers", 1)
+            cnot_pairs = encoded.metadata.get("cnot_pairs", [])
+            gate = {"ry": qml.RY, "rx": qml.RX, "rz": qml.RZ}.get(rotation)
+            if gate is None:
+                raise ValueError(f"Unknown rotation '{rotation}'.")
+
+            @qml.qnode(dev, interface=self.interface)
+            def circuit():
+                for _ in range(layers):
+                    for i, angle in enumerate(params):
+                        gate(float(angle), wires=i)
+                    for ctrl, tgt in cnot_pairs:
+                        qml.CNOT(wires=[ctrl, tgt])
+                return qml.state()
+
         elif encoding == "basis":
             @qml.qnode(dev, interface=self.interface)
             def circuit():
@@ -148,7 +165,7 @@ class PennyLaneExporter:
         else:
             raise ValueError(
                 f"Unknown encoding '{encoding}'. "
-                "Supported: angle, basis, amplitude, iqp, reupload, hamiltonian."
+                "Supported: angle, entangled_angle, basis, amplitude, iqp, reupload, hamiltonian."
             )
 
         return circuit
