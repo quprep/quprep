@@ -131,11 +131,21 @@ def cmd_convert(args) -> int:
 
 
 def cmd_recommend(args) -> int:
-    print(
-        "[quprep] 'recommend' is coming in v0.2.0 (Phase 2 — encoding recommendation engine).",
-        file=sys.stderr,
-    )
-    return 1
+    try:
+        from quprep.core.recommender import recommend
+        rec = recommend(args.source, task=args.task, qubits=args.qubits)
+    except FileNotFoundError:
+        print(f"[quprep] File not found: {args.source}", file=sys.stderr)
+        return 1
+    except ValueError as exc:
+        print(f"[quprep] {exc}", file=sys.stderr)
+        return 1
+    except Exception as exc:
+        print(f"[quprep] Error: {exc}", file=sys.stderr)
+        return 1
+
+    print(str(rec))
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:

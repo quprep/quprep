@@ -176,7 +176,26 @@ class TestConvertErrors:
 # ---------------------------------------------------------------------------
 
 class TestRecommend:
-    def test_recommend_returns_one(self, csv_file, capsys):
+    def test_recommend_returns_zero(self, csv_file, capsys):
         rc = main(["recommend", csv_file])
+        assert rc == 0
+
+    def test_recommend_prints_encoding(self, csv_file, capsys):
+        main(["recommend", csv_file])
+        out = capsys.readouterr().out
+        assert "Recommended encoding" in out
+
+    def test_recommend_with_task(self, csv_file, capsys):
+        rc = main(["recommend", csv_file, "--task", "kernel"])
+        assert rc == 0
+        out = capsys.readouterr().out
+        assert "iqp" in out
+
+    def test_recommend_with_qubits(self, csv_file, capsys):
+        rc = main(["recommend", csv_file, "--qubits", "4"])
+        assert rc == 0
+
+    def test_recommend_missing_file(self, capsys):
+        rc = main(["recommend", "nonexistent.csv"])
         assert rc == 1
-        assert "v0.2.0" in capsys.readouterr().err
+        assert "File not found" in capsys.readouterr().err
