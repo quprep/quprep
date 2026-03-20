@@ -93,14 +93,6 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def cmd_convert(args) -> int:
-    if args.encoding in _PHASE2_ENCODINGS:
-        print(
-            f"[quprep] '{args.encoding}' encoding is coming in v0.2.0. "
-            f"Available now: {_PHASE1_ENCODINGS}",
-            file=sys.stderr,
-        )
-        return 1
-
     if args.framework in _PHASE2_FRAMEWORKS:
         print(
             f"[quprep] '{args.framework}' export is coming in v0.2.0. "

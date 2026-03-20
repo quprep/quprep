@@ -146,9 +146,9 @@ class TestQASMExporter:
         exp = QASMExporter()
         fake = EncodedResult(
             parameters=np.array([0.1, 0.2]),
-            metadata={"encoding": "iqp", "n_qubits": 2},
+            metadata={"encoding": "totally_unknown"},
         )
-        with pytest.raises(ValueError, match="Unknown encoding"):
+        with pytest.raises(ValueError):
             exp.export(fake)
 
     # --- save ---

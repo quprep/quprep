@@ -275,7 +275,7 @@ class TestPrepare:
     def test_prepare_unknown_encoding_raises(self, simple_array):
         import quprep
         with pytest.raises(ValueError, match="Unknown encoding"):
-            quprep.prepare(simple_array, encoding="iqp")
+            quprep.prepare(simple_array, encoding="totally_unknown")
 
     def test_prepare_unknown_framework_raises(self, simple_array):
         import quprep

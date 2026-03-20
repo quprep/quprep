@@ -72,10 +72,9 @@ class TestParser:
 # ---------------------------------------------------------------------------
 
 class TestConvertPhase2Stubs:
-    def test_iqp_encoding_rejected(self, csv_file, capsys):
+    def test_iqp_encoding_works(self, csv_file, capsys):
         rc = main(["convert", csv_file, "--encoding", "iqp"])
-        assert rc == 1
-        assert "v0.2.0" in capsys.readouterr().err
+        assert rc == 0
 
     def test_pennylane_framework_rejected(self, csv_file, capsys):
         rc = main(["convert", csv_file, "--framework", "pennylane"])

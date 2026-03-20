@@ -345,21 +345,57 @@ class TestBasisEncoder:
 # Phase 2 stubs — verify they raise NotImplementedError cleanly
 # ---------------------------------------------------------------------------
 
-class TestPhase2Stubs:
-    def test_iqp_not_implemented(self):
+class TestPhase2Encoders:
+    def test_iqp_encodes(self):
         from quprep.encode.iqp import IQPEncoder
-        enc = IQPEncoder()
-        with pytest.raises(NotImplementedError):
-            enc.encode(np.array([0.1, 0.2]))
+        result = IQPEncoder().encode(np.array([0.1, 0.2, 0.3]))
+        assert result.metadata["encoding"] == "iqp"
+        assert result.metadata["n_qubits"] == 3
+        # parameters = 3 features + 3 pairs
+        assert len(result.parameters) == 3 + 3
 
-    def test_reupload_not_implemented(self):
+    def test_iqp_invalid_reps(self):
+        from quprep.encode.iqp import IQPEncoder
+        with pytest.raises(ValueError):
+            IQPEncoder(reps=0)
+
+    def test_iqp_empty_input_raises(self):
+        from quprep.encode.iqp import IQPEncoder
+        with pytest.raises(ValueError):
+            IQPEncoder().encode(np.array([]))
+
+    def test_reupload_encodes(self):
         from quprep.encode.reupload import ReUploadEncoder
-        enc = ReUploadEncoder()
-        with pytest.raises(NotImplementedError):
-            enc.encode(np.array([0.1, 0.2]))
+        result = ReUploadEncoder(layers=3).encode(np.array([0.1, 0.2]))
+        assert result.metadata["encoding"] == "reupload"
+        assert result.metadata["layers"] == 3
+        assert len(result.parameters) == 2
 
-    def test_hamiltonian_not_implemented(self):
+    def test_reupload_invalid_rotation(self):
+        from quprep.encode.reupload import ReUploadEncoder
+        with pytest.raises(ValueError):
+            ReUploadEncoder(rotation="rw")
+
+    def test_reupload_invalid_layers(self):
+        from quprep.encode.reupload import ReUploadEncoder
+        with pytest.raises(ValueError):
+            ReUploadEncoder(layers=0)
+
+    def test_hamiltonian_encodes(self):
         from quprep.encode.hamiltonian import HamiltonianEncoder
-        enc = HamiltonianEncoder()
-        with pytest.raises(NotImplementedError):
-            enc.encode(np.array([0.1, 0.2]))
+        result = HamiltonianEncoder(evolution_time=1.0, trotter_steps=4).encode(
+            np.array([0.5, 1.0])
+        )
+        assert result.metadata["encoding"] == "hamiltonian"
+        assert result.metadata["trotter_steps"] == 4
+        assert len(result.parameters) == 2
+
+    def test_hamiltonian_invalid_trotter(self):
+        from quprep.encode.hamiltonian import HamiltonianEncoder
+        with pytest.raises(ValueError):
+            HamiltonianEncoder(trotter_steps=0)
+
+    def test_hamiltonian_invalid_time(self):
+        from quprep.encode.hamiltonian import HamiltonianEncoder
+        with pytest.raises(ValueError):
+            HamiltonianEncoder(evolution_time=-1.0)

@@ -61,12 +61,24 @@ def prepare(source, *, encoding: str = "angle", framework: str = "qasm", **kwarg
     from quprep.encode.amplitude import AmplitudeEncoder
     from quprep.encode.angle import AngleEncoder
     from quprep.encode.basis import BasisEncoder
+    from quprep.encode.hamiltonian import HamiltonianEncoder
+    from quprep.encode.iqp import IQPEncoder
+    from quprep.encode.reupload import ReUploadEncoder
     from quprep.export.qasm_export import QASMExporter
 
     _encoders = {
         "angle": lambda: AngleEncoder(rotation=kwargs.get("rotation", "ry")),
         "amplitude": lambda: AmplitudeEncoder(pad=kwargs.get("pad", True)),
         "basis": lambda: BasisEncoder(threshold=kwargs.get("threshold", 0.5)),
+        "iqp": lambda: IQPEncoder(reps=kwargs.get("reps", 2)),
+        "reupload": lambda: ReUploadEncoder(
+            layers=kwargs.get("layers", 3),
+            rotation=kwargs.get("rotation", "ry"),
+        ),
+        "hamiltonian": lambda: HamiltonianEncoder(
+            evolution_time=kwargs.get("evolution_time", 1.0),
+            trotter_steps=kwargs.get("trotter_steps", 4),
+        ),
     }
     if encoding not in _encoders:
         raise ValueError(

@@ -171,6 +171,9 @@ class Pipeline:
         from quprep.encode.amplitude import AmplitudeEncoder
         from quprep.encode.angle import AngleEncoder
         from quprep.encode.basis import BasisEncoder
+        from quprep.encode.hamiltonian import HamiltonianEncoder
+        from quprep.encode.iqp import IQPEncoder
+        from quprep.encode.reupload import ReUploadEncoder
 
         if isinstance(self.encoder, AngleEncoder):
             return f"angle_{self.encoder.rotation}"
@@ -178,4 +181,8 @@ class Pipeline:
             return "amplitude"
         if isinstance(self.encoder, BasisEncoder):
             return "basis"
+        if isinstance(self.encoder, (IQPEncoder, ReUploadEncoder)):
+            return "angle_ry"  # both need [-π, π] like angle Ry
+        if isinstance(self.encoder, HamiltonianEncoder):
+            return "zscore"  # Hamiltonian params: zero-center, unit std
         return None
