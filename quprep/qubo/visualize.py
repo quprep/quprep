@@ -38,7 +38,6 @@ def draw_qubo(qubo, title: str = "QUBO Matrix", cmap: str = "RdBu_r", ax=None):
     """
     try:
         import matplotlib.pyplot as plt
-        import matplotlib.ticker as ticker
     except ImportError as exc:
         raise ImportError(
             "matplotlib is required for draw_qubo(). "
@@ -114,9 +113,8 @@ def draw_ising(ising, title: str = "Ising Model", ax=None):
         If matplotlib is not installed.
     """
     try:
-        import matplotlib.pyplot as plt
         import matplotlib
-        from matplotlib.patches import FancyArrowPatch
+        import matplotlib.pyplot as plt
     except ImportError as exc:
         raise ImportError(
             "matplotlib is required for draw_ising(). "

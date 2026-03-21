@@ -7,12 +7,11 @@ import pytest
 
 from quprep.qubo.constraints import equality_penalty
 from quprep.qubo.converter import QUBOResult, to_qubo
-from quprep.qubo.ising import IsingResult, qubo_to_ising
+from quprep.qubo.ising import qubo_to_ising
 from quprep.qubo.problems.knapsack import knapsack
 from quprep.qubo.problems.maxcut import max_cut
 from quprep.qubo.problems.portfolio import portfolio
 from quprep.qubo.problems.tsp import tsp
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -184,7 +183,6 @@ class TestMaxCut:
         assert isinstance(r, QUBOResult)
 
     def test_variable_map(self):
-        adj = np.eye(0)  # empty graph
         r = max_cut(np.zeros((3, 3)))
         assert "x0" in r.variable_map
 
@@ -425,14 +423,14 @@ class TestSolveBrute:
         assert sol.n_evaluated == 8
 
     def test_too_large_raises(self):
-        from quprep.qubo.solver import solve_brute
         from quprep.qubo.converter import QUBOResult
+        from quprep.qubo.solver import solve_brute
         qubo = QUBOResult(Q=np.eye(25), offset=0.0)
         with pytest.raises(ValueError):
             solve_brute(qubo, max_n=20)
 
     def test_repr(self):
-        from quprep.qubo.solver import solve_brute, SolveResult
+        from quprep.qubo.solver import SolveResult
         sol = SolveResult(x=np.array([1.0, 0.0]), energy=-1.0, n_evaluated=4)
         assert "10" in repr(sol)
 
@@ -443,8 +441,8 @@ class TestSolveBrute:
 
 class TestQAOACircuit:
     def test_basic_output(self):
-        from quprep.qubo.qaoa import qaoa_circuit
         from quprep.qubo.problems.maxcut import max_cut
+        from quprep.qubo.qaoa import qaoa_circuit
         adj = np.array([[0, 1, 1], [1, 0, 1], [1, 1, 0]], dtype=float)
         qasm = qaoa_circuit(max_cut(adj), p=1, gamma=[0.5], beta=[0.3])
         assert "OPENQASM 3.0" in qasm
@@ -453,8 +451,8 @@ class TestQAOACircuit:
         assert "measure" in qasm
 
     def test_p_layers(self):
-        from quprep.qubo.qaoa import qaoa_circuit
         from quprep.qubo.problems.maxcut import max_cut
+        from quprep.qubo.qaoa import qaoa_circuit
         adj = np.array([[0, 1], [1, 0]], dtype=float)
         qasm1 = qaoa_circuit(max_cut(adj), p=1)
         qasm2 = qaoa_circuit(max_cut(adj), p=2)
@@ -462,15 +460,15 @@ class TestQAOACircuit:
         assert len(qasm2.splitlines()) > len(qasm1.splitlines())
 
     def test_default_angles(self):
-        from quprep.qubo.qaoa import qaoa_circuit
         from quprep.qubo.converter import QUBOResult
+        from quprep.qubo.qaoa import qaoa_circuit
         qubo = QUBOResult(Q=np.eye(2), offset=0.0)
         qasm = qaoa_circuit(qubo, p=1)
         assert isinstance(qasm, str)
 
     def test_wrong_gamma_length_raises(self):
-        from quprep.qubo.qaoa import qaoa_circuit
         from quprep.qubo.converter import QUBOResult
+        from quprep.qubo.qaoa import qaoa_circuit
         qubo = QUBOResult(Q=np.eye(2), offset=0.0)
         with pytest.raises(ValueError):
             qaoa_circuit(qubo, p=2, gamma=[0.5], beta=[0.3, 0.3])
@@ -615,28 +613,27 @@ class TestUtilities:
 
     def test_to_dict_json_serializable(self):
         import json
+
         from quprep.qubo.problems.knapsack import knapsack
         r = knapsack(np.array([2.0, 3.0]), np.array([3.0, 4.0]), capacity=3.0)
         # Should not raise
         json.dumps(r.to_dict())
 
     def test_draw_qubo_requires_matplotlib(self):
-        from quprep.qubo.visualize import draw_qubo
         from quprep.qubo.problems.maxcut import max_cut
+        from quprep.qubo.visualize import draw_qubo
         adj = np.array([[0, 1], [1, 0]], dtype=float)
         try:
-            import matplotlib
             ax = draw_qubo(max_cut(adj))
             assert ax is not None
         except ImportError:
             pytest.skip("matplotlib not installed")
 
     def test_draw_ising_requires_matplotlib(self):
-        from quprep.qubo.visualize import draw_ising
         from quprep.qubo.problems.maxcut import max_cut
+        from quprep.qubo.visualize import draw_ising
         adj = np.array([[0, 1], [1, 0]], dtype=float)
         try:
-            import matplotlib
             ax = draw_ising(max_cut(adj).to_ising())
             assert ax is not None
         except ImportError:
@@ -738,14 +735,14 @@ class TestSolveSA:
         assert sol.energy == pytest.approx(-2.0, abs=1e-9)
 
     def test_perfect_partition(self):
-        from quprep.qubo.solver import solve_sa
         from quprep.qubo.problems.number_partition import number_partition
+        from quprep.qubo.solver import solve_sa
         v = np.array([3.0, 1.0, 1.0, 2.0, 2.0, 1.0])
         sol = solve_sa(number_partition(v), seed=0, n_steps=20_000, restarts=3)
         assert sol.energy == pytest.approx(0.0, abs=1e-9)
 
     def test_returns_solve_result(self):
-        from quprep.qubo.solver import solve_sa, SolveResult
+        from quprep.qubo.solver import SolveResult, solve_sa
         adj = np.array([[0,1],[1,0]], dtype=float)
         sol = solve_sa(max_cut(adj), seed=1)
         assert isinstance(sol, SolveResult)
@@ -759,8 +756,8 @@ class TestSolveSA:
         assert sol.n_evaluated == 1500
 
     def test_restarts_improves_result(self):
-        from quprep.qubo.solver import solve_sa
         from quprep.qubo.problems.knapsack import knapsack
+        from quprep.qubo.solver import solve_sa
         w = np.array([2.0, 3.0, 4.0, 5.0, 1.0])
         v = np.array([3.0, 4.0, 5.0, 6.0, 2.0])
         q = knapsack(w, v, capacity=8.0)
@@ -799,7 +796,8 @@ class TestCLIPortfolioGraphcolor:
         ret = main([
             "qubo", "portfolio",
             "--returns", "0.5,0.3,0.2,0.1",
-            "--covariance", "0.1,0.02,0.01,0.0;0.02,0.05,0.01,0.0;0.01,0.01,0.08,0.0;0.0,0.0,0.0,0.04",
+            "--covariance",
+            "0.1,0.02,0.01,0.0;0.02,0.05,0.01,0.0;0.01,0.01,0.08,0.0;0.0,0.0,0.0,0.04",
             "--budget", "2",
         ])
         assert ret == 0

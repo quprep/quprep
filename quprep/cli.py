@@ -108,14 +108,20 @@ def build_parser() -> argparse.ArgumentParser:
 
     # quprep qubo schedule
     sc = qubo_sub.add_parser("schedule", help="Job scheduling (load balancing).")
-    sc.add_argument("--times", "-t", required=True, help='Comma-separated processing times, e.g. "3,1,4,2".')
+    sc.add_argument(
+        "--times", "-t", required=True,
+        help='Comma-separated processing times, e.g. "3,1,4,2".',
+    )
     sc.add_argument("--machines", "-m", type=int, required=True)
     sc.add_argument("--penalty", type=float, default=None)
     sc.add_argument("--solve", action="store_true")
 
     # quprep qubo partition
     pt = qubo_sub.add_parser("partition", help="Number partitioning.")
-    pt.add_argument("--values", "-v", required=True, help='Comma-separated values, e.g. "3,1,1,2,2,1".')
+    pt.add_argument(
+        "--values", "-v", required=True,
+        help='Comma-separated values, e.g. "3,1,1,2,2,1".',
+    )
     pt.add_argument("--penalty", type=float, default=1.0)
     pt.add_argument("--solve", action="store_true")
 
@@ -123,8 +129,10 @@ def build_parser() -> argparse.ArgumentParser:
     pf = qubo_sub.add_parser("portfolio", help="Markowitz portfolio optimization.")
     pf.add_argument("--returns", "-r", required=True,
                     help='Comma-separated expected returns, e.g. "0.5,0.3,0.2,0.1".')
-    pf.add_argument("--covariance", required=True,
-                    help='Covariance matrix as semicolon-separated rows, e.g. "0.1,0.02;0.02,0.05".')
+    pf.add_argument(
+        "--covariance", required=True,
+        help='Covariance matrix as semicolon-separated rows, e.g. "0.1,0.02;0.02,0.05".',
+    )
     pf.add_argument("--budget", "-b", type=int, required=True,
                     help="Number of assets to select (budget constraint K).")
     pf.add_argument("--risk-penalty", type=float, default=1.0)
@@ -154,7 +162,10 @@ def build_parser() -> argparse.ArgumentParser:
     qa.add_argument("--p", type=int, default=1, help="Number of QAOA layers.")
     qa.add_argument("--gamma", default=None, help='Comma-separated gamma values, e.g. "0.5,0.3".')
     qa.add_argument("--beta",  default=None, help='Comma-separated beta values,  e.g. "0.2,0.1".')
-    qa.add_argument("--output", "-o", default=None, help="Output file for QASM. Prints to stdout if omitted.")
+    qa.add_argument(
+        "--output", "-o", default=None,
+        help="Output file for QASM. Prints to stdout if omitted.",
+    )
 
     # quprep qubo export  — serialize Q matrix
     ex = qubo_sub.add_parser("export", help="Export a QUBO Q matrix to JSON or numpy format.")
@@ -230,12 +241,12 @@ def cmd_convert(args) -> int:
     return 0
 
 
-def _parse_matrix(s: str) -> "np.ndarray":
+def _parse_matrix(s: str):
     import numpy as np
     return np.array([[float(v) for v in row.split(",")] for row in s.split(";")])
 
 
-def _parse_vec(s: str) -> "np.ndarray":
+def _parse_vec(s: str):
     import numpy as np
     return np.array([float(v) for v in s.split(",")])
 
@@ -265,7 +276,6 @@ def _print_qubo(result, solve: bool) -> int:
 
 def _build_qubo_from_args(problem: str, args):
     """Build a QUBOResult from CLI args for problem types used by qaoa/export."""
-    import numpy as np
     if problem == "maxcut":
         from quprep.qubo.problems.maxcut import max_cut
         return max_cut(_parse_matrix(args.adjacency))

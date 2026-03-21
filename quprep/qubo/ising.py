@@ -9,8 +9,12 @@ Transformation: s_i = 2*x_i - 1  <=>  x_i = (s_i + 1) / 2
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import numpy as np
+
+if TYPE_CHECKING:
+    from quprep.qubo.converter import QUBOResult
 
 
 @dataclass
@@ -66,7 +70,7 @@ class IsingResult:
         return f"IsingResult(n={len(self.h)}, offset={self.offset:.4f})"
 
 
-def ising_to_qubo(ising: IsingResult) -> "QUBOResult":
+def ising_to_qubo(ising: IsingResult) -> QUBOResult:
     """
     Convert an Ising model back to QUBO form.
 
@@ -118,7 +122,6 @@ def qubo_to_ising(qubo) -> IsingResult:
     IsingResult
     """
     Q = qubo.Q
-    n = Q.shape[0]
 
     # Symmetric off-diagonal view — diagonal must be zero so row sums are purely off-diagonal
     Q_sym = Q + Q.T - 2.0 * np.diag(np.diag(Q))

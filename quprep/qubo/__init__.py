@@ -4,7 +4,13 @@ from quprep.qubo.constraints import equality_penalty, inequality_penalty
 from quprep.qubo.converter import QUBOResult, to_qubo
 from quprep.qubo.ising import IsingResult, ising_to_qubo, qubo_to_ising
 from quprep.qubo.problems import (
-    graph_color, knapsack, max_cut, number_partition, portfolio, scheduling, tsp,
+    graph_color,
+    knapsack,
+    max_cut,
+    number_partition,
+    portfolio,
+    scheduling,
+    tsp,
 )
 from quprep.qubo.qaoa import qaoa_circuit
 from quprep.qubo.solver import SolveResult, solve_brute, solve_sa

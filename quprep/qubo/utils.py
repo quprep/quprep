@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import numpy as np
-
 
 def add_qubo(q1, q2, weight: float = 1.0):
     """

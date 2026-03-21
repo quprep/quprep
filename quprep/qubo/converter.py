@@ -63,7 +63,7 @@ class QUBOResult:
         }
 
     @classmethod
-    def from_dict(cls, d: dict) -> "QUBOResult":
+    def from_dict(cls, d: dict) -> QUBOResult:
         """
         Deserialize from a dict produced by ``to_dict()``.
 
