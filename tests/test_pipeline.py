@@ -305,4 +305,4 @@ class TestPrepare:
 
     def test_version_accessible(self):
         import quprep
-        assert quprep.__version__ == "0.2.0"
+        assert quprep.__version__ == "0.3.0"

@@ -19,11 +19,18 @@ jobs:
         id: changelog
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          # Extract the section for this version from CHANGELOG.md
-          BODY=$(awk "/^## \[$VERSION\]/,/^## \[/" CHANGELOG.md | sed '$d' | sed '1d')
-          echo "body<<EOF" >> $GITHUB_OUTPUT
+          BODY=$(python3 - <<EOF
+          import re, sys
+          content = open("CHANGELOG.md").read()
+          version = "$VERSION"
+          pattern = rf"## \[{re.escape(version)}\][^\n]*\n(.*?)(?=\n## \[|\Z)"
+          m = re.search(pattern, content, re.DOTALL)
+          print(m.group(1).strip() if m else "")
+          EOF
+          )
+          echo "body<<ENDOFBODY" >> $GITHUB_OUTPUT
           echo "$BODY" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          echo "ENDOFBODY" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

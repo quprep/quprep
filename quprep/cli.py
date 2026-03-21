@@ -5,6 +5,10 @@ Usage
     quprep convert dataset.csv --encoding angle --framework qasm
     quprep convert dataset.csv --encoding angle --framework qasm --output circuit.qasm
     quprep recommend dataset.csv --task classification --qubits 8
+    quprep qubo maxcut --adjacency "0,1,1;1,0,1;1,1,0"
+    quprep qubo knapsack --weights "2,3,4" --values "3,4,5" --capacity 5
+    quprep qubo tsp --distances "0,1,2;1,0,1;2,1,0"
+    quprep qubo schedule --times "3,1,4,2" --machines 2
     quprep --version
 """
 
@@ -69,6 +73,102 @@ def build_parser() -> argparse.ArgumentParser:
         help="Number of samples to convert (default: all).",
     )
 
+    # quprep qubo
+    qubo = subparsers.add_parser(
+        "qubo",
+        help="Build and optionally solve a QUBO problem.",
+    )
+    qubo_sub = qubo.add_subparsers(dest="qubo_command")
+
+    # quprep qubo maxcut
+    mc = qubo_sub.add_parser("maxcut", help="Max-Cut graph partitioning.")
+    mc.add_argument(
+        "--adjacency", "-a", required=True,
+        help='Adjacency matrix as semicolon-separated rows, e.g. "0,1,1;1,0,1;1,1,0".',
+    )
+    mc.add_argument("--penalty", type=float, default=10.0)
+    mc.add_argument("--solve", action="store_true", help="Brute-force solve (n <= 20).")
+
+    # quprep qubo knapsack
+    ks = qubo_sub.add_parser("knapsack", help="0/1 Knapsack.")
+    ks.add_argument("--weights", "-w", required=True, help='Comma-separated weights, e.g. "2,3,4".')
+    ks.add_argument("--values", "-v", required=True, help='Comma-separated values, e.g. "3,4,5".')
+    ks.add_argument("--capacity", "-c", type=float, required=True)
+    ks.add_argument("--penalty", type=float, default=None)
+    ks.add_argument("--solve", action="store_true")
+
+    # quprep qubo tsp
+    tp = qubo_sub.add_parser("tsp", help="Travelling Salesman Problem.")
+    tp.add_argument(
+        "--distances", "-d", required=True,
+        help='Distance matrix as semicolon-separated rows, e.g. "0,1,2;1,0,1;2,1,0".',
+    )
+    tp.add_argument("--penalty", type=float, default=None)
+    tp.add_argument("--solve", action="store_true")
+
+    # quprep qubo schedule
+    sc = qubo_sub.add_parser("schedule", help="Job scheduling (load balancing).")
+    sc.add_argument("--times", "-t", required=True, help='Comma-separated processing times, e.g. "3,1,4,2".')
+    sc.add_argument("--machines", "-m", type=int, required=True)
+    sc.add_argument("--penalty", type=float, default=None)
+    sc.add_argument("--solve", action="store_true")
+
+    # quprep qubo partition
+    pt = qubo_sub.add_parser("partition", help="Number partitioning.")
+    pt.add_argument("--values", "-v", required=True, help='Comma-separated values, e.g. "3,1,1,2,2,1".')
+    pt.add_argument("--penalty", type=float, default=1.0)
+    pt.add_argument("--solve", action="store_true")
+
+    # quprep qubo portfolio
+    pf = qubo_sub.add_parser("portfolio", help="Markowitz portfolio optimization.")
+    pf.add_argument("--returns", "-r", required=True,
+                    help='Comma-separated expected returns, e.g. "0.5,0.3,0.2,0.1".')
+    pf.add_argument("--covariance", required=True,
+                    help='Covariance matrix as semicolon-separated rows, e.g. "0.1,0.02;0.02,0.05".')
+    pf.add_argument("--budget", "-b", type=int, required=True,
+                    help="Number of assets to select (budget constraint K).")
+    pf.add_argument("--risk-penalty", type=float, default=1.0)
+    pf.add_argument("--budget-penalty", type=float, default=None)
+    pf.add_argument("--solve", action="store_true")
+
+    # quprep qubo graphcolor
+    gc = qubo_sub.add_parser("graphcolor", help="Graph colouring.")
+    gc.add_argument("--adjacency", "-a", required=True,
+                    help='Adjacency matrix as semicolon-separated rows, e.g. "0,1,1;1,0,1;1,1,0".')
+    gc.add_argument("--colors", "-k", type=int, required=True,
+                    help="Number of colours.")
+    gc.add_argument("--penalty", type=float, default=10.0)
+    gc.add_argument("--solve", action="store_true")
+
+    # quprep qubo qaoa  — generate QAOA circuit
+    qa = qubo_sub.add_parser("qaoa", help="Generate a QAOA circuit for a problem.")
+    qa.add_argument("problem", choices=["maxcut", "knapsack", "tsp", "schedule", "partition"],
+                    help="Problem type.")
+    qa.add_argument("--adjacency", "-a", default=None)
+    qa.add_argument("--weights", "-w", default=None)
+    qa.add_argument("--values", "-v", default=None)
+    qa.add_argument("--capacity", "-c", type=float, default=None)
+    qa.add_argument("--distances", "-d", default=None)
+    qa.add_argument("--times", "-t", default=None)
+    qa.add_argument("--machines", type=int, default=None)
+    qa.add_argument("--p", type=int, default=1, help="Number of QAOA layers.")
+    qa.add_argument("--gamma", default=None, help='Comma-separated gamma values, e.g. "0.5,0.3".')
+    qa.add_argument("--beta",  default=None, help='Comma-separated beta values,  e.g. "0.2,0.1".')
+    qa.add_argument("--output", "-o", default=None, help="Output file for QASM. Prints to stdout if omitted.")
+
+    # quprep qubo export  — serialize Q matrix
+    ex = qubo_sub.add_parser("export", help="Export a QUBO Q matrix to JSON or numpy format.")
+    ex.add_argument("problem", choices=["maxcut", "knapsack", "tsp", "schedule", "partition"])
+    ex.add_argument("--adjacency", "-a", default=None)
+    ex.add_argument("--weights", "-w", default=None)
+    ex.add_argument("--values", "-v", default=None)
+    ex.add_argument("--capacity", "-c", type=float, default=None)
+    ex.add_argument("--distances", "-d", default=None)
+    ex.add_argument("--times", "-t", default=None)
+    ex.add_argument("--machines", type=int, default=None)
+    ex.add_argument("--format", choices=["json", "npy"], default="json")
+    ex.add_argument("--output", "-o", default=None, help="Output file path.")
+
     # quprep recommend
     recommend = subparsers.add_parser(
         "recommend",
@@ -130,6 +230,151 @@ def cmd_convert(args) -> int:
     return 0
 
 
+def _parse_matrix(s: str) -> "np.ndarray":
+    import numpy as np
+    return np.array([[float(v) for v in row.split(",")] for row in s.split(";")])
+
+
+def _parse_vec(s: str) -> "np.ndarray":
+    import numpy as np
+    return np.array([float(v) for v in s.split(",")])
+
+
+def _print_qubo(result, solve: bool) -> int:
+    import numpy as np
+    print(f"Variables : {result.Q.shape[0]}")
+    print(f"Offset    : {result.offset:.4f}")
+    if result.n_original != result.Q.shape[0]:
+        print(f"  ({result.n_original} original + {result.Q.shape[0] - result.n_original} slack)")
+    print(f"Q matrix  :\n{np.array2string(result.Q, precision=4, suppress_small=True)}")
+    if solve:
+        from quprep.qubo.solver import solve_brute, solve_sa
+        n = result.Q.shape[0]
+        if n <= 20:
+            sol = solve_brute(result)
+            method = "exact"
+        else:
+            sol = solve_sa(result, n_steps=50_000, restarts=5, seed=0)
+            method = "simulated annealing"
+        bits = "".join(str(int(b)) for b in sol.x)
+        print(f"\nSolver    : {method}")
+        print(f"Best x    : {bits}")
+        print(f"Energy    : {sol.energy:.6f}")
+    return 0
+
+
+def _build_qubo_from_args(problem: str, args):
+    """Build a QUBOResult from CLI args for problem types used by qaoa/export."""
+    import numpy as np
+    if problem == "maxcut":
+        from quprep.qubo.problems.maxcut import max_cut
+        return max_cut(_parse_matrix(args.adjacency))
+    if problem == "knapsack":
+        from quprep.qubo.problems.knapsack import knapsack
+        return knapsack(_parse_vec(args.weights), _parse_vec(args.values), args.capacity)
+    if problem == "tsp":
+        from quprep.qubo.problems.tsp import tsp
+        return tsp(_parse_matrix(args.distances))
+    if problem == "schedule":
+        from quprep.qubo.problems.scheduling import scheduling
+        return scheduling(_parse_vec(args.times), args.machines)
+    if problem == "partition":
+        from quprep.qubo.problems.number_partition import number_partition
+        return number_partition(_parse_vec(args.values))
+    raise ValueError(f"Unknown problem: {problem}")
+
+
+def cmd_qubo(args) -> int:
+    try:
+        if args.qubo_command == "maxcut":
+            from quprep.qubo.problems.maxcut import max_cut
+            adj = _parse_matrix(args.adjacency)
+            result = max_cut(adj)
+            return _print_qubo(result, args.solve)
+
+        if args.qubo_command == "knapsack":
+            from quprep.qubo.problems.knapsack import knapsack
+            w = _parse_vec(args.weights)
+            v = _parse_vec(args.values)
+            result = knapsack(w, v, args.capacity, penalty=args.penalty)
+            return _print_qubo(result, args.solve)
+
+        if args.qubo_command == "tsp":
+            from quprep.qubo.problems.tsp import tsp
+            D = _parse_matrix(args.distances)
+            result = tsp(D, penalty=args.penalty)
+            return _print_qubo(result, args.solve)
+
+        if args.qubo_command == "schedule":
+            from quprep.qubo.problems.scheduling import scheduling
+            times = _parse_vec(args.times)
+            result = scheduling(times, args.machines, penalty=args.penalty)
+            return _print_qubo(result, args.solve)
+
+        if args.qubo_command == "partition":
+            from quprep.qubo.problems.number_partition import number_partition
+            result = number_partition(_parse_vec(args.values), penalty=args.penalty)
+            return _print_qubo(result, args.solve)
+
+        if args.qubo_command == "portfolio":
+            from quprep.qubo.problems.portfolio import portfolio
+            returns = _parse_vec(args.returns)
+            cov = _parse_matrix(args.covariance)
+            result = portfolio(
+                returns, cov, args.budget,
+                risk_penalty=args.risk_penalty,
+                budget_penalty=args.budget_penalty,
+            )
+            return _print_qubo(result, args.solve)
+
+        if args.qubo_command == "graphcolor":
+            from quprep.qubo.problems.graph_color import graph_color
+            adj = _parse_matrix(args.adjacency)
+            result = graph_color(adj, args.colors, penalty=args.penalty)
+            return _print_qubo(result, args.solve)
+
+        if args.qubo_command == "qaoa":
+            from quprep.qubo.qaoa import qaoa_circuit
+            result = _build_qubo_from_args(args.problem, args)
+            gamma = [float(v) for v in args.gamma.split(",")] if args.gamma else None
+            beta  = [float(v) for v in args.beta.split(",")]  if args.beta  else None
+            qasm = qaoa_circuit(result, p=args.p, gamma=gamma, beta=beta)
+            if args.output:
+                from pathlib import Path
+                Path(args.output).write_text(qasm, encoding="utf-8")
+                print(f"[quprep] Wrote QAOA circuit to {args.output}")
+            else:
+                print(qasm)
+            return 0
+
+        if args.qubo_command == "export":
+            import json
+            result = _build_qubo_from_args(args.problem, args)
+            fmt = args.format
+            if fmt == "json":
+                content = json.dumps(result.to_dict(), indent=2)
+                if args.output:
+                    from pathlib import Path
+                    Path(args.output).write_text(content, encoding="utf-8")
+                    print(f"[quprep] Wrote QUBO JSON to {args.output}")
+                else:
+                    print(content)
+            else:  # npy
+                import numpy as np
+                out = args.output or "qubo.npy"
+                np.save(out, result.Q)
+                print(f"[quprep] Wrote Q matrix ({result.Q.shape}) to {out}")
+            return 0
+
+        # No subcommand — print help
+        print("Usage: quprep qubo {maxcut,knapsack,tsp,schedule,partition,qaoa,export} [options]")
+        return 0
+
+    except Exception as exc:
+        print(f"[quprep] Error: {exc}", file=__import__("sys").stderr)
+        return 1
+
+
 def cmd_recommend(args) -> int:
     try:
         from quprep.core.recommender import recommend
@@ -158,6 +403,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "convert":
         return cmd_convert(args)
+
+    if args.command == "qubo":
+        return cmd_qubo(args)
 
     if args.command == "recommend":
         return cmd_recommend(args)
