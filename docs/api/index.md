@@ -17,7 +17,7 @@ Everything else is accessed via submodules.
 ```python
 import quprep
 
-quprep.__version__   # "0.2.0"
+quprep.__version__   # "0.3.0"
 quprep.prepare(...)
 quprep.Pipeline(...)
 quprep.recommend(...)
@@ -54,6 +54,14 @@ quprep.draw_matplotlib(...)
 | `quprep.ingest.numpy_ingester` | `NumpyIngester` |
 | `quprep.ingest.profiler` | `profile`, `DatasetProfile` |
 | `quprep.core.dataset` | `Dataset` |
+| `quprep.qubo` | `to_qubo`, `QUBOResult`, `qubo_to_ising`, `ising_to_qubo`, `IsingResult` |
+| `quprep.qubo.problems` | `max_cut`, `knapsack`, `tsp`, `portfolio`, `graph_color`, `scheduling`, `number_partition` |
+| `quprep.qubo.solver` | `solve_brute`, `solve_sa`, `SolveResult` |
+| `quprep.qubo.qaoa` | `qaoa_circuit` |
+| `quprep.qubo.constraints` | `equality_penalty`, `inequality_penalty` |
+| `quprep.qubo.ising` | `qubo_to_ising`, `ising_to_qubo` |
+| `quprep.qubo.utils` | `add_qubo` |
+| `quprep.qubo.visualize` | `draw_qubo`, `draw_ising` |
 
 ---
 

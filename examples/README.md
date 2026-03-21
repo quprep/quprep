@@ -10,6 +10,7 @@ Each example is a runnable Python script.
 | 04 | Framework export — QASM, Qiskit, PennyLane, Cirq, TKET | `04_export.py` |
 | 05 | Encoding recommendation — `recommend()` | `05_recommend.py` |
 | 06 | Circuit visualization — ASCII + matplotlib | `06_visualization.py` |
+| 07 | QUBO / Ising — Max-Cut, Knapsack, solvers, D-Wave export, QAOA | `07_qubo.py` |
 
 ## Run a script
 

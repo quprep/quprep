@@ -75,7 +75,7 @@ qnode = result.circuit   # callable qml.QNode
 | **Encode+** | ✅ v0.2.0 | IQP, Entangled Angle, Data re-uploading, Hamiltonian |
 | **Export+** | ✅ v0.2.0 | PennyLane, Cirq, TKET, ASCII + matplotlib visualization |
 | **Recommend** | ✅ v0.2.0 | Automatic encoding selection for your dataset and task |
-| **QUBO** | 🔲 v0.3.0 | QUBO/Ising conversion, problem library |
+| **QUBO** | ✅ v0.3.0 | QUBO/Ising conversion, 7 problem formulations, solvers, QAOA, D-Wave export |
 
 ---
 
@@ -100,4 +100,8 @@ quprep convert data.csv --encoding angle --framework qasm
 quprep convert data.csv --encoding iqp --framework pennylane
 quprep convert data.csv --encoding basis --samples 10 --output circuits.qasm
 quprep recommend data.csv --task classification --qubits 8
+
+quprep qubo maxcut --adjacency "0,1,1;1,0,1;1,1,0" --solve
+quprep qubo knapsack --weights "2,3,4" --values "3,4,5" --capacity 5
+quprep qubo qaoa maxcut --adjacency "0,1,1;1,0,1;1,1,0" --p 2 --output circuit.qasm
 ```

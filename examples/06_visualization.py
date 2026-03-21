@@ -74,7 +74,7 @@ else:
     ]
 
     for name, enc in encodings:
-        path = f"circuit_{name}.png"
+        path = f"/tmp/circuit_{name}.png"
         draw_matplotlib(enc, filename=path)
         print(f"  Saved: {path}")
 

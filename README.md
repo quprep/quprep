@@ -28,6 +28,9 @@ CSV / DataFrame / NumPy  →  QuPrep  →  circuit-ready output for your framewo
 - Recommend the best encoding for your dataset and task
 - Export circuits to OpenQASM 3.0, Qiskit, PennyLane, Cirq, and TKET
 - Visualize circuits as ASCII diagrams or matplotlib figures
+- Formulate combinatorial optimization problems as QUBO / Ising models (Max-Cut, TSP, Knapsack, Portfolio, Graph Colouring, Scheduling, Number Partitioning)
+- Solve with exact brute-force (n ≤ 20) or simulated annealing (any n)
+- Generate QAOA circuits and export to D-Wave Ocean SDK format
 
 ## What QuPrep does NOT do
 
@@ -102,12 +105,38 @@ print(quprep.draw_ascii(result.encoded[0]))
 quprep.draw_matplotlib(result.encoded[0], filename="circuit.png")
 ```
 
+### QUBO / combinatorial optimization
+
+```python
+from quprep.qubo import max_cut, knapsack, solve_brute, solve_sa, qaoa_circuit
+import numpy as np
+
+# Max-Cut on a weighted graph
+adj = np.array([[0,1,1],[1,0,1],[1,1,0]], dtype=float)
+q = max_cut(adj)
+print(q.evaluate(np.array([0., 1., 1.])))  # -2.0
+
+# Brute-force (n ≤ 20) or simulated annealing (any n)
+sol = solve_brute(q)        # exact
+sol = solve_sa(q, seed=42)  # heuristic, scales to n ~ 500+
+
+# Generate a QAOA circuit
+qasm = qaoa_circuit(q, p=2)
+
+# D-Wave Ocean SDK export
+bqm_dict = q.to_dwave()   # {(i, j): coeff}
+```
+
 ### CLI
 
 ```bash
 quprep convert data.csv --encoding angle --framework qasm
 quprep convert data.csv --encoding iqp --framework pennylane
 quprep recommend data.csv --task classification --qubits 8
+
+quprep qubo maxcut --adjacency "0,1,1;1,0,1;1,1,0" --solve
+quprep qubo knapsack --weights "2,3,4" --values "3,4,5" --capacity 5
+quprep qubo qaoa maxcut --adjacency "0,1,1;1,0,1;1,1,0" --p 2 --output circuit.qasm
 ```
 
 ---
@@ -159,6 +188,7 @@ See the [`examples/`](examples/) directory:
 | 04 | Framework export — QASM, Qiskit, PennyLane, Cirq, TKET |
 | 05 | Encoding recommendation |
 | 06 | Circuit visualization |
+| 07 | QUBO / Ising — Max-Cut, Knapsack, solvers, D-Wave export, QAOA |
 
 ---
 
