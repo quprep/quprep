@@ -174,13 +174,13 @@ When you call `prepare()` or `Pipeline.fit_transform()`, QuPrep automatically ap
 
 | Encoding | Auto-normalization |
 |---|---|
-| `angle` (Ry) | Scale features to [0, π] |
-| `angle` (Rx/Rz) | Scale features to [−π, π] |
+| `angle` (Ry) | Scale features to $[0, \pi]$ |
+| `angle` (Rx/Rz) | Scale features to $[-\pi, \pi]$ |
 | `entangled_angle` | Same as `angle` by rotation |
-| `amplitude` | L2-normalize each sample (‖x‖₂ = 1) |
-| `basis` | Binarize features to {0, 1} |
-| `iqp` | Scale features to [−π, π] |
-| `reupload` | Scale features to [−π, π] |
+| `amplitude` | L2-normalize each sample ($\|x\|_2 = 1$) |
+| `basis` | Binarize features to $\{0, 1\}$ |
+| `iqp` | Scale features to $[-\pi, \pi]$ |
+| `reupload` | Scale features to $[-\pi, \pi]$ |
 | `hamiltonian` | Z-score normalize |
 
 You never need to think about this unless you want to override it.

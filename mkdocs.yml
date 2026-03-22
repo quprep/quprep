@@ -6,25 +6,55 @@ repo_name: quprep/quprep
 
 theme:
   name: material
+  custom_dir: docs/overrides
   palette:
-    - scheme: default
-      primary: indigo
-      accent: indigo
-      toggle:
-        icon: material/brightness-7
-        name: Switch to dark mode
-    - scheme: slate
-      primary: indigo
-      accent: indigo
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: black
+      accent: amber
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: white
+      accent: deep-purple
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+  font: false
+  icon:
+    repo: fontawesome/brands/github
   features:
-    - navigation.tabs
+    - navigation.instant
+    - navigation.tracking
     - navigation.sections
+    - navigation.expand
     - navigation.top
+    - navigation.footer
+    - search.suggest
     - search.highlight
     - content.code.copy
+    - content.code.annotate
+    - toc.follow
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/quprep/quprep
+      name: QuPrep on GitHub
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/quprep/
+      name: QuPrep on PyPI
+
+hooks:
+  - docs/hooks.py
+
+extra_css:
+  - stylesheets/extra.css
+
+extra_javascript:
+  - javascripts/mathjax.js
 
 plugins:
   - search
@@ -34,19 +64,32 @@ plugins:
           options:
             show_source: true
             show_root_heading: true
+            show_category_heading: true
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            docstring_style: numpy
+            merge_init_into_class: true
 
 markdown_extensions:
-  - pymdownx.highlight
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
   - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
   - pymdownx.arithmatex:
       generic: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - admonition
+  - pymdownx.details
+  - attr_list
+  - md_in_html
   - toc:
       permalink: true
-
-extra_javascript:
-  - https://polyfill.io/v3/polyfill.min.js?features=es6
-  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
 
 nav:
   - Home: index.md
@@ -59,8 +102,9 @@ nav:
     - Framework Export: guides/export.md
     - QUBO / Ising: guides/qubo.md
   - API Reference:
-    - quprep: api/index.md
+    - Overview: api/index.md
     - Pipeline: api/pipeline.md
     - Encoders: api/encoders.md
     - Exporters: api/exporters.md
+    - QUBO / Ising: api/qubo.md
   - Contributing: contributing.md

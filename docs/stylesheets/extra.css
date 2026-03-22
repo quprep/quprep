@@ -1,0 +1,277 @@
+/* @import must be first — before any rules or comments */
+@import url('https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Fira+Code:wght@400;500;600&display=swap');
+
+/* ============================================================
+   QuPrep Docs — exact palette from quprep.org/src/index.css
+   ============================================================
+   Light:  bg 240 20% 99%  · fg 243 47% 15%  · primary 263 70% 50%  · accent 38 92% 50%  · border 240 15% 90%
+   Dark:   bg 243 47%  7%  · fg 240 20% 92%  · primary 263 70% 60%  · accent 38 92% 55%  · border 243 25% 18%
+   Card:   light 0 0% 100%                   · dark  243 40% 10%
+   Fonts:  Space Grotesk (headings) · DM Sans (body) · Fira Code (code)
+   ============================================================ */
+
+/* ── CSS font variables (so Material's own rules resolve correctly) ── */
+:root {
+  --md-text-font: 'DM Sans';
+  --md-code-font: 'Fira Code';
+}
+
+/* ── Header layout ─────────────────────────────────────────── */
+
+/* Keep theme toggle visible when search is focused */
+[data-md-toggle="search"]:checked ~ .md-header .md-header__option {
+  max-width: 100% !important;
+  opacity: 1 !important;
+  transition: none !important;
+}
+
+@media screen and (min-width: 60em) {
+  /* Move palette toggle immediately after source, no gap */
+  .md-header__option {
+    order: 2;
+    margin-left: 0 !important;
+  }
+
+  .md-search {
+    margin-right: 3rem;
+  }
+
+  .md-header__source {
+    order: 1;
+    margin-left: auto !important;
+    margin-right: 0.6rem !important;
+    width: max-content !important;
+    max-width: none !important;
+  }
+
+  .md-header__source .md-source__repository {
+    max-width: none !important;
+    overflow: visible !important;
+    text-overflow: unset !important;
+  }
+
+}
+
+/* ── Header logo + title ──────────────────────────────────── */
+
+/* Remove the book logo */
+.md-header__button.md-logo {
+  display: none;
+}
+
+/* Header font — Ubuntu matches quprep.org navbar */
+.md-header {
+  font-family: 'Ubuntu', system-ui, sans-serif !important;
+}
+
+/* Gradient title — exact match to quprep.org navbar */
+.md-header__title .md-ellipsis,
+.md-header__title {
+  font-family: 'Ubuntu', system-ui, sans-serif !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.025em !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-image: linear-gradient(135deg, hsl(263, 70%, 50%), hsl(38, 92%, 50%));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Dark mode uses lighter gradient values (matches quprep.org dark palette) */
+[data-md-color-scheme="slate"] .md-header__title .md-ellipsis,
+[data-md-color-scheme="slate"] .md-header__title {
+  background-image: linear-gradient(135deg, hsl(263, 70%, 60%), hsl(38, 92%, 55%));
+}
+
+/* ── Dark page background ─────────────────────────────────── */
+[data-md-color-scheme="slate"] {
+  --md-default-bg-color:           hsl(243, 47%,  7%);   /* --background */
+  --md-default-bg-color--light:    hsl(243, 40%, 10%);   /* --card */
+  --md-default-bg-color--lighter:  hsl(243, 30%, 15%);   /* --secondary */
+  --md-default-bg-color--lightest: hsl(243, 25%, 18%);   /* --border */
+
+  --md-default-fg-color:           hsl(240, 20%, 92%);   /* --foreground */
+  --md-default-fg-color--light:    hsl(240, 15%, 55%);   /* --muted-foreground */
+  --md-default-fg-color--lighter:  hsl(240, 10%, 40%);
+  --md-default-fg-color--lightest: hsl(243, 25%, 18%);   /* --border */
+
+  --md-code-bg-color:              hsl(243, 40%, 10%);   /* --card */
+  --md-code-fg-color:              hsl(240, 20%, 88%);
+}
+
+/* Header — matches card bg, seamless with sidebar */
+[data-md-color-scheme="slate"] .md-header {
+  background-color: hsl(243, 40%, 10%);                  /* --card */
+  border-bottom: 1px solid hsl(243, 25%, 18%);           /* --border */
+  box-shadow: none;
+}
+
+/* Left sidebar — match page bg exactly so no box is visible */
+[data-md-color-scheme="slate"] .md-sidebar--primary,
+[data-md-color-scheme="slate"] .md-sidebar--primary .md-nav__title,
+[data-md-color-scheme="slate"] .md-sidebar--primary .md-sidebar__scrollwrap {
+  background-color: hsl(243, 47%, 7%) !important;
+  box-shadow: none !important;
+}
+
+/* Right sidebar (TOC) — blend with page bg, no visible box */
+[data-md-color-scheme="slate"] .md-sidebar--secondary {
+  background-color: hsl(243, 47%, 7%);
+}
+[data-md-color-scheme="slate"] .md-sidebar--secondary .md-nav__title {
+  background-color: hsl(243, 47%, 7%);
+  box-shadow: none;
+  color: hsl(240, 15%, 55%);
+}
+
+/* ── Dark links & nav ─────────────────────────────────────── */
+[data-md-color-scheme="slate"] .md-typeset a {
+  color: hsl(263, 70%, 70%);                             /* primary lightened for dark bg */
+}
+[data-md-color-scheme="slate"] .md-typeset a:hover {
+  color: hsl(263, 70%, 80%);
+}
+
+[data-md-color-scheme="slate"] .md-nav__link {
+  color: hsl(240, 15%, 55%);                             /* --muted-foreground */
+}
+[data-md-color-scheme="slate"] .md-nav__link:hover,
+[data-md-color-scheme="slate"] .md-nav__link:focus {
+  color: hsl(240, 20%, 92%);                             /* --foreground */
+}
+[data-md-color-scheme="slate"] .md-nav__link--active {
+  color: hsl(263, 70%, 70%);                             /* --primary (dark) lightened */
+  font-weight: 600;
+}
+[data-md-color-scheme="slate"] .md-nav__item .md-nav__link--active {
+  border-left: 2px solid hsl(263, 70%, 60%);             /* --primary dark */
+  padding-left: calc(0.6rem - 2px);
+}
+
+/* ── Light page background ────────────────────────────────── */
+[data-md-color-scheme="default"] {
+  --md-default-bg-color: hsl(240, 20%, 99%);             /* --background */
+  --md-code-bg-color:    hsl(240, 20%, 96%);             /* --secondary */
+}
+
+/* White header with subtle border */
+[data-md-color-scheme="default"] .md-header {
+  background-color: hsl(240, 20%, 99%);                  /* --background */
+  border-bottom: 1px solid hsl(240, 15%, 90%);           /* --border */
+  box-shadow: none;
+}
+
+/* ── Light links & nav ────────────────────────────────────── */
+[data-md-color-scheme="default"] .md-typeset a {
+  color: hsl(263, 70%, 50%);                             /* --primary */
+}
+[data-md-color-scheme="default"] .md-typeset a:hover {
+  color: hsl(263, 70%, 40%);
+}
+
+[data-md-color-scheme="default"] .md-nav__link--active {
+  color: hsl(263, 70%, 50%);                             /* --primary */
+  font-weight: 600;
+}
+[data-md-color-scheme="default"] .md-nav__link:hover {
+  color: hsl(263, 70%, 45%);
+}
+[data-md-color-scheme="default"] .md-nav__item .md-nav__link--active {
+  border-left: 2px solid hsl(263, 70%, 50%);             /* --primary */
+  padding-left: calc(0.6rem - 2px);
+}
+
+/* ── Typography ───────────────────────────────────────────── */
+
+/* ── Fonts ────────────────────────────────────────────────── */
+/* Material loads Space Grotesk + Fira Code. DM Sans loaded via @import above. */
+
+/* Base fonts — font: false means we own everything */
+body {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+code, pre, kbd {
+  font-family: 'Fira Code', monospace;
+}
+
+/* Space Grotesk — headings and header title */
+h1, h2, h3, h4, h5, h6,
+.md-typeset h1,
+.md-typeset h2,
+.md-typeset h3,
+.md-typeset h4,
+.md-nav__title,
+.md-header__title {
+  font-family: 'Space Grotesk', system-ui, sans-serif !important;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.md-typeset h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* ── Code blocks ──────────────────────────────────────────── */
+.md-typeset code {
+  border-radius: 4px;
+  font-size: 0.85em;
+}
+.md-typeset pre {
+  border-radius: 8px;
+}
+[data-md-color-scheme="slate"] .md-typeset pre {
+  border: 1px solid hsl(243, 25%, 18%);                  /* --border */
+}
+
+/* ── Tables ───────────────────────────────────────────────── */
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) th {
+  background-color: hsl(243, 30%, 15%);                  /* --secondary */
+}
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) td {
+  border-color: hsl(243, 25%, 18%);                      /* --border */
+}
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) tr:hover {
+  background-color: hsl(243, 40%, 10%);                  /* --card */
+}
+
+/* ── Footer ───────────────────────────────────────────────── */
+[data-md-color-scheme="slate"] .md-footer {
+  background-color: hsl(243, 40%, 10%);                  /* --card */
+  border-top: 1px solid hsl(243, 25%, 18%);              /* --border */
+}
+[data-md-color-scheme="slate"] .md-footer-meta {
+  background-color: hsl(243, 47%, 7%);                   /* --background */
+}
+
+/* ── Admonitions ──────────────────────────────────────────── */
+.md-typeset .admonition,
+.md-typeset details {
+  border-radius: 6px;
+  border-left-width: 3px;
+}
+[data-md-color-scheme="slate"] .md-typeset .admonition {
+  background-color: hsl(243, 40%, 10%);                  /* --card */
+}
+
+/* ── Grid cards ───────────────────────────────────────────── */
+[data-md-color-scheme="slate"] .md-typeset .grid.cards > ul > li,
+[data-md-color-scheme="slate"] .md-typeset .grid.cards > ol > li {
+  background-color: hsl(243, 40%, 10%);                  /* --card */
+  border: 1px solid hsl(243, 25%, 18%);                  /* --border */
+  border-radius: 8px;
+}
+[data-md-color-scheme="slate"] .md-typeset .grid.cards > ul > li:hover,
+[data-md-color-scheme="slate"] .md-typeset .grid.cards > ol > li:hover {
+  border-color: hsl(263, 70%, 60%);                      /* --primary dark */
+  box-shadow: 0 4px 24px -8px hsla(263, 70%, 60%, 0.2);
+}
+
+/* ── Scrollbar ────────────────────────────────────────────── */
+[data-md-color-scheme="slate"] ::-webkit-scrollbar { width: 6px; height: 6px; }
+[data-md-color-scheme="slate"] ::-webkit-scrollbar-track { background: hsl(243, 47%, 7%); }
+[data-md-color-scheme="slate"] ::-webkit-scrollbar-thumb { background: hsl(243, 25%, 22%); border-radius: 3px; }
+[data-md-color-scheme="slate"] ::-webkit-scrollbar-thumb:hover { background: hsl(263, 70%, 45%); }

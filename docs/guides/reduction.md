@@ -9,7 +9,7 @@ Current quantum hardware is limited to tens or hundreds of qubits. Most real-wor
 | Encoding | Qubits needed for d features |
 |---|---|
 | Angle | d qubits |
-| Amplitude | log₂(d) qubits |
+| Amplitude | $\log_2(d)$ qubits |
 | Basis | d qubits |
 | IQP | d qubits |
 
@@ -40,7 +40,7 @@ print(pipeline.reducer.explained_variance_ratio_)
 
 ## LDA
 
-Maximises class separability. Research shows LDA outperforms PCA for quantum classification tasks (Mancilla & Pere, 2022). Requires class labels. Maximum components: n_classes − 1.
+Maximises class separability. Research shows LDA outperforms PCA for quantum classification tasks. Requires class labels. Maximum components: n_classes − 1.
 
 ```python
 from quprep.reduce.lda import LDAReducer
@@ -125,6 +125,5 @@ Supported backends: `ibm_brisbane` (127), `ibm_kyiv` (127), `ibm_torino` (133), 
 
 ---
 
-## References
-
-- Mancilla & Pere (2022) — LDA vs PCA for quantum classification
+!!! note "References"
+    Mancilla, J., & Pere, C. (2022). A preprocessing perspective for quantum machine learning classification advantage in finance using NISQ algorithms. *Entropy*, 24(11), 1656. [doi:10.3390/e24111656](https://doi.org/10.3390/e24111656){target="_blank"}

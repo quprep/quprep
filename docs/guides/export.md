@@ -139,7 +139,7 @@ print(circuit)
 pip install quprep[tket]
 ```
 
-Returns a `pytket.Circuit`. Angles are automatically converted from radians to pytket half-turns (angle/π).
+Returns a `pytket.Circuit`. Angles are automatically converted from radians to pytket half-turns ($\text{angle}/\pi$).
 
 ```python
 from quprep.export.tket_export import TKETExporter

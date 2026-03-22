@@ -44,8 +44,8 @@ Requires $\|x\|_2 = 1$. If $d$ is not a power of two, pads with zeros and re-nor
 
 | Property | Value |
 |---|---|
-| Qubits | n = ⌈log₂(d)⌉ |
-| Depth | O(2ⁿ) — exponential |
+| Qubits | $n = \lceil \log_2(d) \rceil$ |
+| Depth | $O(2^n)$ — exponential |
 | NISQ-safe | ❌ Poor — deep circuit |
 | Best for | Qubit-limited scenarios, high expressivity |
 
@@ -107,8 +107,8 @@ $$|\psi(x)\rangle = U_\Phi(x) H^{\otimes n} |0\rangle^n$$
 | Property | Value |
 |---|---|
 | Qubits | n = d |
-| Depth | O(d² · reps) |
-| NISQ-safe | ⚠️ Medium — d² two-qubit gates |
+| Depth | $O(d^2 \cdot \text{reps})$ |
+| NISQ-safe | ⚠️ Medium — $d^2$ two-qubit gates |
 | Best for | Kernel methods, quantum advantage arguments |
 
 ```python
@@ -118,9 +118,10 @@ enc = IQPEncoder(reps=2)
 result = enc.encode(x)   # x in [−π, π]
 ```
 
-**Normalization:** `minmax_pm_pi` ([−π, π]). Applied automatically.
+**Normalization:** `minmax_pm_pi` ($[-\pi, \pi]$). Applied automatically.
 
-Reference: Havlíček et al., *Nature* 567, 209–212 (2019).
+!!! note "References"
+    Havlíček et al. (2019). Supervised learning with quantum-enhanced feature spaces. *Nature*, 567, 209–212. [doi:10.1038/s41586-019-0980-2](https://doi.org/10.1038/s41586-019-0980-2){target="_blank"}
 
 ---
 
@@ -163,7 +164,8 @@ enc = ReUploadEncoder(layers=3, rotation="ry")
 result = enc.encode(x)   # x in [−π, π]
 ```
 
-Reference: Pérez-Salinas et al., *Quantum* 4, 341 (2020).
+!!! note "References"
+    Pérez-Salinas et al. (2020). Data re-uploading for a universal quantum classifier. *Quantum*, 4, 226. [doi:10.22331/q-2020-02-06-226](https://doi.org/10.22331/q-2020-02-06-226){target="_blank"}
 
 ---
 

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block extrahead %}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+{% endblock %}
+
+{% block scripts %}
+  {{ super() }}
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+  <script>
+    document$.subscribe(function() {
+      MathJax.startup.promise.then(function() {
+        MathJax.typesetPromise();
+      });
+    });
+  </script>
+{% endblock %}
