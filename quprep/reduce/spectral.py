@@ -25,7 +25,20 @@ class SpectralReducer:
         self.n_components = n_components
 
     def fit_transform(self, dataset):
-        """Apply FFT row-wise and return reduced Dataset."""
+        """
+        Apply row-wise FFT and return the reduced Dataset.
+
+        Parameters
+        ----------
+        dataset : Dataset
+            Input dataset treated as 1-D signal rows.
+
+        Returns
+        -------
+        Dataset
+            Reduced dataset with features named ``freq0``, ``freq1``, etc.
+            Values are FFT magnitudes (always >= 0).
+        """
         from quprep.core.dataset import Dataset
 
         fft = np.fft.rfft(dataset.data, axis=1)  # (n_samples, n_freq_bins)
@@ -73,7 +86,19 @@ class TSNEReducer:
         self.random_state = random_state
 
     def fit_transform(self, dataset):
-        """Fit t-SNE and return reduced Dataset."""
+        """
+        Fit t-SNE and return the reduced Dataset.
+
+        Parameters
+        ----------
+        dataset : Dataset
+            Input dataset.
+
+        Returns
+        -------
+        Dataset
+            Reduced dataset with features named ``tsne0``, ``tsne1``, etc.
+        """
         from sklearn.manifold import TSNE
 
         from quprep.core.dataset import Dataset
@@ -126,7 +151,24 @@ class UMAPReducer:
         self.random_state = random_state
 
     def fit_transform(self, dataset):
-        """Fit UMAP and return reduced Dataset."""
+        """
+        Fit UMAP and return the reduced Dataset.
+
+        Parameters
+        ----------
+        dataset : Dataset
+            Input dataset.
+
+        Returns
+        -------
+        Dataset
+            Reduced dataset with features named ``umap0``, ``umap1``, etc.
+
+        Raises
+        ------
+        ImportError
+            If ``umap-learn`` is not installed (``pip install quprep[umap]``).
+        """
         try:
             import umap
         except ImportError as e:

@@ -1,19 +1,18 @@
-"""Max-Cut QUBO formulation.
+r"""Max-Cut QUBO formulation.
 
 Max-Cut: given a weighted graph G=(V, E), partition V into two sets S and S_bar
 to maximize the total weight of edges crossing the cut.
 
 QUBO formulation (minimization):
-    minimize  -sum_{(i,j) in E} w_ij * (x_i + x_j - 2*x_i*x_j)
 
-which maps to:
-    Q[i,i] -= sum of weights of edges incident to i
-    Q[i,j] += 2 * w_ij  for each edge (i,j), i < j
+$$\min -\sum_{(i,j) \in E} w_{ij}(x_i + x_j - 2x_ix_j)$$
+
+which maps to: $Q_{ii} -= \sum_j w_{ij}$, $Q_{ij} += 2w_{ij}$ for $i < j$.
 
 References
 ----------
 Lucas, A. (2014). Ising formulations of many NP problems.
-    Frontiers in Physics, 2, 5.
+    *Frontiers in Physics*, 2, 5. [doi:10.3389/fphy.2014.00005](https://doi.org/10.3389/fphy.2014.00005){target="_blank"}
 """
 
 from __future__ import annotations

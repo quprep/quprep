@@ -68,10 +68,12 @@ def profile(dataset: Dataset) -> DatasetProfile:
     Parameters
     ----------
     dataset : Dataset
+        Input dataset to profile.
 
     Returns
     -------
     DatasetProfile
+        Summary statistics including shape, feature types, and missing value counts.
     """
     data = dataset.data
     n_samples, n_features = data.shape

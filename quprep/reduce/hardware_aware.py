@@ -25,7 +25,7 @@ def _max_features_for_encoding(encoding: str, qubit_budget: int) -> int:
 
 
 class HardwareAwareReducer:
-    """
+    r"""
     Automatically reduce features to fit a target backend's qubit count.
 
     Calculates the qubit budget for the given backend and encoding, then
@@ -38,7 +38,7 @@ class HardwareAwareReducer:
     encoding : str
         Target encoding — determines the feature-to-qubit mapping.
         ``'angle'`` and ``'basis'`` use 1 qubit per feature.
-        ``'amplitude'`` uses log₂(n_features) qubits.
+        ``'amplitude'`` uses $\log_2(\text{n\_features})$ qubits.
     method : str
         Reduction method. Currently ``'pca'`` and ``'auto'`` (defaults to PCA).
     """
@@ -54,7 +54,29 @@ class HardwareAwareReducer:
         self.method = method
 
     def fit_transform(self, dataset):
-        """Reduce to the backend's qubit budget and return Dataset."""
+        """
+        Reduce features to fit the backend's qubit budget.
+
+        If the dataset already fits within the budget, it is returned unchanged.
+        Otherwise PCA is applied to reduce to the maximum feature count allowed
+        by the encoding on the target backend.
+
+        Parameters
+        ----------
+        dataset : Dataset
+            Input dataset.
+
+        Returns
+        -------
+        Dataset
+            Dataset with at most ``max_features`` columns for the configured
+            backend and encoding. Passthrough if already within budget.
+
+        Raises
+        ------
+        ValueError
+            If ``backend`` is an unrecognised string name.
+        """
         n_features = dataset.data.shape[1]
         budget = self._qubit_budget()
         max_feat = _max_features_for_encoding(self.encoding, budget)

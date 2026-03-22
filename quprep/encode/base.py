@@ -10,11 +10,11 @@ from quprep.core.dataset import Dataset
 
 
 class BaseEncoder(ABC):
-    """
+    r"""
     Abstract interface for quantum encoders.
 
     All encoders must implement `encode()`, which maps a normalized
-    feature vector x ∈ ℝ^d to a parameterized quantum circuit.
+    feature vector $x \in \mathbb{R}^d$ to a parameterized quantum circuit.
 
     Subclasses should document:
     - The mathematical mapping x → circuit parameters.
@@ -36,10 +36,23 @@ class BaseEncoder(ABC):
         Returns
         -------
         EncodedResult
+            Circuit parameters and metadata for the encoded sample.
         """
 
     def encode_batch(self, dataset: Dataset) -> list[EncodedResult]:
-        """Encode all samples in a Dataset."""
+        """
+        Encode all samples in a Dataset.
+
+        Parameters
+        ----------
+        dataset : Dataset
+            Dataset whose rows are encoded one by one.
+
+        Returns
+        -------
+        list of EncodedResult
+            One EncodedResult per sample row.
+        """
         return [self.encode(row) for row in dataset.data]
 
     @property

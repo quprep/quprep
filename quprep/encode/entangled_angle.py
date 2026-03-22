@@ -1,13 +1,13 @@
-"""Entangled angle encoding — rotation gates interleaved with entangling CNOT layers.
+r"""Entangled angle encoding — rotation gates interleaved with entangling CNOT layers.
 
 Mathematical formulation
 ------------------------
 Applies ``layers`` repetitions of:
 
-    1. Single-qubit rotation layer:  R_G(x_i) on each qubit i
-    2. Entangling layer:             CNOT gates according to ``entanglement``
+1. Single-qubit rotation layer: $R_G(x_i)$ on each qubit $i$
+2. Entangling layer: CNOT gates according to ``entanglement``
 
-where R_G ∈ {Ry, Rx, Rz}.
+where $R_G \in \{R_y, R_x, R_z\}$.
 
 Entanglement patterns
 ---------------------
@@ -18,7 +18,7 @@ Entanglement patterns
 Properties
 ----------
 Qubits : n = d
-Depth  : O(d · layers)  [linear/circular]  or  O(d² · layers)  [full]
+Depth  : $O(d \cdot \text{layers})$ [linear/circular] or $O(d^2 \cdot \text{layers})$ [full]
 NISQ   : Good for linear/circular (shallow per layer). Full entanglement
          may be deep on near-term hardware.
 Best for: Classification and QML tasks that benefit from feature correlations.

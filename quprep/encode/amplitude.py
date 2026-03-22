@@ -1,17 +1,17 @@
-"""Amplitude encoding — embeds data as quantum state amplitudes.
+r"""Amplitude encoding — embeds data as quantum state amplitudes.
 
 Mathematical formulation
 ------------------------
-Given L2-normalized x ∈ ℝ^d with ‖x‖₂ = 1:
+Given L2-normalized $x \in \mathbb{R}^d$ with $\|x\|_2 = 1$:
 
-    |ψ(x)⟩ = Σ_{i=0}^{d-1} x_i |i⟩
+$|\psi(x)\rangle = \sum_{i=0}^{d-1} x_i |i\rangle$
 
-Requires d = 2^n. If d is not a power of two, pad with zeros.
+Requires $d = 2^n$. If d is not a power of two, pad with zeros.
 
 Properties
 ----------
-Qubits : n = ⌈log₂(d)⌉
-Depth  : O(2^n) — exponential state preparation circuit.
+Qubits : $n = \lceil \log_2(d) \rceil$
+Depth  : $O(2^n)$ — exponential state preparation circuit.
 NISQ   : Poor — deep circuit, not suitable for current hardware.
 Best for: Qubit-limited scenarios where expressivity matters more than depth.
 
@@ -26,10 +26,10 @@ from quprep.encode.base import BaseEncoder, EncodedResult
 
 
 class AmplitudeEncoder(BaseEncoder):
-    """
+    r"""
     Amplitude encoding.
 
-    x must be L2-normalized (‖x‖₂ = 1). Use quprep.normalize.Scaler('l2').
+    x must be L2-normalized ($\|x\|_2 = 1$). Use quprep.normalize.Scaler('l2').
 
     Parameters
     ----------
@@ -50,11 +50,20 @@ class AmplitudeEncoder(BaseEncoder):
         return "O(2^n)"
 
     def encode(self, x: np.ndarray) -> EncodedResult:
-        """
+        r"""
         Encode x as amplitude vector.
 
-        Validates ‖x‖₂ = 1 (within numerical tolerance). If d is not a power
-        of two, pads with zeros and re-normalizes (when pad=True).
+        Parameters
+        ----------
+        x : np.ndarray, shape (d,)
+            L2-normalized feature vector ($\|x\|_2 = 1$). Use ``Scaler('l2')``.
+            If d is not a power of two and ``pad=True``, zero-pads and re-normalizes.
+
+        Returns
+        -------
+        EncodedResult
+            ``parameters`` = amplitude vector (length padded to next power of two).
+            ``metadata`` includes ``encoding``, ``n_qubits``, ``padded``, ``original_dim``.
         """
         x = np.asarray(x, dtype=float)
         if x.ndim != 1:

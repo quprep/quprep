@@ -39,7 +39,20 @@ class QASMExporter:
         self.version = version
 
     def export(self, encoded) -> str:
-        """Return the OpenQASM 3.0 string for an EncodedResult."""
+        """
+        Convert an EncodedResult to an OpenQASM 3.0 string.
+
+        Parameters
+        ----------
+        encoded : EncodedResult
+            Output from any QuPrep encoder (except amplitude).
+
+        Returns
+        -------
+        str
+            OpenQASM 3.0 circuit string, compatible with Qiskit, Cirq,
+            and hardware backends.
+        """
         encoding = encoded.metadata.get("encoding", "unknown")
         if encoding == "angle":
             return self._export_angle(encoded)
@@ -152,10 +165,30 @@ class QASMExporter:
         return "\n".join(lines) + "\n"
 
     def export_batch(self, encoded_list: list) -> list[str]:
-        """Export a list of EncodedResults to QASM strings."""
+        """
+        Export a list of EncodedResults to QASM strings.
+
+        Parameters
+        ----------
+        encoded_list : list of EncodedResult
+
+        Returns
+        -------
+        list of str
+            One OpenQASM 3.0 string per sample.
+        """
         return [self.export(e) for e in encoded_list]
 
     def save(self, encoded, path: str | Path) -> None:
-        """Write the QASM string to a .qasm file."""
+        """
+        Export an EncodedResult and write the QASM string to a file.
+
+        Parameters
+        ----------
+        encoded : EncodedResult
+            Output from any QuPrep encoder.
+        path : str or Path
+            Destination file path (e.g. ``'circuit.qasm'``).
+        """
         qasm_str = self.export(encoded)
         Path(path).write_text(qasm_str, encoding="utf-8")

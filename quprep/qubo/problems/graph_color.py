@@ -1,24 +1,22 @@
-"""Graph Coloring QUBO formulation.
+r"""Graph Coloring QUBO formulation.
 
-Graph coloring: assign one of K colors to each node in graph G=(V, E) such
-that no two adjacent nodes share the same color.
+Graph coloring: assign one of $K$ colors to each node in graph $G=(V, E)$
+such that no two adjacent nodes share the same color.
 
-QUBO uses n*K binary variables x_{i,c}:
-    x_{i,c} = 1  =>  node i is assigned color c
+QUBO uses $n \cdot K$ binary variables $x_{i,c}$ where $x_{i,c}=1$ means
+node $i$ is assigned color $c$.
 
-Constraints:
-    C1 (one color per node): sum_c x[i,c] = 1  for all i
-    C2 (valid coloring):     x[i,c] * x[j,c] = 0  for all edges (i,j), all colors c
+Constraints (both enforced as penalty terms):
 
-Both constraints are penalty terms. There is no explicit minimization objective —
-any feasible assignment satisfies the graph coloring requirement.
+- $C_1$ (one color per node): $\sum_c x_{i,c} = 1$ for all $i$
+- $C_2$ (valid coloring): $x_{i,c} \cdot x_{j,c} = 0$ for all edges $(i,j)$, all $c$
 
-Variable index: v(node, color) = node * n_colors + color
+Variable index: $v(i, c) = i \cdot K + c$
 
 References
 ----------
 Lucas, A. (2014). Ising formulations of many NP problems.
-    Frontiers in Physics, 2, 5.
+    *Frontiers in Physics*, 2, 5. [doi:10.3389/fphy.2014.00005](https://doi.org/10.3389/fphy.2014.00005){target="_blank"}
 """
 
 from __future__ import annotations

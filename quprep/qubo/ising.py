@@ -1,9 +1,10 @@
-"""QUBO <-> Ising transformations.
+r"""QUBO <-> Ising transformations.
 
-QUBO: minimize x^T Q x,  x in {0, 1}^n
-Ising: minimize sum_{i<j} J_{ij} s_i s_j + sum_i h_i s_i,  s in {-1, +1}^n
+QUBO: minimize $x^T Q x$, $x \in \{0, 1\}^n$
 
-Transformation: s_i = 2*x_i - 1  <=>  x_i = (s_i + 1) / 2
+Ising: minimize $\sum_{i<j} J_{ij} s_i s_j + \sum_i h_i s_i$, $s \in \{-1, +1\}^n$
+
+Transformation: $s_i = 2x_i - 1 \iff x_i = (s_i + 1) / 2$
 """
 
 from __future__ import annotations
@@ -19,7 +20,7 @@ if TYPE_CHECKING:
 
 @dataclass
 class IsingResult:
-    """
+    r"""
     Ising model representation.
 
     Attributes
@@ -37,17 +38,21 @@ class IsingResult:
     offset: float = 0.0
 
     def to_qubo(self):
-        """
+        r"""
         Convert Ising (h, J) back to QUBO form.
 
-        Uses the inverse transformation x_i = (s_i + 1) / 2:
-            Q[i,i] = 2*h_i - 2 * sum_{j != i} J_sym[i,j]
-            Q[i,j] = 4 * J[i,j]   for i < j
-            offset  = original_offset + sum(J upper-tri) - sum(h)
+        Uses the inverse transformation $x_i = (s_i + 1) / 2$:
+
+        $$
+        Q_{ii} = 2h_i - 2\sum_{j \neq i} J^{\text{sym}}_{ij}, \quad
+        Q_{ij} = 4J_{ij} \; (i<j), \quad
+        \text{offset} = \text{offset}_0 + \textstyle\sum J_{\text{upper}} - \sum_i h_i
+        $$
 
         Returns
         -------
         QUBOResult
+            QUBO form of the Ising model.
         """
         from quprep.qubo.converter import QUBOResult
 
@@ -71,14 +76,16 @@ class IsingResult:
 
 
 def ising_to_qubo(ising: IsingResult) -> QUBOResult:
-    """
+    r"""
     Convert an Ising model back to QUBO form.
 
-    Applies the inverse substitution x_i = (s_i + 1) / 2:
+    Applies the inverse substitution $x_i = (s_i + 1) / 2$:
 
-        Q[i,i] = 2*h_i - 2 * sum_{j != i} J_sym[i,j]
-        Q[i,j] = 4 * J[i,j]   for i < j
-        offset  = original_offset + sum(J_upper) - sum(h)
+    $$
+    Q_{ii} = 2h_i - 2\sum_{j \neq i} J^{\text{sym}}_{ij}, \quad
+    Q_{ij} = 4J_{ij} \; (i<j), \quad
+    \text{offset} = \text{offset}_0 + \sum_{\text{upper}} J - \sum_i h_i
+    $$
 
     Parameters
     ----------
@@ -88,6 +95,7 @@ def ising_to_qubo(ising: IsingResult) -> QUBOResult:
     Returns
     -------
     QUBOResult
+        QUBO form of the Ising model.
 
     Examples
     --------
@@ -104,13 +112,16 @@ def ising_to_qubo(ising: IsingResult) -> QUBOResult:
 
 
 def qubo_to_ising(qubo) -> IsingResult:
-    """
+    r"""
     Convert a QUBOResult to Ising (h, J) form.
 
-    Uses the substitution x_i = (s_i + 1) / 2:
-        J[i,j] = Q[i,j] / 4                          for i < j
-        h[i]   = Q[i,i]/2 + sum_{j!=i} Q_sym[i,j]/4
-        offset  = original_offset + sum(Q_diag)/2 + sum(Q_upper_off_diag)/4
+    Uses the substitution $x_i = (s_i + 1) / 2$:
+
+    $$
+    J_{ij} = \frac{Q_{ij}}{4} \; (i<j), \quad
+    h_i = \frac{Q_{ii}}{2} + \sum_{j \neq i} \frac{Q^{\text{sym}}_{ij}}{4}, \quad
+    \text{offset} = \text{offset}_0 + \frac{\sum_i Q_{ii}}{2} + \frac{\sum_{i<j} Q_{ij}}{4}
+    $$
 
     Parameters
     ----------
@@ -120,6 +131,7 @@ def qubo_to_ising(qubo) -> IsingResult:
     Returns
     -------
     IsingResult
+        Ising model with bias vector h and coupling matrix J.
     """
     Q = qubo.Q
 

@@ -30,6 +30,7 @@ def draw_qubo(qubo, title: str = "QUBO Matrix", cmap: str = "RdBu_r", ax=None):
     Returns
     -------
     matplotlib.axes.Axes
+        Axes object with the Q matrix heatmap drawn on it.
 
     Raises
     ------
@@ -106,6 +107,7 @@ def draw_ising(ising, title: str = "Ising Model", ax=None):
     Returns
     -------
     matplotlib.axes.Axes
+        Axes object with the Ising graph drawn on it.
 
     Raises
     ------

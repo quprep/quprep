@@ -43,7 +43,20 @@ class QiskitExporter:
             ) from None
 
     def export(self, encoded) -> qiskit.QuantumCircuit:
-        """Convert an EncodedResult to a Qiskit QuantumCircuit."""
+        """
+        Convert an EncodedResult to a Qiskit QuantumCircuit.
+
+        Parameters
+        ----------
+        encoded : EncodedResult
+            Output from any QuPrep encoder. Supports ``angle``, ``basis``,
+            and ``amplitude`` encodings.
+
+        Returns
+        -------
+        qiskit.QuantumCircuit
+            Ready-to-transpile Qiskit circuit.
+        """
         from qiskit import QuantumCircuit
 
         encoding = encoded.metadata.get("encoding", "unknown")
@@ -76,5 +89,16 @@ class QiskitExporter:
         return qc
 
     def export_batch(self, encoded_list: list) -> list:
-        """Export a list of EncodedResults."""
+        """
+        Export a list of EncodedResults to Qiskit QuantumCircuits.
+
+        Parameters
+        ----------
+        encoded_list : list of EncodedResult
+
+        Returns
+        -------
+        list of qiskit.QuantumCircuit
+            One circuit per sample.
+        """
         return [self.export(e) for e in encoded_list]

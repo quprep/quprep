@@ -1,13 +1,14 @@
-"""0/1 Knapsack QUBO formulation.
+r"""0/1 Knapsack QUBO formulation.
 
 Knapsack: given n items with values v_i and weights w_i, select a subset
 to maximize total value without exceeding capacity W.
 
 QUBO formulation (minimization):
-    minimize  -sum_i v_i * x_i  +  penalty * (sum_i w_i * x_i - W)^2
 
-The capacity constraint is enforced via a quadratic penalty term.
-The penalty coefficient should be at least max(v_i) to ensure feasibility.
+$$\min -\sum_i v_i x_i + \lambda\!\left(\sum_i w_i x_i - W\right)^2$$
+
+The capacity constraint is enforced via a quadratic penalty $\lambda$.
+The penalty coefficient should be at least $\max(v_i)$ to ensure feasibility.
 
 Note
 ----
@@ -18,7 +19,7 @@ use slack binary variables (adds ceil(log2(W+1)) ancilla qubits).
 References
 ----------
 Lucas, A. (2014). Ising formulations of many NP problems.
-    Frontiers in Physics, 2, 5.
+    *Frontiers in Physics*, 2, 5. [doi:10.3389/fphy.2014.00005](https://doi.org/10.3389/fphy.2014.00005){target="_blank"}
 """
 
 from __future__ import annotations
@@ -54,6 +55,11 @@ def knapsack(
     -------
     QUBOResult
         Variable x_i = 1 means item i is selected.
+
+    Raises
+    ------
+    ValueError
+        If ``weights`` and ``values`` have different lengths.
     """
     w = np.asarray(weights, dtype=float)
     v = np.asarray(values, dtype=float)

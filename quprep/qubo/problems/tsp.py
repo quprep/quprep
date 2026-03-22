@@ -1,26 +1,26 @@
-"""Travelling Salesman Problem (TSP) QUBO formulation.
+r"""Travelling Salesman Problem (TSP) QUBO formulation.
 
 TSP: given n cities with distance matrix D, find the shortest Hamiltonian
 cycle visiting every city exactly once.
 
-QUBO formulation uses n^2 binary variables x_{i,t}:
-    x_{i,t} = 1  =>  city i is visited at time step t
+QUBO formulation uses $n^2$ binary variables $x_{i,t}$ where $x_{i,t}=1$ means
+city $i$ is visited at time step $t$.
 
 Objective (minimize total distance):
-    sum_{i,j,t} D[i,j] * x[i,t] * x[j,(t+1) mod n]
 
-Constraints:
-    C1: each city visited exactly once:   sum_t x[i,t] = 1  for all i
-    C2: each time slot has one city:      sum_i x[i,t] = 1  for all t
+$$\min \sum_{i,j,t} D_{ij}\, x_{i,t}\, x_{j,(t+1)\bmod n}$$
 
-Both constraints are enforced with quadratic penalty terms.
+Constraints (enforced via quadratic penalties):
 
-Variable index: v(i, t) = i * n + t   (i = city, t = time step)
+- $C_1$: each city visited once: $\sum_t x_{i,t} = 1$ for all $i$
+- $C_2$: one city per time slot: $\sum_i x_{i,t} = 1$ for all $t$
+
+Variable index: $v(i, t) = i \cdot n + t$.
 
 References
 ----------
 Lucas, A. (2014). Ising formulations of many NP problems.
-    Frontiers in Physics, 2, 5.
+    *Frontiers in Physics*, 2, 5. [doi:10.3389/fphy.2014.00005](https://doi.org/10.3389/fphy.2014.00005){target="_blank"}
 """
 
 from __future__ import annotations
@@ -47,9 +47,14 @@ def tsp(distance_matrix: np.ndarray, penalty: float | None = None) -> QUBOResult
     Returns
     -------
     QUBOResult
-        n^2 binary variables. variable_map["x_i_t"] gives the index of x_{i,t}.
+        $n^2$ binary variables. ``variable_map["x_i_t"]`` gives the index of $x_{i,t}$.
         A feasible solution has exactly n variables equal to 1, one per city
         and one per time step.
+
+    Raises
+    ------
+    ValueError
+        If ``distance_matrix`` is not a square 2-D array.
     """
     D = np.asarray(distance_matrix, dtype=float)
     n = D.shape[0]

@@ -1,18 +1,18 @@
-"""Data re-uploading encoding — maximum expressivity via repeated feature layers.
+r"""Data re-uploading encoding — maximum expressivity via repeated feature layers.
 
 Mathematical formulation
 ------------------------
-Given x ∈ [−π, π]^d and L layers:
+Given $x \in [-\pi, \pi]^d$ and $L$ layers:
 
-    |ψ(x)⟩ = U_L(θ_L) S(x) ... U_1(θ_1) S(x) |0⟩^n
+$|\psi(x)\rangle = U_L(\theta_L)\, S(x)\, \cdots\, U_1(\theta_1)\, S(x)\, |0\rangle^n$
 
-where S(x) = ⊗_i R_Y(x_i) is the data-encoding layer and U_l(θ) is a
-trainable variational layer. Features are uploaded L times.
+where $S(x) = \bigotimes_i R_Y(x_i)$ is the data-encoding layer and $U_l(\theta)$ is a
+trainable variational layer. Features are uploaded $L$ times.
 
 Properties
 ----------
 Qubits : n = d
-Depth  : O(d · L)
+Depth  : $O(d \cdot L)$
 NISQ   : Medium — linear in features and layers.
 Best for: High-expressivity QNNs. Universal approximation with enough layers.
 
@@ -59,12 +59,20 @@ class ReUploadEncoder(BaseEncoder):
         return "O(d · layers)"
 
     def encode(self, x: np.ndarray) -> EncodedResult:
-        """
+        r"""
         Encode a 1-D feature vector using data re-uploading.
 
-        The same feature vector is applied `layers` times. Parameters
-        store x repeated once — the exporter repeats it `layers` times.
-        Normalise input to [−π, π] with 'minmax_pm_pi' before encoding.
+        Parameters
+        ----------
+        x : np.ndarray, shape (d,)
+            Normalized feature vector in $[-\pi, \pi]$. Use ``Scaler('minmax_pm_pi')``.
+
+        Returns
+        -------
+        EncodedResult
+            ``parameters`` = x stored once (exporter repeats it ``layers`` times).
+            ``metadata`` includes ``encoding``, ``n_qubits``, ``layers``,
+            ``rotation``, ``depth``.
         """
         x = np.asarray(x, dtype=float)
         if x.ndim != 1 or len(x) == 0:

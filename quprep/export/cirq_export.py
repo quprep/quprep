@@ -49,6 +49,7 @@ class CirqExporter:
         Returns
         -------
         cirq.Circuit
+            Circuit using ``cirq.LineQubit`` wires.
         """
         import cirq
 
@@ -133,5 +134,16 @@ class CirqExporter:
         return cirq.Circuit(ops)
 
     def export_batch(self, encoded_list: list) -> list:
-        """Export a list of EncodedResults to Cirq Circuits."""
+        """
+        Export a list of EncodedResults to Cirq Circuits.
+
+        Parameters
+        ----------
+        encoded_list : list of EncodedResult
+
+        Returns
+        -------
+        list of cirq.Circuit
+            One circuit per sample.
+        """
         return [self.export(e) for e in encoded_list]

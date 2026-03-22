@@ -26,7 +26,13 @@ class PipelineResult:
 
     @property
     def circuit(self):
-        """First circuit in the batch — convenience for single-sample use."""
+        """
+        First item in the batch — convenience for single-sample use.
+
+        Returns the first exported circuit if an exporter was configured,
+        otherwise the first ``EncodedResult`` if only an encoder was configured,
+        otherwise ``None``.
+        """
         if self.circuits:
             return self.circuits[0]
         if self.encoded:
@@ -91,7 +97,21 @@ class Pipeline:
         self.exporter = exporter
 
     def fit_transform(self, source) -> PipelineResult:
-        """Run all pipeline stages on source data."""
+        """
+        Run all pipeline stages on source data and return results.
+
+        Parameters
+        ----------
+        source : str, Path, np.ndarray, pd.DataFrame, or Dataset
+            Input data. File paths are auto-ingested (CSV supported).
+            Arrays and DataFrames are wrapped automatically.
+
+        Returns
+        -------
+        PipelineResult
+            Contains ``dataset`` (processed), ``encoded`` (list of EncodedResult
+            or None), and ``circuits`` (framework-specific circuit objects or None).
+        """
         dataset = self._ingest(source)
 
         if self.cleaner is not None:

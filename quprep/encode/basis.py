@@ -1,12 +1,12 @@
-"""Basis encoding — maps binary/integer features to computational basis states.
+r"""Basis encoding — maps binary/integer features to computational basis states.
 
 Mathematical formulation
 ------------------------
-Given binary x ∈ {0,1}^d:
+Given binary $x \in \{0,1\}^d$:
 
-    |ψ(x)⟩ = |x_1 x_2 ... x_d⟩
+$|\psi(x)\rangle = |x_1\, x_2\, \cdots\, x_d\rangle$
 
-Each qubit is set to |0⟩ or |1⟩ via an X gate when x_i = 1.
+Each qubit is set to $|0\rangle$ or $|1\rangle$ via an X gate when $x_i = 1$.
 
 Properties
 ----------
@@ -50,8 +50,16 @@ class BasisEncoder(BaseEncoder):
         """
         Binarize x and encode as computational basis state.
 
-        Values >= threshold → 1 (qubit |1⟩ via X gate).
-        Values <  threshold → 0 (qubit |0⟩, identity).
+        Parameters
+        ----------
+        x : np.ndarray, shape (d,)
+            Feature vector. Values >= threshold → 1; values < threshold → 0.
+
+        Returns
+        -------
+        EncodedResult
+            ``parameters`` = binary vector of 0.0/1.0 values (one per qubit).
+            ``metadata`` includes ``encoding``, ``threshold``, ``n_qubits``, ``depth``.
         """
         x = np.asarray(x, dtype=float)
         if x.ndim != 1:

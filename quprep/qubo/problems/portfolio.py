@@ -1,19 +1,18 @@
-"""Markowitz Portfolio Optimization QUBO formulation.
+r"""Markowitz Portfolio Optimization QUBO formulation.
 
 Portfolio optimization: given n assets with expected returns mu_i and
 covariance matrix Sigma, select exactly K assets to maximize risk-adjusted
 return.
 
 QUBO formulation (minimization):
-    minimize  -sum_i mu_i * x_i
-              + risk_penalty * x^T Sigma x
-              + budget_penalty * (sum_i x_i - K)^2
+
+$$\min -\sum_i \mu_i x_i + \lambda_r\, x^T \Sigma x + \lambda_b\!\left(\sum_i x_i - K\right)^2$$
 
 References
 ----------
 Mugel et al. (2022). Dynamic portfolio optimization with real datasets using
     quantum processors and quantum-inspired tensor networks.
-    Physical Review Research, 4(1), 013006.
+    *Physical Review Research*, 4(1), 013006. [doi:10.1103/PhysRevResearch.4.013006](https://doi.org/10.1103/PhysRevResearch.4.013006){target="_blank"}
 """
 
 from __future__ import annotations
@@ -52,6 +51,11 @@ def portfolio(
     -------
     QUBOResult
         Variable x_i = 1 means asset i is selected.
+
+    Raises
+    ------
+    ValueError
+        If ``covariance`` shape does not match the number of assets in ``returns``.
     """
     mu = np.asarray(returns, dtype=float)
     Sigma = np.asarray(covariance, dtype=float)

@@ -1,24 +1,21 @@
-"""Job Scheduling QUBO formulation.
+r"""Job Scheduling QUBO formulation.
 
 Scheduling: assign n jobs to m machines to minimize total squared load
 (a proxy for balanced makespan minimization).
 
-QUBO uses n*m binary variables x_{i,k}:
-    x_{i,k} = 1  =>  job i is assigned to machine k
+QUBO uses $n \cdot m$ binary variables $x_{i,k}$ where $x_{i,k}=1$ means
+job $i$ is assigned to machine $k$.
 
 Objective (minimize load imbalance):
-    sum_k  (sum_i p_i * x[i,k])^2
 
-    where p_i is the processing time of job i.
+$$\min \sum_k \left(\sum_i p_i\, x_{i,k}\right)^2$$
 
-Minimizing squared machine loads encourages balanced assignment. The sum of
-squared loads is minimized when all machines carry equal load.
+where $p_i$ is the processing time of job $i$.
 
-Constraint:
-    Each job must be assigned to exactly one machine:
-        sum_k x[i,k] = 1  for all i
+Constraint: each job assigned to exactly one machine:
+$\sum_k x_{i,k} = 1$ for all $i$.
 
-Variable index: v(job, machine) = job * n_machines + machine
+Variable index: $v(i, k) = i \cdot m + k$.
 
 Notes
 -----
@@ -28,8 +25,8 @@ references for richer scheduling models.
 
 References
 ----------
-Venturelli et al. (2015). Quantum Optimization of Fully Connected Spin
-    Glasses. Physical Review X, 5(3), 031040.
+Lucas, A. (2014). Ising formulations of many NP problems.
+    *Frontiers in Physics*, 2, 5. [doi:10.3389/fphy.2014.00005](https://doi.org/10.3389/fphy.2014.00005){target="_blank"}
 """
 
 from __future__ import annotations

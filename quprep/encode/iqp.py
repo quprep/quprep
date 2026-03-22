@@ -1,18 +1,18 @@
-"""IQP (Instantaneous Quantum Polynomial) encoding.
+r"""IQP (Instantaneous Quantum Polynomial) encoding.
 
 Mathematical formulation
 ------------------------
-Given x ∈ [−π, π]^d with pairwise products x_i·x_j:
+Given $x \in [-\pi, \pi]^d$ with pairwise products $x_i \cdot x_j$:
 
-    |ψ(x)⟩ = U_Φ(x) H^⊗n |0⟩^n
+$|\psi(x)\rangle = U_\Phi(x) H^{\otimes n} |0\rangle^n$
 
-where U_Φ(x) = exp(i Σ_i x_i Z_i + i Σ_{i<j} x_i x_j Z_i Z_j)
+where $U_\Phi(x) = \exp\!\left(i \sum_i x_i Z_i + i \sum_{i<j} x_i x_j Z_i Z_j\right)$
 
 Properties
 ----------
 Qubits : n = d
-Depth  : O(d²) — quadratic in features.
-NISQ   : Medium — d² two-qubit gates required.
+Depth  : $O(d^2)$ — quadratic in features.
+NISQ   : Medium — $d^2$ two-qubit gates required.
 Best for: Kernel methods with quantum advantage arguments.
 
 Reference: Havlíček et al., Nature 567, 209–212 (2019).
@@ -49,11 +49,20 @@ class IQPEncoder(BaseEncoder):
         return "O(d² · reps)"
 
     def encode(self, x: np.ndarray) -> EncodedResult:
-        """
+        r"""
         Encode a 1-D feature vector using the IQP feature map.
 
-        Parameters store [x_0..x_{d-1}, x_0·x_1, ..., x_{d-2}·x_{d-1}].
-        Normalise input to [−π, π] with 'minmax_pm_pi' before encoding.
+        Parameters
+        ----------
+        x : np.ndarray, shape (d,)
+            Normalized feature vector in $[-\pi, \pi]$. Use ``Scaler('minmax_pm_pi')``.
+
+        Returns
+        -------
+        EncodedResult
+            ``parameters`` = $[x_0, \ldots, x_{d-1}, x_0 x_1, \ldots, x_{d-2} x_{d-1}]$
+            (d single-qubit angles followed by $d(d-1)/2$ pairwise products).
+            ``metadata`` includes ``encoding``, ``n_qubits``, ``reps``, ``depth``, ``n_pairs``.
         """
         x = np.asarray(x, dtype=float)
         if x.ndim != 1 or len(x) == 0:

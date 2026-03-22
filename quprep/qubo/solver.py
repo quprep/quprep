@@ -39,8 +39,8 @@ def solve_brute(qubo, max_n: int = 20) -> SolveResult:
     """
     Find the exact minimum of a QUBO by exhaustive enumeration.
 
-    Evaluates all 2^n binary strings and returns the one with the lowest
-    objective value x^T Q x + offset.
+    Evaluates all $2^n$ binary strings and returns the one with the lowest
+    objective value $x^T Q x + \text{offset}$.
 
     Parameters
     ----------
@@ -53,6 +53,7 @@ def solve_brute(qubo, max_n: int = 20) -> SolveResult:
     Returns
     -------
     SolveResult
+        Best solution found, its energy, and the number of states evaluated.
 
     Raises
     ------

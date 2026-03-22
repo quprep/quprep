@@ -1,17 +1,20 @@
-"""QUBO -> QAOA circuit generator.
+r"""QUBO -> QAOA circuit generator.
 
 Converts a QUBOResult (via its Ising form) into a parameterized QAOA circuit
 ready for quantum hardware or simulation.
 
-QAOA circuit structure (p layers):
-    1. Initialize all qubits in |+> = H|0>
-    2. For each layer l = 0..p-1:
-       a. Cost unitary U_C(gamma[l]):
-            - RZ(2*gamma*h_i) for each qubit i  (single-qubit Z bias)
-            - CNOT + RZ(2*gamma*J_ij) + CNOT    (two-qubit ZZ coupling)
-       b. Mixer unitary U_B(beta[l]):
-            - RX(2*beta) for each qubit i
-    3. Measure all qubits
+QAOA circuit structure ($p$ layers):
+
+1. Initialize: $|{+}\rangle^{\otimes n} = H^{\otimes n}|0\rangle^n$
+2. For each layer $l = 0 \ldots p-1$:
+
+   a. Cost unitary $U_C(\gamma_l)$:
+      - $RZ(2\gamma_l h_i)$ on each qubit $i$ (single-qubit Z bias)
+      - $\text{CNOT}_{ij} \cdot RZ(2\gamma_l J_{ij}) \cdot \text{CNOT}_{ij}$ (ZZ coupling)
+
+   b. Mixer unitary $U_B(\beta_l)$: $RX(2\beta_l)$ on each qubit $i$
+
+3. Measure all qubits
 
 The output is an OpenQASM 3.0 string by default, or can be integrated with
 any framework via the existing QuPrep exporters.

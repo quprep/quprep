@@ -2,12 +2,13 @@
 
 Supported encodings
 -------------------
-- angle       : RY/RX/RZ gate per qubit.
-- basis       : PauliX gates on qubits where the bit is 1.
-- amplitude   : AmplitudeEmbedding (full state vector initialization).
-- iqp         : Hadamards + RZ(x_i) + IsingZZ(x_i·x_j) interactions, repeated reps times.
-- reupload    : rotation gate repeated ``layers`` times per qubit.
-- hamiltonian : RZ(2·x_i·T/S) per qubit, repeated trotter_steps times.
+- angle           : RY/RX/RZ gate per qubit.
+- entangled_angle : rotation layer + CNOT entangling layer, repeated layers times.
+- basis           : PauliX gates on qubits where the bit is 1.
+- amplitude       : AmplitudeEmbedding (full state vector initialization).
+- iqp             : Hadamards + RZ(x_i) + IsingZZ(x_i·x_j) interactions, repeated reps times.
+- reupload        : rotation gate repeated ``layers`` times per qubit.
+- hamiltonian     : RZ(2·x_i·T/S) per qubit, repeated trotter_steps times.
 
 Requires: pip install quprep[pennylane]
 """
@@ -61,12 +62,15 @@ class PennyLaneExporter:
         Parameters
         ----------
         encoded : EncodedResult
-            Output from any QuPrep encoder.
+            Output from any QuPrep encoder. Supports all 7 encodings:
+            ``angle``, ``entangled_angle``, ``basis``, ``amplitude``,
+            ``iqp``, ``reupload``, ``hamiltonian``.
 
         Returns
         -------
         qml.QNode
-            Callable quantum circuit.
+            Callable quantum circuit. Invoke with no arguments to execute
+            and obtain the quantum state vector.
         """
         import pennylane as qml
 
@@ -171,5 +175,16 @@ class PennyLaneExporter:
         return circuit
 
     def export_batch(self, encoded_list: list) -> list:
-        """Export a list of EncodedResults to PennyLane QNodes."""
+        """
+        Export a list of EncodedResults to PennyLane QNodes.
+
+        Parameters
+        ----------
+        encoded_list : list of EncodedResult
+
+        Returns
+        -------
+        list of qml.QNode
+            One callable QNode per sample.
+        """
         return [self.export(e) for e in encoded_list]

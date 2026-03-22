@@ -244,6 +244,7 @@ def draw_matplotlib(encoded, filename: str | Path | None = None):
     Returns
     -------
     matplotlib.figure.Figure or None
+        Figure object if filename is None; None after saving to file.
     """
     try:
         import matplotlib.pyplot as plt

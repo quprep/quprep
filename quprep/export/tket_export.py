@@ -22,10 +22,10 @@ if TYPE_CHECKING:
 
 
 class TKETExporter:
-    """
+    r"""
     Export EncodedResult objects to TKET/pytket Circuit.
 
-    pytket rotation gates use half-turns (angle / π). This exporter converts
+    pytket rotation gates use half-turns ($\text{angle} / \pi$). This exporter converts
     all radian angles from QuPrep encoders to the pytket convention automatically.
 
     Requires: pip install quprep[tket]
@@ -53,6 +53,7 @@ class TKETExporter:
         Returns
         -------
         pytket.Circuit
+            Circuit with angles converted to pytket half-turns.
         """
         from pytket import Circuit
 
@@ -138,5 +139,16 @@ class TKETExporter:
         return circuit
 
     def export_batch(self, encoded_list: list) -> list:
-        """Export a list of EncodedResults to pytket Circuits."""
+        """
+        Export a list of EncodedResults to pytket Circuits.
+
+        Parameters
+        ----------
+        encoded_list : list of EncodedResult
+
+        Returns
+        -------
+        list of pytket.Circuit
+            One circuit per sample.
+        """
         return [self.export(e) for e in encoded_list]

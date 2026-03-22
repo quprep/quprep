@@ -1,12 +1,12 @@
-"""Angle encoding — maps features to qubit rotation angles.
+r"""Angle encoding — maps features to qubit rotation angles.
 
 Mathematical formulation
 ------------------------
-Given normalized x ∈ [0, π]^d (Ry) or [−π, π]^d (Rx/Rz):
+Given normalized $x \in [0, \pi]^d$ (Ry) or $x \in [-\pi, \pi]^d$ (Rx/Rz):
 
-    |ψ(x)⟩ = ⊗_{i=1}^{d} R_G(x_i)|0⟩
+$|\psi(x)\rangle = \bigotimes_{i=1}^{d} R_G(x_i)|0\rangle$
 
-where R_G is the chosen rotation gate (Ry, Rx, or Rz).
+where $R_G$ is the chosen rotation gate (Ry, Rx, or Rz).
 
 Properties
 ----------
@@ -47,11 +47,21 @@ class AngleEncoder(BaseEncoder):
         return 1
 
     def encode(self, x: np.ndarray) -> EncodedResult:
-        """
+        r"""
         Encode feature vector x as rotation angles.
 
-        x must be pre-normalized to [0, π] for 'ry', or [−π, π] for 'rx'/'rz'.
-        Use quprep.normalize.auto_normalizer(encoding) to apply correct scaling.
+        Parameters
+        ----------
+        x : np.ndarray, shape (d,)
+            Normalized feature vector. Must be in $[0, \pi]$ for 'ry',
+            or $[-\pi, \pi]$ for 'rx'/'rz'. Use
+            ``quprep.normalize.auto_normalizer(encoding)`` for correct scaling.
+
+        Returns
+        -------
+        EncodedResult
+            ``parameters`` = x (rotation angles, one per qubit).
+            ``metadata`` includes ``encoding``, ``rotation``, ``n_qubits``, ``depth``.
         """
         x = np.asarray(x, dtype=float)
         if x.ndim != 1:

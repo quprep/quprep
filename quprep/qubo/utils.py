@@ -23,6 +23,7 @@ def add_qubo(q1, q2, weight: float = 1.0):
     Returns
     -------
     QUBOResult
+        Combined QUBO with ``Q = q1.Q + weight * q2.Q`` and merged variable maps.
 
     Raises
     ------

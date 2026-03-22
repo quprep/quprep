@@ -1,4 +1,4 @@
-"""Constraint encoding for QUBO — convert linear/quadratic constraints to penalty terms."""
+r"""Constraint encoding for QUBO — convert linear/quadratic constraints to penalty terms."""
 
 from __future__ import annotations
 
@@ -6,19 +6,20 @@ import numpy as np
 
 
 def equality_penalty(A: np.ndarray, b: np.ndarray, penalty: float) -> tuple[np.ndarray, float]:
-    """
-    Encode linear equality constraints Ax = b as a QUBO penalty matrix.
+    r"""
+    Encode linear equality constraints $Ax = b$ as a QUBO penalty matrix.
 
-    Each row of A defines one constraint: a^T x = b_i, encoded as:
-        penalty * (a^T x - b_i)^2
+    Each row of $A$ defines one constraint $a^T x = b_i$, penalised as:
 
-    Expanding:
-        penalty * (Σ_i a_i^2 x_i + 2 Σ_{i<j} a_i a_j x_i x_j - 2b Σ_i a_i x_i + b^2)
+    $$\lambda (a^T x - b_i)^2$$
 
-    Which maps to upper-triangular QUBO form:
-        Q[i,i] += penalty * (a_i^2 - 2*b*a_i)
-        Q[i,j] += penalty * 2 * a_i * a_j   for i < j
-        offset  += penalty * b^2
+    Expanding and collecting QUBO terms:
+
+    $$
+    Q_{ii} \mathrel{+}= \lambda(a_i^2 - 2b_i a_i), \quad
+    Q_{ij} \mathrel{+}= 2\lambda a_i a_j \; (i<j), \quad
+    \text{offset} \mathrel{+}= \lambda b_i^2
+    $$
 
     Parameters
     ----------
@@ -28,8 +29,8 @@ def equality_penalty(A: np.ndarray, b: np.ndarray, penalty: float) -> tuple[np.n
     b : np.ndarray, shape (m,) or scalar
         RHS vector. A scalar is broadcast across all constraints.
     penalty : float
-        Lagrange multiplier. Must be large enough to enforce constraints;
-        a common heuristic is 10x the largest cost coefficient.
+        Lagrange multiplier $\lambda$. Must be large enough to enforce
+        constraints; a common heuristic is 10x the largest cost coefficient.
 
     Returns
     -------
@@ -37,6 +38,11 @@ def equality_penalty(A: np.ndarray, b: np.ndarray, penalty: float) -> tuple[np.n
         Upper-triangular QUBO penalty matrix to add to the cost matrix.
     offset : float
         Constant offset contributed by the penalty terms.
+
+    Raises
+    ------
+    ValueError
+        If the number of rows in ``A`` does not match the length of ``b``.
     """
     A = np.atleast_2d(np.asarray(A, dtype=float))
     b = np.atleast_1d(np.asarray(b, dtype=float))
@@ -69,42 +75,49 @@ def inequality_penalty(
     b: np.ndarray,
     penalty: float,
 ) -> tuple[np.ndarray, float, int]:
-    """
-    Encode linear inequality constraints Ax <= b as a QUBO penalty matrix.
+    r"""
+    Encode linear inequality constraints $Ax \leq b$ as a QUBO penalty matrix.
 
-    Each constraint a^T x <= b_i is converted to an equality by introducing
-    binary slack variables z_0, ..., z_{K-1} where K = ceil(log2(max_slack+1)):
+    Each constraint $a^T x \leq b_i$ is converted to an equality by introducing
+    $K = \lceil \log_2(\text{max\_slack}+1) \rceil$ binary slack variables
+    $z_0, \ldots, z_{K-1}$:
 
-        a^T x + sum_k 2^k z_k = b_i
+    $$a^T x + \sum_{k=0}^{K-1} 2^k z_k = b_i$$
 
-    This expands the variable space from n to n + n_slack, where n_slack is
-    the total number of slack bits across all constraints.
+    This expands the variable space from $n$ to $n + n_{\text{slack}}$.
 
     Parameters
     ----------
     A : np.ndarray, shape (m, n) or (n,)
         Constraint matrix. Each row is one constraint.
     b : np.ndarray, shape (m,) or scalar
-        RHS values. Must satisfy b_i >= min(a^T x) for feasibility.
+        RHS values. Must satisfy $b_i \geq \min(a^T x)$ for feasibility.
     penalty : float
-        Lagrange multiplier.
+        Lagrange multiplier $\lambda$.
 
     Returns
     -------
     Q_penalty : np.ndarray, shape (n + n_slack, n + n_slack)
-        Upper-triangular QUBO penalty matrix. Rows/columns 0..n-1 correspond
-        to original variables; n..n+n_slack-1 are slack variables.
+        Upper-triangular QUBO penalty matrix. Rows/columns $0 \ldots n-1$
+        correspond to original variables; $n \ldots n+n_{\text{slack}}-1$
+        are slack variables.
     offset : float
         Constant offset.
     n_slack : int
         Number of slack binary variables added.
 
+    Raises
+    ------
+    ValueError
+        If the number of rows in ``A`` does not match the length of ``b``,
+        or if any constraint is detected as infeasible
+        (``b_i < min(a^T x)``).
+
     Notes
     -----
-    The slack encoding covers slack values 0..2^K-1. If max_slack is not
-    a power-of-two minus one, some slack assignments are infeasible but are
-    penalised naturally by the equality term. For exact enforcement use a
-    large enough penalty (>= max absolute cost coefficient).
+    The slack encoding covers slack values $0 \ldots 2^K - 1$. If
+    $\text{max\_slack}$ is not a power-of-two minus one, some slack assignments
+    are infeasible but are penalised naturally by the equality term.
     """
     A = np.atleast_2d(np.asarray(A, dtype=float))
     b = np.atleast_1d(np.asarray(b, dtype=float))

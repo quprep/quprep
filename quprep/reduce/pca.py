@@ -11,14 +11,19 @@ class PCAReducer:
 
     A good default for unsupervised tasks. Preserves global variance.
     For classification tasks, consider LDAReducer which preserves class
-    separability and has been shown to outperform PCA for QML
-    (Mancilla & Pere, 2022).
+    separability and has been shown to outperform PCA for QML.
 
     Parameters
     ----------
     n_components : int or float
         Number of components to keep, or variance fraction (e.g. 0.95 keeps
         95% of variance). Capped at n_features automatically.
+
+    References
+    ----------
+    Mancilla, J., & Pere, C. (2022). A preprocessing perspective for quantum
+        machine learning classification advantage in finance using NISQ algorithms.
+        *Entropy*, 24(11), 1656. [doi:10.3390/e24111656](https://doi.org/10.3390/e24111656){target="_blank"}
     """
 
     def __init__(self, n_components: int | float = 0.95):
@@ -26,7 +31,20 @@ class PCAReducer:
         self._pca = None
 
     def fit_transform(self, dataset):
-        """Fit PCA and return reduced Dataset."""
+        """
+        Fit PCA on dataset and return dimensionality-reduced Dataset.
+
+        Parameters
+        ----------
+        dataset : Dataset
+            Input dataset. All features must be numeric.
+
+        Returns
+        -------
+        Dataset
+            Reduced dataset with features named ``pc0``, ``pc1``, etc.
+            Explained variance is stored in ``dataset.metadata['explained_variance_ratio']``.
+        """
         from sklearn.decomposition import PCA
 
         from quprep.core.dataset import Dataset
@@ -55,7 +73,19 @@ class PCAReducer:
 
     @property
     def explained_variance_ratio_(self):
-        """Variance fraction explained by each component (after fit)."""
+        """
+        Variance fraction explained by each component.
+
+        Returns
+        -------
+        np.ndarray
+            Array of length n_components, values sum to <= 1.0.
+
+        Raises
+        ------
+        RuntimeError
+            If ``fit_transform()`` has not been called yet.
+        """
         if self._pca is None:
             raise RuntimeError("Call fit_transform() first.")
         return self._pca.explained_variance_ratio_

@@ -1,24 +1,21 @@
-"""Number Partitioning QUBO formulation.
+r"""Number Partitioning QUBO formulation.
 
 Number partitioning: given n positive numbers v_i, split them into two
 subsets A and B such that the difference |sum(A) - sum(B)| is minimised
 (ideally zero for a perfect partition).
 
-Let x_i = 1 if value i is in subset A, 0 if in subset B.
-Define s_i = 2*x_i - 1 in {-1, +1}. A perfect partition requires:
+Let $x_i = 1$ if value $i$ is in subset $A$, $0$ if in subset $B$.
+Define $s_i = 2x_i - 1 \in \{-1, +1\}$. A perfect partition requires:
 
-    sum_i v_i * s_i = 0
+$$\sum_i v_i s_i = 0$$
 
 The objective to minimize is the squared difference:
 
-    (sum_i v_i * s_i)^2 = (sum_i v_i * (2*x_i - 1))^2
+$$\left(\sum_i v_i s_i\right)^2 = \left(\sum_i v_i (2x_i - 1)\right)^2$$
 
-Expanding and collecting QUBO terms (using x_i^2 = x_i for binary x):
-    S = sum_i v_i
+Expanding (using $x_i^2 = x_i$ for binary $x$), with $S = \sum_i v_i$:
 
-    Q[i,i] = v_i * (v_i - S) * 4 / 4    ... (simplified)
-    Q[i,j] = 2 * v_i * v_j  for i < j
-    offset  = S^2
+$$Q_{ii} = v_i(v_i - S), \quad Q_{ij} = 2v_iv_j \; (i<j), \quad \text{offset} = S^2$$
 
 Note: the penalty argument scales the entire objective — useful when
 combining with other QUBO terms via add_qubo().
@@ -26,7 +23,7 @@ combining with other QUBO terms via add_qubo().
 References
 ----------
 Lucas, A. (2014). Ising formulations of many NP problems.
-    Frontiers in Physics, 2, 5.
+    *Frontiers in Physics*, 2, 5. [doi:10.3389/fphy.2014.00005](https://doi.org/10.3389/fphy.2014.00005){target="_blank"}
 """
 
 from __future__ import annotations

@@ -1,19 +1,19 @@
-"""Hamiltonian encoding — time-evolution encoding for physics simulations.
+r"""Hamiltonian encoding — time-evolution encoding for physics simulations.
 
 Mathematical formulation
 ------------------------
-Given x ∈ ℝ^d encoding Hamiltonian parameters and evolution time T:
+Given $x \in \mathbb{R}^d$ encoding Hamiltonian parameters and evolution time $T$:
 
-    |ψ(x)⟩ = e^{-i H(x) T} |0⟩^n
+$|\psi(x)\rangle = e^{-i H(x) T} |0\rangle^n$
 
-where H(x) = Σ_i x_i Z_i (single-qubit Pauli Z Hamiltonian).
+where $H(x) = \sum_i x_i Z_i$ (single-qubit Pauli Z Hamiltonian).
 
-Trotterized as S Rz(2·x_i·T/S) repetitions per qubit, where S = trotter_steps.
+Trotterized as $S$ repetitions of $Rz(2 x_i T/S)$ per qubit, where $S$ = trotter_steps.
 
 Properties
 ----------
 Qubits : n = d
-Depth  : O(d · trotter_steps)
+Depth  : $O(d \cdot \text{trotter\_steps})$
 NISQ   : Poor — requires many repetitions for high-fidelity simulation.
 Best for: Physics simulation, VQE.
 """
@@ -54,11 +54,21 @@ class HamiltonianEncoder(BaseEncoder):
         return "O(d · trotter_steps)"
 
     def encode(self, x: np.ndarray) -> EncodedResult:
-        """
+        r"""
         Encode a 1-D feature vector using Trotterized Hamiltonian evolution.
 
-        Parameters store per-step Rz angles: 2·x_i·T/S for each feature.
-        The exporter applies these `trotter_steps` times per qubit.
+        Parameters
+        ----------
+        x : np.ndarray, shape (d,)
+            Feature vector encoding Hamiltonian coefficients. Use ``Scaler('zscore')``.
+
+        Returns
+        -------
+        EncodedResult
+            ``parameters`` = per-step Rz angles $2 x_i T/S$ (one per qubit).
+            The exporter applies these ``trotter_steps`` times per qubit.
+            ``metadata`` includes ``encoding``, ``n_qubits``, ``trotter_steps``,
+            ``evolution_time``, ``depth``.
         """
         x = np.asarray(x, dtype=float)
         if x.ndim != 1 or len(x) == 0:

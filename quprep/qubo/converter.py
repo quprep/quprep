@@ -42,7 +42,14 @@ class QUBOResult:
         self.n_original = n_original if n_original is not None else Q.shape[0]
 
     def to_ising(self) -> IsingResult:
-        """Convert QUBO to Ising (h, J) form."""
+        """
+        Convert QUBO to Ising (h, J) form.
+
+        Returns
+        -------
+        IsingResult
+            Ising model equivalent to this QUBO problem.
+        """
         from quprep.qubo.ising import qubo_to_ising
         return qubo_to_ising(self)
 
@@ -52,8 +59,9 @@ class QUBOResult:
 
         Returns
         -------
-        dict with keys: Q, offset, variable_map, n_original.
-        Q is stored as a nested list (use json.dumps to save).
+        dict
+            Keys: ``Q`` (nested list), ``offset``, ``variable_map``, ``n_original``.
+            Pass directly to ``json.dumps()`` to serialize.
         """
         return {
             "Q": self.Q.tolist(),
@@ -75,6 +83,7 @@ class QUBOResult:
         Returns
         -------
         QUBOResult
+            Reconstructed QUBO problem.
         """
         return cls(
             Q=np.array(d["Q"]),
@@ -87,7 +96,7 @@ class QUBOResult:
         """
         Evaluate the QUBO objective for a given binary assignment.
 
-        Computes x^T Q x + offset.
+        Computes $x^T Q x + \text{offset}$.
 
         Parameters
         ----------
@@ -156,15 +165,18 @@ def to_qubo(
     constraints: list[dict] | None = None,
     penalty: float = 10.0,
 ) -> QUBOResult:
-    """
+    r"""
     Convert a cost matrix and optional linear equality constraints to QUBO.
 
-    The QUBO objective is: minimize x^T Q x,  x in {0, 1}^n
+    The QUBO objective is: minimize $x^T Q x$, $x \in \{0, 1\}^n$
 
-    The input cost_matrix can be any square real matrix. It is converted to
+    The input `cost_matrix` can be any square real matrix. It is converted to
     upper-triangular QUBO form:
-        Q[i,i] = M[i,i]                  (linear / bias term)
-        Q[i,j] = M[i,j] + M[j,i] i < j  (quadratic coupling)
+
+    $$
+    Q_{ii} = M_{ii} \; \text{(linear/bias)}, \quad
+    Q_{ij} = M_{ij} + M_{ji} \; (i < j) \; \text{(quadratic coupling)}
+    $$
 
     Constraint penalties are added on top via the Lagrangian approach.
 

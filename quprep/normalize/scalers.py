@@ -1,13 +1,13 @@
-"""Normalization strategies with auto-selection per encoding type.
+r"""Normalization strategies with auto-selection per encoding type.
 
 Encoding–normalization mapping
 -------------------------------
-Amplitude  → L2-normalize (‖x‖₂ = 1). Amplitudes must form a valid quantum state.
-Angle Ry   → scale to [0, π]. Maps to rotation angles on the Bloch sphere.
-Angle Rx   → scale to [−π, π].
-Basis      → binarize to {0, 1}. Qubits are |0⟩ or |1⟩ only.
-IQP        → scale to [−π, π] (feature products handled by the IQP encoder).
-QUBO/Ising → binary {0,1} or signed {−1,+1}.
+Amplitude  → L2-normalize ($\|x\|_2 = 1$). Amplitudes must form a valid quantum state.
+Angle Ry   → scale to $[0, \pi]$. Maps to rotation angles on the Bloch sphere.
+Angle Rx   → scale to $[-\pi, \pi]$.
+Basis      → binarize to $\{0, 1\}$. Qubits are $|0\rangle$ or $|1\rangle$ only.
+IQP        → scale to $[-\pi, \pi]$ (feature products handled by the IQP encoder).
+QUBO/Ising → binary $\{0,1\}$ or signed $\{-1,+1\}$.
 
 Users can override by passing a Scaler explicitly to the Pipeline.
 """
@@ -68,7 +68,7 @@ def auto_normalizer(encoding: str) -> Scaler:
 
 
 class Scaler:
-    """
+    r"""
     Apply a normalization strategy to a Dataset.
 
     All strategies operate column-wise (per feature) except 'l2' which
@@ -77,17 +77,22 @@ class Scaler:
     Parameters
     ----------
     strategy : str
-        'l2'           — unit L2 norm per sample: x / ‖x‖₂.
+        'l2'           — unit L2 norm per sample: $x / \|x\|_2$.
                          Zero-norm rows are left as-is (all-zero vector).
-        'minmax'       — scale each feature to [0, 1].
-        'minmax_pi'    — scale each feature to [0, π].  (angle Ry)
-        'minmax_pm_pi' — scale each feature to [−π, π]. (angle Rx/Rz, IQP)
+        'minmax'       — scale each feature to $[0, 1]$.
+        'minmax_pi'    — scale each feature to $[0, \pi]$.  (angle Ry)
+        'minmax_pm_pi' — scale each feature to $[-\pi, \pi]$. (angle Rx/Rz, IQP)
         'zscore'       — zero mean, unit std per feature.
                          Constant features (std = 0) are left as zero.
-        'binary'       — threshold each feature at 0.5 → {0.0, 1.0}.
-        'pm_one'       — threshold each feature at 0.5 → {−1.0, +1.0}. (Ising)
+        'binary'       — threshold each feature at 0.5 → $\{0.0, 1.0\}$.
+        'pm_one'       — threshold each feature at 0.5 → $\{-1.0, +1.0\}$. (Ising)
     threshold : float
         Binarization cutoff for 'binary' and 'pm_one'. Default 0.5.
+
+    Raises
+    ------
+    ValueError
+        If ``strategy`` is not one of the supported strategies.
     """
 
     def __init__(self, strategy: str = "minmax", threshold: float = 0.5):
@@ -105,6 +110,7 @@ class Scaler:
         Parameters
         ----------
         dataset : Dataset
+            Input dataset to normalize.
 
         Returns
         -------

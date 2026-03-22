@@ -10,7 +10,7 @@ class LDAReducer:
     Reduce dimensionality with LDA.
 
     Preserves class separability. Research shows LDA outperforms PCA for
-    quantum classification tasks (Mancilla & Pere, 2022).
+    quantum classification tasks.
 
     Requires class labels — pass at init or directly to fit_transform().
     Maximum components = n_classes - 1 (sklearn enforces this automatically).
@@ -21,6 +21,12 @@ class LDAReducer:
         Number of discriminant components to keep.
     labels : array-like, optional
         Class labels. Can also be passed directly to fit_transform().
+
+    References
+    ----------
+    Mancilla, J., & Pere, C. (2022). A preprocessing perspective for quantum
+        machine learning classification advantage in finance using NISQ algorithms.
+        *Entropy*, 24(11), 1656. [doi:10.3390/e24111656](https://doi.org/10.3390/e24111656){target="_blank"}
     """
 
     def __init__(self, n_components: int = 2, labels=None):
@@ -29,7 +35,28 @@ class LDAReducer:
         self._lda = None
 
     def fit_transform(self, dataset, labels=None):
-        """Fit LDA and return reduced Dataset."""
+        """
+        Fit LDA on dataset and return dimensionality-reduced Dataset.
+
+        Parameters
+        ----------
+        dataset : Dataset
+            Input dataset. All features must be numeric.
+        labels : array-like, optional
+            Class labels. Overrides ``self.labels`` if provided.
+            Required if ``labels`` was not set at init.
+
+        Returns
+        -------
+        Dataset
+            Reduced dataset with features named ``ld0``, ``ld1``, etc.
+            Actual n_components is capped at ``n_classes - 1``.
+
+        Raises
+        ------
+        ValueError
+            If no labels are available (neither at init nor passed here).
+        """
         from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 
         from quprep.core.dataset import Dataset
