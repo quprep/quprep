@@ -131,14 +131,13 @@ class TestPipelinePartial:
         assert result.circuits is None
         assert len(result.encoded) == simple_dataset.n_samples
 
-    def test_fit_not_implemented(self, simple_dataset):
+    def test_fit_returns_self(self, simple_dataset):
         p = Pipeline()
-        with pytest.raises(NotImplementedError):
-            p.fit(simple_dataset)
+        assert p.fit(simple_dataset) is p
 
-    def test_transform_not_implemented(self, simple_dataset):
+    def test_transform_requires_fit(self, simple_dataset):
         p = Pipeline()
-        with pytest.raises(NotImplementedError):
+        with pytest.raises(RuntimeError, match="not been fitted"):
             p.transform(simple_dataset)
 
 
@@ -305,4 +304,4 @@ class TestPrepare:
 
     def test_version_accessible(self):
         import quprep
-        assert quprep.__version__ == "0.3.0"
+        assert quprep.__version__ == "0.3.1.dev0"

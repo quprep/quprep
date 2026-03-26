@@ -52,6 +52,80 @@ class HardwareAwareReducer:
         self.backend = backend
         self.encoding = encoding
         self.method = method
+        self._fitted = False
+        self._inner_reducer = None  # PCAReducer if reduction was needed
+
+    def fit(self, dataset) -> HardwareAwareReducer:
+        """
+        Fit the hardware-aware reducer on dataset.
+
+        If the dataset already fits within the qubit budget, this is a no-op.
+        Otherwise, fits a PCAReducer to the required feature count.
+
+        Parameters
+        ----------
+        dataset : Dataset
+
+        Returns
+        -------
+        HardwareAwareReducer
+            Returns ``self`` for chaining.
+
+        Raises
+        ------
+        ValueError
+            If ``backend`` is an unrecognised string name.
+        """
+        n_features = dataset.data.shape[1]
+        budget = self._qubit_budget()
+        max_feat = _max_features_for_encoding(self.encoding, budget)
+
+        if n_features <= max_feat:
+            self._inner_reducer = None
+        else:
+            from quprep.reduce.pca import PCAReducer
+            self._inner_reducer = PCAReducer(n_components=max_feat)
+            self._inner_reducer.fit(dataset)
+
+        self._budget = budget
+        self._fitted = True
+        return self
+
+    def transform(self, dataset) -> object:
+        """
+        Reduce features to fit the backend's qubit budget.
+
+        Parameters
+        ----------
+        dataset : Dataset
+
+        Returns
+        -------
+        Dataset
+            Dataset with at most ``max_features`` columns. Passthrough if
+            already within budget.
+
+        Raises
+        ------
+        sklearn.exceptions.NotFittedError
+            If ``fit()`` has not been called yet.
+        """
+        from sklearn.exceptions import NotFittedError
+
+        if not self._fitted:
+            raise NotFittedError(
+                f"This {type(self).__name__} instance is not fitted yet. "
+                "Call 'fit()' before 'transform()'."
+            )
+
+        if self._inner_reducer is None:
+            return dataset
+
+        result = self._inner_reducer.transform(dataset)
+        result.metadata["reducer"] = "hardware_aware_pca"
+        result.metadata["backend"] = self.backend
+        result.metadata["qubit_budget"] = self._budget
+        return result
 
     def fit_transform(self, dataset):
         """
@@ -77,23 +151,7 @@ class HardwareAwareReducer:
         ValueError
             If ``backend`` is an unrecognised string name.
         """
-        n_features = dataset.data.shape[1]
-        budget = self._qubit_budget()
-        max_feat = _max_features_for_encoding(self.encoding, budget)
-
-        if n_features <= max_feat:
-            # Already within budget — passthrough
-            return dataset
-
-        from quprep.reduce.pca import PCAReducer
-
-        reducer = PCAReducer(n_components=max_feat)
-        result = reducer.fit_transform(dataset)
-        # Overwrite reducer tag so caller knows what happened
-        result.metadata["reducer"] = "hardware_aware_pca"
-        result.metadata["backend"] = self.backend
-        result.metadata["qubit_budget"] = budget
-        return result
+        return self.fit(dataset).transform(dataset)
 
     def _qubit_budget(self) -> int:
         if isinstance(self.backend, int):

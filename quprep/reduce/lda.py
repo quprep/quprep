@@ -33,6 +33,88 @@ class LDAReducer:
         self.n_components = n_components
         self.labels = labels
         self._lda = None
+        self._fitted = False
+        self._fitted_labels: np.ndarray | None = None  # stored for metadata
+
+    def fit(self, dataset, labels=None) -> LDAReducer:
+        """
+        Fit LDA on dataset.
+
+        Parameters
+        ----------
+        dataset : Dataset
+        labels : array-like, optional
+            Class labels. Overrides ``self.labels`` if provided.
+
+        Returns
+        -------
+        LDAReducer
+            Returns ``self`` for chaining.
+
+        Raises
+        ------
+        ValueError
+            If no labels are available.
+        """
+        from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+
+        _labels = labels if labels is not None else self.labels
+        if _labels is None:
+            raise ValueError(
+                "LDAReducer requires class labels. "
+                "Pass labels= to fit() or at LDAReducer(labels=y)."
+            )
+        _labels = np.asarray(_labels)
+        n_classes = len(np.unique(_labels))
+        n_features = dataset.data.shape[1]
+        n = min(self.n_components, n_classes - 1, n_features)
+        self._lda = LinearDiscriminantAnalysis(n_components=n)
+        self._lda.fit(dataset.data, _labels)
+        self._fitted_labels = _labels
+        self._fitted = True
+        return self
+
+    def transform(self, dataset) -> object:
+        """
+        Apply fitted LDA and return a reduced Dataset.
+
+        Parameters
+        ----------
+        dataset : Dataset
+
+        Returns
+        -------
+        Dataset
+            Reduced dataset with features named ``ld0``, ``ld1``, etc.
+
+        Raises
+        ------
+        sklearn.exceptions.NotFittedError
+            If ``fit()`` has not been called yet.
+        """
+        from sklearn.exceptions import NotFittedError
+
+        from quprep.core.dataset import Dataset
+
+        if not self._fitted:
+            raise NotFittedError(
+                f"This {type(self).__name__} instance is not fitted yet. "
+                "Call 'fit()' before 'transform()'."
+            )
+        reduced = self._lda.transform(dataset.data)
+        k = reduced.shape[1]
+        return Dataset(
+            data=reduced.astype(np.float64),
+            feature_names=[f"ld{i}" for i in range(k)],
+            feature_types=["continuous"] * k,
+            metadata={
+                **dataset.metadata,
+                "reducer": "lda",
+                "n_components": k,
+                "classes": np.unique(self._fitted_labels).tolist(),
+            },
+            categorical_data=dataset.categorical_data,
+        )
 
     def fit_transform(self, dataset, labels=None):
         """
@@ -57,36 +139,4 @@ class LDAReducer:
         ValueError
             If no labels are available (neither at init nor passed here).
         """
-        from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-
-        from quprep.core.dataset import Dataset
-
-        _labels = labels if labels is not None else self.labels
-        if _labels is None:
-            raise ValueError(
-                "LDAReducer requires class labels. "
-                "Pass labels= to fit_transform() or at LDAReducer(labels=y)."
-            )
-
-        _labels = np.asarray(_labels)
-        n_classes = len(np.unique(_labels))
-        n_features = dataset.data.shape[1]
-        # sklearn cap: n_components <= min(n_classes - 1, n_features)
-        n = min(self.n_components, n_classes - 1, n_features)
-
-        self._lda = LinearDiscriminantAnalysis(n_components=n)
-        reduced = self._lda.fit_transform(dataset.data, _labels)
-        k = reduced.shape[1]
-
-        return Dataset(
-            data=reduced.astype(np.float64),
-            feature_names=[f"ld{i}" for i in range(k)],
-            feature_types=["continuous"] * k,
-            metadata={
-                **dataset.metadata,
-                "reducer": "lda",
-                "n_components": k,
-                "classes": np.unique(_labels).tolist(),
-            },
-            categorical_data=dataset.categorical_data,
-        )
+        return self.fit(dataset, labels).transform(dataset)

@@ -55,6 +55,23 @@ class Dataset:
     def n_categorical(self) -> int:
         return len(self.categorical_data)
 
+    def copy(self) -> Dataset:
+        """
+        Return a deep copy of this Dataset.
+
+        Returns
+        -------
+        Dataset
+            New Dataset with independent copies of all mutable attributes.
+        """
+        return Dataset(
+            data=self.data.copy(),
+            feature_names=list(self.feature_names),
+            feature_types=list(self.feature_types),
+            categorical_data={k: list(v) for k, v in self.categorical_data.items()},
+            metadata=dict(self.metadata),
+        )
+
     def __repr__(self) -> str:
         cat = f", categorical={self.n_categorical}" if self.categorical_data else ""
         return f"Dataset(n_samples={self.n_samples}, n_features={self.n_features}{cat})"

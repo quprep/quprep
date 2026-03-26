@@ -20,13 +20,21 @@ The missing preprocessing layer between classical datasets and quantum computing
     rec = quprep.recommend(df, task="classification", qubits=8)
 """
 
-__version__ = "0.3.0"
+__version__ = "0.3.1.dev0"
 __author__ = "Hasarindu Perera"
 __license__ = "Apache-2.0"
 
 from quprep.core.pipeline import Pipeline
 from quprep.core.recommender import recommend
 from quprep.export.visualize import draw_ascii, draw_matplotlib
+from quprep.validation import (
+    CostEstimate,
+    DataSchema,
+    FeatureSpec,
+    QuPrepWarning,
+    SchemaViolationError,
+    estimate_cost,
+)
 
 __all__ = [
     "__version__",
@@ -35,6 +43,12 @@ __all__ = [
     "prepare",
     "draw_ascii",
     "draw_matplotlib",
+    "DataSchema",
+    "FeatureSpec",
+    "SchemaViolationError",
+    "CostEstimate",
+    "estimate_cost",
+    "QuPrepWarning",
 ]
 
 

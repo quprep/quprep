@@ -102,6 +102,74 @@ class Scaler:
             )
         self.strategy = strategy
         self.threshold = threshold
+        self._fitted = False
+        self._col_min: np.ndarray | None = None
+        self._col_max: np.ndarray | None = None
+        self._mean: np.ndarray | None = None
+        self._std: np.ndarray | None = None
+
+    def fit(self, dataset: Dataset) -> Scaler:
+        """
+        Learn normalization parameters from dataset.
+
+        For stateless strategies (``'l2'``, ``'binary'``, ``'pm_one'``) this
+        is a no-op that marks the scaler as fitted.
+
+        Parameters
+        ----------
+        dataset : Dataset
+
+        Returns
+        -------
+        Scaler
+            Returns ``self`` for chaining.
+        """
+        data = dataset.data
+        if self.strategy in ("minmax", "minmax_pi", "minmax_pm_pi", "pm_one"):
+            self._col_min = np.nanmin(data, axis=0)
+            self._col_max = np.nanmax(data, axis=0)
+        elif self.strategy == "zscore":
+            self._mean = np.nanmean(data, axis=0)
+            self._std = np.nanstd(data, axis=0)
+        # l2 and binary are stateless — nothing to learn
+        self._fitted = True
+        return self
+
+    def transform(self, dataset: Dataset) -> Dataset:
+        """
+        Apply learned normalization and return a new Dataset.
+
+        Parameters
+        ----------
+        dataset : Dataset
+
+        Returns
+        -------
+        Dataset
+            Same metadata, feature_names, feature_types, and categorical_data.
+            Only ``data`` is modified.
+
+        Raises
+        ------
+        sklearn.exceptions.NotFittedError
+            If ``fit()`` has not been called yet.
+        """
+        from sklearn.exceptions import NotFittedError
+
+        if not self._fitted:
+            raise NotFittedError(
+                f"This {type(self).__name__} instance is not fitted yet. "
+                "Call 'fit()' before 'transform()'."
+            )
+        data = dataset.data.copy()
+        data = self._apply(data)
+        return Dataset(
+            data=data,
+            feature_names=list(dataset.feature_names),
+            feature_types=list(dataset.feature_types),
+            categorical_data=dict(dataset.categorical_data),
+            metadata=dict(dataset.metadata),
+        )
 
     def fit_transform(self, dataset: Dataset) -> Dataset:
         """
@@ -118,30 +186,25 @@ class Scaler:
             Same metadata, feature_names, feature_types, and categorical_data.
             Only `data` is modified.
         """
-        data = self._scale(dataset.data.copy())
-        return Dataset(
-            data=data,
-            feature_names=list(dataset.feature_names),
-            feature_types=list(dataset.feature_types),
-            categorical_data=dict(dataset.categorical_data),
-            metadata=dict(dataset.metadata),
-        )
+        return self.fit(dataset).transform(dataset)
 
-    def _scale(self, data: np.ndarray) -> np.ndarray:
+    def _apply(self, data: np.ndarray) -> np.ndarray:
+        """Apply fitted parameters (or stateless transform) to data."""
         if self.strategy == "l2":
             return _l2_normalize(data)
 
         if self.strategy == "minmax":
-            return _minmax(data, low=0.0, high=1.0)
+            return _apply_minmax(data, self._col_min, self._col_max, low=0.0, high=1.0)
 
         if self.strategy == "minmax_pi":
-            return _minmax(data, low=0.0, high=np.pi)
+            return _apply_minmax(data, self._col_min, self._col_max, low=0.0, high=np.pi)
 
         if self.strategy == "minmax_pm_pi":
-            return _minmax(data, low=-np.pi, high=np.pi)
+            return _apply_minmax(data, self._col_min, self._col_max, low=-np.pi, high=np.pi)
 
         if self.strategy == "zscore":
-            return _zscore(data)
+            std = np.where(self._std == 0, 1.0, self._std)
+            return (data - self._mean) / std
 
         if self.strategy == "binary":
             return (data >= self.threshold).astype(float)
@@ -163,19 +226,15 @@ def _l2_normalize(data: np.ndarray) -> np.ndarray:
     return data / norms
 
 
-def _minmax(data: np.ndarray, low: float, high: float) -> np.ndarray:
-    """Scale each column to [low, high]. Constant columns map to low."""
-    col_min = np.nanmin(data, axis=0)
-    col_max = np.nanmax(data, axis=0)
+def _apply_minmax(
+    data: np.ndarray,
+    col_min: np.ndarray,
+    col_max: np.ndarray,
+    low: float,
+    high: float,
+) -> np.ndarray:
+    """Scale each column to [low, high] using pre-fitted min/max."""
     col_range = col_max - col_min
     col_range = np.where(col_range == 0, 1.0, col_range)
-    scaled = (data - col_min) / col_range          # → [0, 1]
-    return scaled * (high - low) + low             # → [low, high]
-
-
-def _zscore(data: np.ndarray) -> np.ndarray:
-    """Zero mean, unit std per column. Constant columns become zero."""
-    mean = np.nanmean(data, axis=0)
-    std = np.nanstd(data, axis=0)
-    std = np.where(std == 0, 1.0, std)
-    return (data - mean) / std
+    scaled = (data - col_min) / col_range   # → [0, 1]
+    return scaled * (high - low) + low      # → [low, high]

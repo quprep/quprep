@@ -39,6 +39,77 @@ class FeatureSelector:
         self.method = method
         self.threshold = threshold
         self.max_features = max_features
+        self._fitted = False
+        self._keep_mask: np.ndarray | None = None
+
+    def fit(self, dataset: Dataset, labels: np.ndarray | None = None) -> FeatureSelector:
+        """
+        Learn which features to keep from dataset.
+
+        Parameters
+        ----------
+        dataset : Dataset
+        labels : np.ndarray, optional
+            Required for ``'mutual_info'`` method.
+
+        Returns
+        -------
+        FeatureSelector
+            Returns ``self`` for chaining.
+        """
+        if self.method == "correlation":
+            keep = self._correlation_mask(dataset.data)
+        elif self.method == "mutual_info":
+            keep = self._mutual_info_mask(dataset.data, labels)
+        else:
+            keep = self._variance_mask(dataset.data)
+
+        if self.max_features is not None:
+            kept_indices = np.where(keep)[0][: self.max_features]
+            keep = np.zeros(dataset.n_features, dtype=bool)
+            keep[kept_indices] = True
+
+        self._keep_mask = keep
+        self._fitted = True
+        return self
+
+    def transform(self, dataset: Dataset) -> Dataset:
+        """
+        Apply learned feature mask and return a reduced Dataset.
+
+        Parameters
+        ----------
+        dataset : Dataset
+
+        Returns
+        -------
+        Dataset
+
+        Raises
+        ------
+        sklearn.exceptions.NotFittedError
+            If ``fit()`` has not been called yet.
+        """
+        from sklearn.exceptions import NotFittedError
+
+        if not self._fitted:
+            raise NotFittedError(
+                f"This {type(self).__name__} instance is not fitted yet. "
+                "Call 'fit()' before 'transform()'."
+            )
+
+        keep = self._keep_mask
+        data = dataset.data[:, keep]
+        feature_names = [n for n, k in zip(dataset.feature_names, keep) if k]
+        feature_types = [t for t, k in zip(dataset.feature_types, keep) if k]
+
+        return Dataset(
+            data=data,
+            feature_names=feature_names,
+            feature_types=feature_types,
+            categorical_data=dict(dataset.categorical_data),
+            metadata=dict(dataset.metadata),
+        )
 
     def fit_transform(self, dataset: Dataset, labels: np.ndarray | None = None) -> Dataset:
         """
@@ -54,30 +125,7 @@ class FeatureSelector:
         -------
         Dataset
         """
-        if self.method == "correlation":
-            keep = self._correlation_mask(dataset.data)
-        elif self.method == "mutual_info":
-            keep = self._mutual_info_mask(dataset.data, labels)
-        else:
-            keep = self._variance_mask(dataset.data)
-
-        if self.max_features is not None:
-            # among kept features, apply hard cap (left-to-right)
-            kept_indices = np.where(keep)[0][: self.max_features]
-            keep = np.zeros(dataset.n_features, dtype=bool)
-            keep[kept_indices] = True
-
-        data = dataset.data[:, keep]
-        feature_names = [n for n, k in zip(dataset.feature_names, keep) if k]
-        feature_types = [t for t, k in zip(dataset.feature_types, keep) if k]
-
-        return Dataset(
-            data=data,
-            feature_names=feature_names,
-            feature_types=feature_types,
-            categorical_data=dict(dataset.categorical_data),
-            metadata=dict(dataset.metadata),
-        )
+        return self.fit(dataset, labels).transform(dataset)
 
     def _correlation_mask(self, data: np.ndarray) -> np.ndarray:
         n = data.shape[1]

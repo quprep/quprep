@@ -23,6 +23,51 @@ class SpectralReducer:
 
     def __init__(self, n_components: int = 8):
         self.n_components = n_components
+        self._fitted = False
+
+    def fit(self, dataset) -> SpectralReducer:
+        """
+        No-op — SpectralReducer is stateless (FFT has no learned parameters).
+
+        Parameters
+        ----------
+        dataset : Dataset
+
+        Returns
+        -------
+        SpectralReducer
+        """
+        self._fitted = True
+        return self
+
+    def transform(self, dataset) -> object:
+        """
+        Apply row-wise FFT and return the reduced Dataset.
+
+        Parameters
+        ----------
+        dataset : Dataset
+
+        Returns
+        -------
+        Dataset
+        """
+        from quprep.core.dataset import Dataset
+
+        fft = np.fft.rfft(dataset.data, axis=1)
+        k = min(self.n_components, fft.shape[1])
+        reduced = np.abs(fft[:, :k]).astype(np.float64)
+        return Dataset(
+            data=reduced,
+            feature_names=[f"freq{i}" for i in range(k)],
+            feature_types=["continuous"] * k,
+            metadata={
+                **dataset.metadata,
+                "reducer": "spectral",
+                "n_components": k,
+            },
+            categorical_data=dataset.categorical_data,
+        )
 
     def fit_transform(self, dataset):
         """
@@ -39,23 +84,7 @@ class SpectralReducer:
             Reduced dataset with features named ``freq0``, ``freq1``, etc.
             Values are FFT magnitudes (always >= 0).
         """
-        from quprep.core.dataset import Dataset
-
-        fft = np.fft.rfft(dataset.data, axis=1)  # (n_samples, n_freq_bins)
-        k = min(self.n_components, fft.shape[1])
-        reduced = np.abs(fft[:, :k]).astype(np.float64)
-
-        return Dataset(
-            data=reduced,
-            feature_names=[f"freq{i}" for i in range(k)],
-            feature_types=["continuous"] * k,
-            metadata={
-                **dataset.metadata,
-                "reducer": "spectral",
-                "n_components": k,
-            },
-            categorical_data=dataset.categorical_data,
-        )
+        return self.fit(dataset).transform(dataset)
 
 
 class TSNEReducer:
@@ -84,6 +113,61 @@ class TSNEReducer:
         self.n_components = n_components
         self.perplexity = perplexity
         self.random_state = random_state
+        self._fitted = False
+
+    def fit(self, dataset) -> TSNEReducer:
+        """
+        No-op — t-SNE has no generalizable fit (it cannot transform new data).
+
+        Parameters
+        ----------
+        dataset : Dataset
+
+        Returns
+        -------
+        TSNEReducer
+        """
+        self._fitted = True
+        return self
+
+    def transform(self, dataset) -> object:
+        """
+        Re-run t-SNE on the provided dataset.
+
+        .. note::
+            t-SNE does not support out-of-sample extension. Calling
+            ``transform()`` re-fits from scratch on each call.
+
+        Parameters
+        ----------
+        dataset : Dataset
+
+        Returns
+        -------
+        Dataset
+        """
+        from sklearn.manifold import TSNE
+
+        from quprep.core.dataset import Dataset
+
+        tsne = TSNE(
+            n_components=self.n_components,
+            perplexity=self.perplexity,
+            random_state=self.random_state,
+        )
+        reduced = tsne.fit_transform(dataset.data).astype(np.float64)
+        k = reduced.shape[1]
+        return Dataset(
+            data=reduced,
+            feature_names=[f"tsne{i}" for i in range(k)],
+            feature_types=["continuous"] * k,
+            metadata={
+                **dataset.metadata,
+                "reducer": "tsne",
+                "n_components": k,
+            },
+            categorical_data=dataset.categorical_data,
+        )
 
     def fit_transform(self, dataset):
         """
@@ -99,29 +183,7 @@ class TSNEReducer:
         Dataset
             Reduced dataset with features named ``tsne0``, ``tsne1``, etc.
         """
-        from sklearn.manifold import TSNE
-
-        from quprep.core.dataset import Dataset
-
-        tsne = TSNE(
-            n_components=self.n_components,
-            perplexity=self.perplexity,
-            random_state=self.random_state,
-        )
-        reduced = tsne.fit_transform(dataset.data).astype(np.float64)
-        k = reduced.shape[1]
-
-        return Dataset(
-            data=reduced,
-            feature_names=[f"tsne{i}" for i in range(k)],
-            feature_types=["continuous"] * k,
-            metadata={
-                **dataset.metadata,
-                "reducer": "tsne",
-                "n_components": k,
-            },
-            categorical_data=dataset.categorical_data,
-        )
+        return self.fit(dataset).transform(dataset)
 
 
 class UMAPReducer:
@@ -149,6 +211,81 @@ class UMAPReducer:
         self.n_components = n_components
         self.n_neighbors = n_neighbors
         self.random_state = random_state
+        self._fitted = False
+        self._umap = None
+
+    def fit(self, dataset) -> UMAPReducer:
+        """
+        Fit UMAP on dataset.
+
+        Parameters
+        ----------
+        dataset : Dataset
+
+        Returns
+        -------
+        UMAPReducer
+
+        Raises
+        ------
+        ImportError
+            If ``umap-learn`` is not installed.
+        """
+        try:
+            import umap
+        except ImportError as e:
+            raise ImportError(
+                "UMAPReducer requires the umap-learn package. "
+                "Install it with: pip install quprep[umap]"
+            ) from e
+        self._umap = umap.UMAP(
+            n_components=self.n_components,
+            n_neighbors=self.n_neighbors,
+            random_state=self.random_state,
+        )
+        self._umap.fit(dataset.data)
+        self._fitted = True
+        return self
+
+    def transform(self, dataset) -> object:
+        """
+        Apply fitted UMAP and return the reduced Dataset.
+
+        Parameters
+        ----------
+        dataset : Dataset
+
+        Returns
+        -------
+        Dataset
+
+        Raises
+        ------
+        sklearn.exceptions.NotFittedError
+            If ``fit()`` has not been called yet.
+        """
+        from sklearn.exceptions import NotFittedError
+
+        from quprep.core.dataset import Dataset
+
+        if not self._fitted:
+            raise NotFittedError(
+                f"This {type(self).__name__} instance is not fitted yet. "
+                "Call 'fit()' before 'transform()'."
+            )
+        reduced = self._umap.transform(dataset.data).astype(np.float64)
+        k = reduced.shape[1]
+        return Dataset(
+            data=reduced,
+            feature_names=[f"umap{i}" for i in range(k)],
+            feature_types=["continuous"] * k,
+            metadata={
+                **dataset.metadata,
+                "reducer": "umap",
+                "n_components": k,
+            },
+            categorical_data=dataset.categorical_data,
+        )
 
     def fit_transform(self, dataset):
         """
@@ -169,32 +306,4 @@ class UMAPReducer:
         ImportError
             If ``umap-learn`` is not installed (``pip install quprep[umap]``).
         """
-        try:
-            import umap
-        except ImportError as e:
-            raise ImportError(
-                "UMAPReducer requires the umap-learn package. "
-                "Install it with: pip install quprep[umap]"
-            ) from e
-
-        from quprep.core.dataset import Dataset
-
-        reducer = umap.UMAP(
-            n_components=self.n_components,
-            n_neighbors=self.n_neighbors,
-            random_state=self.random_state,
-        )
-        reduced = reducer.fit_transform(dataset.data).astype(np.float64)
-        k = reduced.shape[1]
-
-        return Dataset(
-            data=reduced,
-            feature_names=[f"umap{i}" for i in range(k)],
-            feature_types=["continuous"] * k,
-            metadata={
-                **dataset.metadata,
-                "reducer": "umap",
-                "n_components": k,
-            },
-            categorical_data=dataset.categorical_data,
-        )
+        return self.fit(dataset).transform(dataset)

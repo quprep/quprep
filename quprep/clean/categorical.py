@@ -35,6 +35,82 @@ class CategoricalEncoder:
             raise ValueError(f"handle_unknown must be 'ignore' or 'error', got '{handle_unknown}'")
         self.strategy = strategy
         self.handle_unknown = handle_unknown
+        self._fitted = False
+        self._categories: dict[str, list] = {}  # col_name → ordered category list
+
+    def fit(self, dataset: Dataset) -> CategoricalEncoder:
+        """
+        Learn category mappings from dataset.
+
+        Parameters
+        ----------
+        dataset : Dataset
+
+        Returns
+        -------
+        CategoricalEncoder
+            Returns ``self`` for chaining.
+        """
+        import pandas as pd
+
+        self._categories = {}
+        for col_name, values in dataset.categorical_data.items():
+            s = pd.Series(values, dtype="category")
+            self._categories[col_name] = s.cat.categories.tolist()
+        self._fitted = True
+        return self
+
+    def transform(self, dataset: Dataset) -> Dataset:
+        """
+        Encode learned categorical columns and return a numeric-only Dataset.
+
+        Parameters
+        ----------
+        dataset : Dataset
+
+        Returns
+        -------
+        Dataset
+            ``categorical_data`` will be empty.
+
+        Raises
+        ------
+        sklearn.exceptions.NotFittedError
+            If ``fit()`` has not been called yet.
+        ValueError
+            If an unknown category is found and ``handle_unknown='error'``.
+        """
+        from sklearn.exceptions import NotFittedError
+
+        if not self._fitted:
+            raise NotFittedError(
+                f"This {type(self).__name__} instance is not fitted yet. "
+                "Call 'fit()' before 'transform()'."
+            )
+
+        if not dataset.categorical_data:
+            return dataset
+
+        data = dataset.data.copy()
+        feature_names = list(dataset.feature_names)
+        feature_types = list(dataset.feature_types)
+
+        for col_name, values in dataset.categorical_data.items():
+            categories = self._categories.get(col_name, [])
+            encoded, new_names, new_types = self._encode_with_categories(
+                col_name, values, categories
+            )
+            data = np.hstack([data, encoded])
+            feature_names.extend(new_names)
+            feature_types.extend(new_types)
+
+        return Dataset(
+            data=data,
+            feature_names=feature_names,
+            feature_types=feature_types,
+            categorical_data={},
+            metadata=dict(dataset.metadata),
+        )
 
     def fit_transform(self, dataset: Dataset) -> Dataset:
         """
@@ -49,40 +125,26 @@ class CategoricalEncoder:
         -------
         Dataset
         """
-        if not dataset.categorical_data:
-            return dataset
+        return self.fit(dataset).transform(dataset)
 
-        data = dataset.data.copy()
-        feature_names = list(dataset.feature_names)
-        feature_types = list(dataset.feature_types)
-
-        for col_name, values in dataset.categorical_data.items():
-            encoded, new_names, new_types = self._encode_column(col_name, values)
-            data = np.hstack([data, encoded])
-            feature_names.extend(new_names)
-            feature_types.extend(new_types)
-
-        return Dataset(
-            data=data,
-            feature_names=feature_names,
-            feature_types=feature_types,
-            categorical_data={},
-            metadata=dict(dataset.metadata),
-        )
-
-    def _encode_column(self, col_name: str, values: list):
+    def _encode_with_categories(self, col_name: str, values: list, categories: list):
+        """Encode a column using a pre-fitted category list."""
         import pandas as pd
 
-        s = pd.Series(values, dtype="category")
-
         if self.strategy == "onehot":
+            s = pd.Series(values, dtype="category")
             dummies = pd.get_dummies(s, prefix=col_name, dtype=float)
+            # Align columns to fitted categories
+            expected_cols = [f"{col_name}_{cat}" for cat in categories]
+            for col in expected_cols:
+                if col not in dummies.columns:
+                    dummies[col] = 0.0
+            dummies = dummies.reindex(columns=expected_cols, fill_value=0.0)
             encoded = dummies.to_numpy(dtype=float)
             new_names = list(dummies.columns)
             new_types = ["binary"] * encoded.shape[1]
 
-        elif self.strategy in ("label", "ordinal"):
-            categories = s.cat.categories.tolist()
+        else:  # label / ordinal
             mapping = {cat: float(i) for i, cat in enumerate(categories)}
             encoded_vals = np.array([mapping.get(v, np.nan) for v in values], dtype=float)
             if self.handle_unknown == "error" and np.isnan(encoded_vals).any():

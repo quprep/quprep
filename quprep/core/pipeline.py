@@ -55,6 +55,9 @@ class Pipeline:
     Each stage is optional and works independently. You can use just the
     encoder, just the reducer, or any combination without touching the rest.
 
+    sklearn-compatible: supports ``fit()``, ``transform()``, ``get_params()``,
+    and ``set_params()`` in addition to the native ``fit_transform()``.
+
     Parameters
     ----------
     ingester : optional
@@ -69,6 +72,9 @@ class Pipeline:
         Quantum encoding component. Returns a processed Dataset if omitted.
     exporter : optional
         Framework export component. Returns EncodedResult list if omitted.
+    schema : DataSchema, optional
+        Input schema to validate at pipeline entry. Raises SchemaViolationError
+        on mismatch.
 
     Examples
     --------
@@ -88,6 +94,7 @@ class Pipeline:
         normalizer=None,
         encoder=None,
         exporter=None,
+        schema=None,
     ):
         self.ingester = ingester
         self.cleaner = cleaner
@@ -95,16 +102,71 @@ class Pipeline:
         self.normalizer = normalizer
         self.encoder = encoder
         self.exporter = exporter
+        self.schema = schema
+        self._fitted = False
+        self._resolved_normalizer = None
 
-    def fit_transform(self, source) -> PipelineResult:
+    # ------------------------------------------------------------------
+    # Primary API
+    # ------------------------------------------------------------------
+
+    def fit(self, source, y=None) -> Pipeline:
         """
-        Run all pipeline stages on source data and return results.
+        Fit all pipeline stages on training data.
 
         Parameters
         ----------
         source : str, Path, np.ndarray, pd.DataFrame, or Dataset
-            Input data. File paths are auto-ingested (CSV supported).
-            Arrays and DataFrames are wrapped automatically.
+            Training data.
+        y : ignored
+            Accepted for sklearn API compatibility.
+
+        Returns
+        -------
+        Pipeline
+            Returns ``self`` for chaining (sklearn convention).
+        """
+        dataset = self._ingest(source)
+        self._validate_entry(dataset)
+        self._fit_stages(dataset)
+        self._fitted = True
+        return self
+
+    def transform(self, source) -> PipelineResult:
+        """
+        Apply fitted pipeline stages to data.
+
+        Parameters
+        ----------
+        source : str, Path, np.ndarray, pd.DataFrame, or Dataset
+            Input data.
+
+        Returns
+        -------
+        PipelineResult
+
+        Raises
+        ------
+        RuntimeError
+            If the pipeline has not been fitted yet.
+        """
+        if not self._fitted:
+            raise RuntimeError(
+                "Pipeline has not been fitted. Call fit() or fit_transform() first."
+            )
+        dataset = self._ingest(source)
+        return self._apply_stages(dataset)
+
+    def fit_transform(self, source, y=None) -> PipelineResult:
+        """
+        Fit all stages and transform in a single pass.
+
+        Parameters
+        ----------
+        source : str, Path, np.ndarray, pd.DataFrame, or Dataset
+            Input data.
+        y : ignored
+            Accepted for sklearn API compatibility.
 
         Returns
         -------
@@ -113,22 +175,132 @@ class Pipeline:
             or None), and ``circuits`` (framework-specific circuit objects or None).
         """
         dataset = self._ingest(source)
+        self._validate_entry(dataset)
+        dataset = self._fit_stages(dataset)
+        self._fitted = True
+        return self._encode_export(dataset)
 
+    # ------------------------------------------------------------------
+    # sklearn estimator interface
+    # ------------------------------------------------------------------
+
+    def get_params(self, deep: bool = True) -> dict:
+        """
+        Return pipeline parameters (sklearn convention).
+
+        Parameters
+        ----------
+        deep : bool
+            Ignored — included for sklearn API compatibility.
+
+        Returns
+        -------
+        dict
+        """
+        return {
+            "ingester": self.ingester,
+            "cleaner": self.cleaner,
+            "reducer": self.reducer,
+            "normalizer": self.normalizer,
+            "encoder": self.encoder,
+            "exporter": self.exporter,
+            "schema": self.schema,
+        }
+
+    def set_params(self, **params) -> Pipeline:
+        """
+        Set pipeline parameters (sklearn convention).
+
+        Parameters
+        ----------
+        **params
+            Parameter names and values.
+
+        Returns
+        -------
+        Pipeline
+            Returns ``self``.
+
+        Raises
+        ------
+        ValueError
+            If an unknown parameter name is given.
+        """
+        valid = set(self.get_params())
+        for key, value in params.items():
+            if key not in valid:
+                raise ValueError(
+                    f"Invalid parameter '{key}'. Valid parameters: {sorted(valid)}"
+                )
+            setattr(self, key, value)
+        return self
+
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
+
+    def _validate_entry(self, dataset) -> None:
+        """Run validation and schema checks at pipeline entry."""
+        from quprep.validation.input_validator import validate_dataset
+        validate_dataset(dataset, context="at pipeline entry")
+        if self.schema is not None:
+            self.schema.validate(dataset)
+
+    def _fit_stages(self, dataset):
+        """
+        Fit all stateful stages sequentially.
+
+        Each stage is fitted on the output of the previous stage, then
+        applied to produce the dataset for the next stage.
+
+        Returns the fully transformed dataset (after all fitted stages).
+        """
         if self.cleaner is not None:
-            dataset = self.cleaner.fit_transform(dataset)
+            self.cleaner.fit(dataset)
+            dataset = self.cleaner.transform(dataset)
 
         if self.reducer is not None:
-            dataset = self.reducer.fit_transform(dataset)
+            self.reducer.fit(dataset)
+            dataset = self.reducer.transform(dataset)
 
-        normalizer = self.normalizer
-        if normalizer is None and self.encoder is not None:
+        self._resolved_normalizer = self.normalizer
+        if self._resolved_normalizer is None and self.encoder is not None:
             key = self._encoding_key()
             if key is not None:
                 from quprep.normalize.scalers import auto_normalizer
-                normalizer = auto_normalizer(key)
-        if normalizer is not None:
-            dataset = normalizer.fit_transform(dataset)
+                self._resolved_normalizer = auto_normalizer(key)
 
+        if self._resolved_normalizer is not None:
+            self._resolved_normalizer.fit(dataset)
+            dataset = self._resolved_normalizer.transform(dataset)
+
+        # Cost / qubit warning after all reductions are applied
+        if self.encoder is not None:
+            import warnings
+
+            from quprep.validation.cost import estimate_cost
+            from quprep.validation.input_validator import QuPrepWarning
+            cost = estimate_cost(self.encoder, dataset.n_features)
+            if cost.warning:
+                warnings.warn(cost.warning, QuPrepWarning, stacklevel=4)
+
+        return dataset
+
+    def _apply_stages(self, dataset) -> PipelineResult:
+        """Apply fitted stages to dataset and return PipelineResult."""
+        if self.cleaner is not None:
+            dataset = self.cleaner.transform(dataset)
+
+        if self.reducer is not None:
+            dataset = self.reducer.transform(dataset)
+
+        if self._resolved_normalizer is not None:
+            dataset = self._resolved_normalizer.transform(dataset)
+
+        return self._encode_export(dataset)
+
+    def _encode_export(self, dataset) -> PipelineResult:
+        """Run encoder + exporter on a already-transformed dataset."""
         if self.encoder is None:
             return PipelineResult(dataset=dataset, encoded=None, circuits=None)
 
@@ -139,18 +311,6 @@ class Pipeline:
 
         circuits = self.exporter.export_batch(encoded)
         return PipelineResult(dataset=dataset, encoded=encoded, circuits=circuits)
-
-    def fit(self, source):
-        """Fit the pipeline on training data."""
-        raise NotImplementedError("Pipeline.fit() — coming in v0.2.0")
-
-    def transform(self, source):
-        """Transform data using a fitted pipeline."""
-        raise NotImplementedError("Pipeline.transform() — coming in v0.2.0")
-
-    # ------------------------------------------------------------------
-    # Internal helpers
-    # ------------------------------------------------------------------
 
     def _ingest(self, source):
         """Return a Dataset regardless of what source type is passed in."""
@@ -203,7 +363,7 @@ class Pipeline:
         if isinstance(self.encoder, BasisEncoder):
             return "basis"
         if isinstance(self.encoder, (IQPEncoder, ReUploadEncoder)):
-            return "angle_ry"  # both need [-π, π] like angle Ry
+            return "angle_ry"
         if isinstance(self.encoder, HamiltonianEncoder):
             return "hamiltonian"
         return None
