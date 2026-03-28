@@ -6,7 +6,7 @@
 [![Python 3.10+](https://img.shields.io/pypi/pyversions/quprep.svg)](https://pypi.org/project/quprep/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![CI](https://github.com/quprep/quprep/actions/workflows/ci.yml/badge.svg)](https://github.com/quprep/quprep/actions/workflows/ci.yml)
-[![Documentation](https://readthedocs.org/projects/quprep/badge/?version=latest)](https://quprep.readthedocs.io)
+[![Documentation](https://readthedocs.org/projects/quprep/badge/?version=latest)](https://docs.quprep.org)
 [![DOI](https://zenodo.org/badge/1185611576.svg)](https://doi.org/10.5281/zenodo.19286258)
 
 ---
@@ -192,12 +192,12 @@ quprep qubo qaoa maxcut --adjacency "0,1,1;1,0,1;1,1,0" --p 2 --output circuit.q
 
 ## Documentation
 
-Full documentation at **[quprep.readthedocs.io](https://quprep.readthedocs.io)**
+Full documentation at **[docs.quprep.org](https://docs.quprep.org)**
 
-- [Installation](https://quprep.readthedocs.io/getting-started/installation)
-- [Quickstart guide](https://quprep.readthedocs.io/getting-started/quickstart)
-- [Encoding guide](https://quprep.readthedocs.io/guides/encodings)
-- [API reference](https://quprep.readthedocs.io/api)
+- [Installation](https://docs.quprep.org/getting-started/installation)
+- [Quickstart guide](https://docs.quprep.org/getting-started/quickstart)
+- [Encoding guide](https://docs.quprep.org/guides/encodings)
+- [API reference](https://docs.quprep.org/api)
 
 ---
 

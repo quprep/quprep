@@ -1,6 +1,6 @@
 site_name: QuPrep
 site_description: Quantum data preparation — the missing preprocessing layer between classical datasets and quantum computing frameworks.
-site_url: https://quprep.readthedocs.io
+site_url: https://docs.quprep.org
 repo_url: https://github.com/quprep/quprep
 repo_name: quprep/quprep
 
