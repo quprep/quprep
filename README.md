@@ -129,6 +129,25 @@ qasm = qaoa_circuit(q, p=2)
 bqm_dict = q.to_dwave()   # {(i, j): coeff}
 ```
 
+### Validation & cost estimation
+
+```python
+import quprep as qd
+
+# Define expected schema and attach to pipeline
+schema = qd.DataSchema([
+    qd.FeatureSpec("age",    dtype="continuous", min_value=0, max_value=120),
+    qd.FeatureSpec("income", dtype="continuous", min_value=0),
+])
+pipeline = qd.Pipeline(encoder=qd.AngleEncoder(), schema=schema)
+result = pipeline.fit_transform("data.csv")
+
+# Cost estimate is computed automatically at fit time
+print(result.cost.nisq_safe)    # True
+print(result.cost.circuit_depth)
+result.summary()                # audit table + cost breakdown
+```
+
 ### CLI
 
 ```bash
@@ -220,11 +239,13 @@ If you use QuPrep in your research, please cite:
 
 ```bibtex
 @software{quprep2026,
-  author  = {Perera, Hasarindu},
-  title   = {QuPrep: Quantum Data Preparation},
-  year    = {2026},
-  url     = {https://github.com/quprep/quprep},
-  doi     = {10.5281/zenodo.19286258},
-  license = {Apache-2.0},
+  author    = {Perera, Hasarindu},
+  title     = {QuPrep: Quantum Data Preparation},
+  year      = {2026},
+  publisher = {Zenodo},
+  version   = {0.4.0},
+  doi       = {10.5281/zenodo.19286258},
+  url       = {https://doi.org/10.5281/zenodo.19286258},
+  license   = {Apache-2.0},
 }
 ```

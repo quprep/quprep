@@ -101,6 +101,7 @@ nav:
     - Dimensionality Reduction: guides/reduction.md
     - Framework Export: guides/export.md
     - QUBO / Ising: guides/qubo.md
+    - Validation & Cost: guides/validation.md
   - API Reference:
     - Overview: api/index.md
     - Pipeline: api/pipeline.md
