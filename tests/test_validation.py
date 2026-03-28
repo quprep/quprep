@@ -136,6 +136,52 @@ def test_schema_infer_roundtrip():
     schema.validate(ds)  # inferred schema should always validate its source
 
 
+def test_schema_to_json_roundtrip():
+    schema = DataSchema([
+        FeatureSpec("age", dtype="continuous", min_value=0.0, max_value=120.0),
+        FeatureSpec("flag", dtype="binary", nullable=True),
+    ])
+    json_str = schema.to_json()
+    restored = DataSchema.from_json(json_str)
+    assert len(restored.features) == 2
+    assert restored.features[0].name == "age"
+    assert restored.features[0].min_value == 0.0
+    assert restored.features[0].max_value == 120.0
+    assert restored.features[1].nullable is True
+
+
+def test_schema_to_dict_omits_none_fields():
+    schema = DataSchema([FeatureSpec("x", dtype="continuous")])
+    d = schema.to_dict()
+    assert "min_value" not in d[0]
+    assert "max_value" not in d[0]
+    assert "nullable" not in d[0]
+
+
+def test_schema_to_dict_omits_false_nullable():
+    schema = DataSchema([FeatureSpec("x", dtype="continuous", nullable=False)])
+    d = schema.to_dict()
+    assert "nullable" not in d[0]
+
+
+def test_schema_from_dict_partial_fields():
+    data = [{"name": "x", "dtype": "continuous", "min_value": 1.0}]
+    schema = DataSchema.from_dict(data)
+    assert schema.features[0].max_value is None
+    assert schema.features[0].nullable is False
+
+
+def test_schema_infer_to_json_roundtrip():
+    ds = Dataset(
+        data=np.array([[1.0, 2.0], [3.0, 4.0]]),
+        feature_names=["a", "b"],
+        feature_types=["continuous", "continuous"],
+    )
+    json_str = DataSchema.infer(ds).to_json()
+    restored = DataSchema.from_json(json_str)
+    restored.validate(ds)  # must still pass on source data
+
+
 def test_schema_collects_all_violations():
     ds = Dataset(
         data=np.array([[-1.0, 5.0]]),

@@ -9,10 +9,7 @@ Chain cleaning → normalization → encoding → export using the Pipeline API.
 import numpy as np
 import pandas as pd
 
-from quprep import Pipeline
-from quprep.clean.imputer import Imputer
-from quprep.encode.angle import AngleEncoder
-from quprep.export.qasm_export import QASMExporter
+import quprep as qd
 
 # ── 1. Messy dataset with missing values and outliers ────────────────────────
 
@@ -32,10 +29,10 @@ print()
 
 # ── 2. Build the pipeline ────────────────────────────────────────────────────
 
-pipeline = Pipeline(
-    cleaner=Imputer(strategy="mean"),        # fill NaNs with column mean
-    encoder=AngleEncoder(rotation="ry"),     # Ry rotation gates
-    exporter=QASMExporter(),                 # OpenQASM 3.0 output
+pipeline = qd.Pipeline(
+    cleaner=qd.Imputer(strategy="mean"),     # fill NaNs with column mean
+    encoder=qd.AngleEncoder(rotation="ry"),  # Ry rotation gates
+    exporter=qd.QASMExporter(),              # OpenQASM 3.0 output
 )
 
 result = pipeline.fit_transform(df)
@@ -51,7 +48,7 @@ print(result.circuit)
 
 # ── 4. Save all circuits to disk ─────────────────────────────────────────────
 
-exporter = QASMExporter()
+exporter = qd.QASMExporter()
 for i, enc in enumerate(result.encoded):
     path = f"/tmp/circuit_{i:02d}.qasm"
     exporter.save(enc, path)

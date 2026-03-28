@@ -15,10 +15,9 @@ Install extras as needed:
 
 import numpy as np
 
-from quprep.encode.angle import AngleEncoder
-from quprep.export.qasm_export import QASMExporter
+import quprep as qd
 
-enc = AngleEncoder(rotation="ry").encode(np.array([0.3, 1.1, 0.7]) * np.pi)
+enc = qd.AngleEncoder(rotation="ry").encode(np.array([0.3, 1.1, 0.7]) * np.pi)
 
 # ── OpenQASM 3.0 — no dependencies ───────────────────────────────────────────
 
@@ -26,7 +25,7 @@ print("=" * 55)
 print("OpenQASM 3.0  (no extra dependencies)")
 print("=" * 55)
 
-print(QASMExporter().export(enc))
+print(qd.QASMExporter().export(enc))
 
 # ── Qiskit ───────────────────────────────────────────────────────────────────
 

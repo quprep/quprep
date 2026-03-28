@@ -12,13 +12,7 @@ For matplotlib output:
 
 import numpy as np
 
-from quprep.encode.angle import AngleEncoder
-from quprep.encode.basis import BasisEncoder
-from quprep.encode.entangled_angle import EntangledAngleEncoder
-from quprep.encode.hamiltonian import HamiltonianEncoder
-from quprep.encode.iqp import IQPEncoder
-from quprep.encode.reupload import ReUploadEncoder
-from quprep.export.visualize import draw_ascii, draw_matplotlib
+import quprep as qd
 
 x = np.array([0.5, 1.2, 0.75])   # 3-feature vector
 
@@ -27,32 +21,32 @@ x = np.array([0.5, 1.2, 0.75])   # 3-feature vector
 print("=" * 55)
 print("Angle encoding  (Ry)")
 print("=" * 55)
-print(draw_ascii(AngleEncoder(rotation="ry").encode(x * np.pi)))
+print(qd.draw_ascii(qd.AngleEncoder(rotation="ry").encode(x * np.pi)))
 
 print("=" * 55)
 print("Basis encoding")
 print("=" * 55)
-print(draw_ascii(BasisEncoder().encode(np.array([1.0, 0.0, 1.0]))))
+print(qd.draw_ascii(qd.BasisEncoder().encode(np.array([1.0, 0.0, 1.0]))))
 
 print("=" * 55)
 print("Entangled angle  (full, 2 layers)")
 print("=" * 55)
-print(draw_ascii(EntangledAngleEncoder(layers=2, entanglement="full").encode(x * np.pi)))
+print(qd.draw_ascii(qd.EntangledAngleEncoder(layers=2, entanglement="full").encode(x * np.pi)))
 
 print("=" * 55)
 print("IQP  (reps=1)")
 print("=" * 55)
-print(draw_ascii(IQPEncoder(reps=1).encode(x * np.pi)))
+print(qd.draw_ascii(qd.IQPEncoder(reps=1).encode(x * np.pi)))
 
 print("=" * 55)
 print("Data re-uploading  (3 layers)")
 print("=" * 55)
-print(draw_ascii(ReUploadEncoder(layers=3).encode(x * np.pi)))
+print(qd.draw_ascii(qd.ReUploadEncoder(layers=3).encode(x * np.pi)))
 
 print("=" * 55)
 print("Hamiltonian  (2 Trotter steps)")
 print("=" * 55)
-print(draw_ascii(HamiltonianEncoder(trotter_steps=2).encode(x)))
+print(qd.draw_ascii(qd.HamiltonianEncoder(trotter_steps=2).encode(x)))
 
 # ── 2. matplotlib ─────────────────────────────────────────────────────────────
 
@@ -66,16 +60,16 @@ else:
     print("=" * 55)
 
     encodings = [
-        ("angle",           AngleEncoder(rotation="ry").encode(x * np.pi)),
-        ("entangled_full",  EntangledAngleEncoder(entanglement="full").encode(x * np.pi)),
-        ("iqp",             IQPEncoder(reps=1).encode(x * np.pi)),
-        ("reupload",        ReUploadEncoder(layers=2).encode(x * np.pi)),
-        ("hamiltonian",     HamiltonianEncoder(trotter_steps=2).encode(x)),
+        ("angle",           qd.AngleEncoder(rotation="ry").encode(x * np.pi)),
+        ("entangled_full",  qd.EntangledAngleEncoder(entanglement="full").encode(x * np.pi)),
+        ("iqp",             qd.IQPEncoder(reps=1).encode(x * np.pi)),
+        ("reupload",        qd.ReUploadEncoder(layers=2).encode(x * np.pi)),
+        ("hamiltonian",     qd.HamiltonianEncoder(trotter_steps=2).encode(x)),
     ]
 
     for name, enc in encodings:
         path = f"/tmp/circuit_{name}.png"
-        draw_matplotlib(enc, filename=path)
+        qd.draw_matplotlib(enc, filename=path)
         print(f"  Saved: {path}")
 
     print()

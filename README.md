@@ -7,6 +7,7 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![CI](https://github.com/quprep/quprep/actions/workflows/ci.yml/badge.svg)](https://github.com/quprep/quprep/actions/workflows/ci.yml)
 [![Documentation](https://readthedocs.org/projects/quprep/badge/?version=latest)](https://quprep.readthedocs.io)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.pending.svg)](https://zenodo.org/search?q=quprep)
 
 ---
 
@@ -64,16 +65,18 @@ pip install quprep[all]        # everything above
 ### One-liner
 
 ```python
-import quprep
+import quprep as qd
 
-result = quprep.prepare("data.csv", encoding="angle", framework="qasm")
+result = qd.prepare("data.csv", encoding="angle", framework="qasm")
 print(result.circuit)
 ```
 
 ### Encoding recommendation
 
 ```python
-rec = quprep.recommend("data.csv", task="classification", qubits=8)
+import quprep as qd
+
+rec = qd.recommend("data.csv", task="classification", qubits=8)
 print(rec)                    # ranked table with reasoning
 result = rec.apply("data.csv")
 ```
@@ -81,15 +84,12 @@ result = rec.apply("data.csv")
 ### Pipeline API
 
 ```python
-from quprep import Pipeline
-from quprep.reduce.pca import PCAReducer
-from quprep.encode.iqp import IQPEncoder
-from quprep.export.pennylane_export import PennyLaneExporter  # pip install quprep[pennylane]
+import quprep as qd  # all public classes on the top-level namespace
 
-pipeline = Pipeline(
-    reducer=PCAReducer(n_components=8),
-    encoder=IQPEncoder(reps=2),
-    exporter=PennyLaneExporter(),
+pipeline = qd.Pipeline(
+    reducer=qd.PCAReducer(n_components=8),
+    encoder=qd.IQPEncoder(reps=2),
+    exporter=qd.PennyLaneExporter(),   # pip install quprep[pennylane]
 )
 result = pipeline.fit_transform("data.csv")
 qnode = result.circuit   # callable qml.QNode
@@ -98,11 +98,13 @@ qnode = result.circuit   # callable qml.QNode
 ### Circuit visualization
 
 ```python
+import quprep as qd
+
 # ASCII — no dependencies
-print(quprep.draw_ascii(result.encoded[0]))
+print(qd.draw_ascii(result.encoded[0]))
 
 # matplotlib — pip install quprep[viz]
-quprep.draw_matplotlib(result.encoded[0], filename="circuit.png")
+qd.draw_matplotlib(result.encoded[0], filename="circuit.png")
 ```
 
 ### QUBO / combinatorial optimization
@@ -133,6 +135,10 @@ bqm_dict = q.to_dwave()   # {(i, j): coeff}
 quprep convert data.csv --encoding angle --framework qasm
 quprep convert data.csv --encoding iqp --framework pennylane
 quprep recommend data.csv --task classification --qubits 8
+
+quprep validate data.csv                              # shape, columns, NaN report
+quprep validate data.csv --infer-schema schema.json  # infer schema and save
+quprep validate data.csv --schema schema.json        # enforce schema (exit 1 on violation)
 
 quprep qubo maxcut --adjacency "0,1,1;1,0,1;1,1,0" --solve
 quprep qubo knapsack --weights "2,3,4" --values "3,4,5" --capacity 5
@@ -189,6 +195,7 @@ See the [`examples/`](examples/) directory:
 | 05 | Encoding recommendation |
 | 06 | Circuit visualization |
 | 07 | QUBO / Ising — Max-Cut, Knapsack, solvers, D-Wave export, QAOA |
+| 08 | Validation, schema & cost — `DataSchema`, `estimate_cost`, `result.summary()` |
 
 ---
 
@@ -217,6 +224,9 @@ If you use QuPrep in your research, please cite:
   title   = {QuPrep: Quantum Data Preparation},
   year    = {2026},
   url     = {https://github.com/quprep/quprep},
+  doi     = {10.5281/zenodo.pending},
   license = {Apache-2.0},
 }
 ```
+
+A citable Zenodo record (with a permanent DOI) will be published alongside the v1.0.0 stable release. Until then the GitHub repository URL is the canonical reference.

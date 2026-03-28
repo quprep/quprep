@@ -176,3 +176,91 @@ class DataSchema:
                 )
             )
         return cls(features)
+
+    # ------------------------------------------------------------------
+    # Serialization
+    # ------------------------------------------------------------------
+
+    def to_dict(self) -> list[dict]:
+        """
+        Serialise this schema to a plain list of dicts.
+
+        Each dict has keys ``name``, ``dtype``, and optionally ``min_value``,
+        ``max_value``, and ``nullable`` (only included when non-default so the
+        output stays terse).
+
+        Returns
+        -------
+        list[dict]
+        """
+        out = []
+        for spec in self.features:
+            entry: dict = {"name": spec.name, "dtype": spec.dtype}
+            if spec.min_value is not None:
+                entry["min_value"] = spec.min_value
+            if spec.max_value is not None:
+                entry["max_value"] = spec.max_value
+            if spec.nullable:
+                entry["nullable"] = spec.nullable
+            out.append(entry)
+        return out
+
+    def to_json(self, indent: int = 2) -> str:
+        """
+        Serialise this schema to a JSON string.
+
+        Parameters
+        ----------
+        indent : int
+            JSON indentation level (default 2).
+
+        Returns
+        -------
+        str
+        """
+        import json
+        return json.dumps(self.to_dict(), indent=indent)
+
+    @classmethod
+    def from_dict(cls, data: list[dict]) -> DataSchema:
+        """
+        Build a DataSchema from a list of dicts (e.g. loaded from JSON).
+
+        Parameters
+        ----------
+        data : list[dict]
+            Each dict must have ``name`` and ``dtype``; ``min_value``,
+            ``max_value``, and ``nullable`` are optional.
+
+        Returns
+        -------
+        DataSchema
+        """
+        features = [
+            FeatureSpec(
+                name=entry["name"],
+                dtype=entry["dtype"],
+                min_value=entry.get("min_value"),
+                max_value=entry.get("max_value"),
+                nullable=entry.get("nullable", False),
+            )
+            for entry in data
+        ]
+        return cls(features)
+
+    @classmethod
+    def from_json(cls, s: str) -> DataSchema:
+        """
+        Build a DataSchema from a JSON string.
+
+        Parameters
+        ----------
+        s : str
+            JSON string produced by :meth:`to_json`.
+
+        Returns
+        -------
+        DataSchema
+        """
+        import json
+        return cls.from_dict(json.loads(s))

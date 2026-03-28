@@ -9,6 +9,8 @@ Usage
     quprep qubo knapsack --weights "2,3,4" --values "3,4,5" --capacity 5
     quprep qubo tsp --distances "0,1,2;1,0,1;2,1,0"
     quprep qubo schedule --times "3,1,4,2" --machines 2
+    quprep validate dataset.csv
+    quprep validate dataset.csv --schema schema.json
     quprep --version
 """
 
@@ -198,6 +200,31 @@ def build_parser() -> argparse.ArgumentParser:
         help="Maximum qubit budget.",
     )
 
+    # quprep validate
+    validate = subparsers.add_parser(
+        "validate",
+        help="Validate a dataset: report structure, NaN counts, and optional schema checks.",
+    )
+    validate.add_argument("source", help="Input CSV file path.")
+    validate.add_argument(
+        "--schema", "-s",
+        default=None,
+        metavar="SCHEMA_JSON",
+        help=(
+            "Path to a JSON schema file. Each entry must have 'name' and 'dtype' keys; "
+            "'min_value', 'max_value', and 'nullable' are optional."
+        ),
+    )
+    validate.add_argument(
+        "--infer-schema",
+        default=None,
+        metavar="OUTPUT_JSON",
+        help=(
+            "Infer a schema from the dataset and write it to OUTPUT_JSON. "
+            "Use '-' to print to stdout instead of saving to a file."
+        ),
+    )
+
     return parser
 
 
@@ -385,6 +412,109 @@ def cmd_qubo(args) -> int:
         return 1
 
 
+def cmd_validate(args) -> int:
+    try:
+        from quprep.ingest.csv_ingester import CSVIngester
+        dataset = CSVIngester().load(args.source)
+    except FileNotFoundError:
+        print(f"[quprep] File not found: {args.source}", file=sys.stderr)
+        return 1
+    except Exception as exc:
+        print(f"[quprep] Failed to load '{args.source}': {exc}", file=sys.stderr)
+        return 1
+
+    import numpy as np
+
+    print(f"Dataset : {args.source}")
+    print(f"Shape   : {dataset.n_samples} samples × {dataset.n_features} features")
+    if dataset.feature_names:
+        names_preview = dataset.feature_names[:8]
+        suffix = " ..." if dataset.n_features > 8 else ""
+        print(f"Columns : {', '.join(names_preview)}{suffix}")
+
+    # NaN report
+    nan_cols = []
+    for i in range(dataset.n_features):
+        col = dataset.data[:, i]
+        n_nan = int(np.isnan(col).sum())
+        if n_nan:
+            col_name = (
+                dataset.feature_names[i]
+                if i < len(dataset.feature_names)
+                else f"feature[{i}]"
+            )
+            nan_cols.append((col_name, n_nan))
+    if nan_cols:
+        print(f"NaN     : {len(nan_cols)} column(s) with missing values")
+        for col_name, n_nan in nan_cols:
+            pct = 100.0 * n_nan / dataset.n_samples
+            print(f"          '{col_name}': {n_nan} ({pct:.1f}%)")
+    else:
+        print("NaN     : none")
+
+    # Value ranges
+    print("Ranges  :")
+    for i in range(min(dataset.n_features, 10)):
+        col = dataset.data[:, i]
+        valid = col[~np.isnan(col)]
+        col_name = (
+            dataset.feature_names[i]
+            if i < len(dataset.feature_names)
+            else f"feature[{i}]"
+        )
+        if valid.size > 0:
+            print(f"          '{col_name}': [{valid.min():.4g}, {valid.max():.4g}]")
+        else:
+            print(f"          '{col_name}': all NaN")
+    if dataset.n_features > 10:
+        print(f"          ... ({dataset.n_features - 10} more columns)")
+
+    # Schema inference
+    if args.infer_schema:
+        from quprep.validation.schema import DataSchema
+        inferred = DataSchema.infer(dataset)
+        json_str = inferred.to_json()
+        if args.infer_schema == "-":
+            print("\nInferred schema:")
+            print(json_str)
+        else:
+            from pathlib import Path
+            Path(args.infer_schema).write_text(json_str, encoding="utf-8")
+            print(f"\nInferred schema written to {args.infer_schema}")
+
+    # Schema validation
+    if args.schema:
+        import json
+        try:
+            with open(args.schema, encoding="utf-8") as fh:
+                raw = json.load(fh)
+        except (FileNotFoundError, json.JSONDecodeError) as exc:
+            print(f"\n[quprep] Cannot load schema file: {exc}", file=sys.stderr)
+            return 1
+
+        from quprep.validation.schema import DataSchema, FeatureSpec, SchemaViolationError
+        specs = [
+            FeatureSpec(
+                name=entry["name"],
+                dtype=entry["dtype"],
+                min_value=entry.get("min_value"),
+                max_value=entry.get("max_value"),
+                nullable=entry.get("nullable", False),
+            )
+            for entry in raw
+        ]
+        schema = DataSchema(specs)
+        print("\nSchema  : checking ...")
+        try:
+            schema.validate(dataset)
+            print("Schema  : OK — no violations")
+        except SchemaViolationError as exc:
+            print(f"Schema  : FAILED\n{exc}", file=sys.stderr)
+            return 1
+
+    return 0
+
+
 def cmd_recommend(args) -> int:
     try:
         from quprep.core.recommender import recommend
@@ -419,6 +549,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "recommend":
         return cmd_recommend(args)
+
+    if args.command == "validate":
+        return cmd_validate(args)
 
     return 1
 

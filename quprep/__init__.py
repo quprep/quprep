@@ -3,30 +3,75 @@ QuPrep — Quantum Data Preparation.
 
 The missing preprocessing layer between classical datasets and quantum computing frameworks.
 
+Both import styles are supported::
+
     import quprep
+    import quprep as qd   # "quantum data" — preferred short alias
 
-    # One-liner
-    circuit = quprep.prepare("data.csv", encoding="angle", framework="qiskit")
+One-liner::
 
-    # Pipeline
-    pipeline = quprep.Pipeline(
-        cleaner=quprep.Cleaner(impute="knn"),
-        reducer=quprep.LDAReducer(n_components=4),
-        encoder=quprep.AngleEncoder(),
-        exporter=quprep.QiskitExporter(),
+    circuit = qd.prepare("data.csv", encoding="angle", framework="qiskit")
+
+Full pipeline::
+
+    pipeline = qd.Pipeline(
+        cleaner=qd.Imputer(strategy="knn"),
+        reducer=qd.LDAReducer(n_components=4),
+        encoder=qd.AngleEncoder(),
+        exporter=qd.QiskitExporter(),
     )
+    result = pipeline.fit_transform(df)
+    result.summary()
 
-    # Recommendation
-    rec = quprep.recommend(df, task="classification", qubits=8)
+Schema-validated pipeline::
+
+    schema = qd.DataSchema([
+        qd.FeatureSpec("age", dtype="continuous", min_value=0, max_value=120),
+        qd.FeatureSpec("score", dtype="continuous", min_value=0.0, max_value=1.0),
+    ])
+    pipeline = qd.Pipeline(encoder=qd.AngleEncoder(), schema=schema)
+
+Recommendation::
+
+    rec = qd.recommend(df, task="classification", qubits=8)
 """
 
-__version__ = "0.3.1.dev0"
+__version__ = "0.4.0"
 __author__ = "Hasarindu Perera"
 __license__ = "Apache-2.0"
 
-from quprep.core.pipeline import Pipeline
+# Core
+# Cleaners
+from quprep.clean.categorical import CategoricalEncoder
+from quprep.clean.imputer import Imputer
+from quprep.clean.outlier import OutlierHandler
+from quprep.clean.selector import FeatureSelector
+from quprep.core.pipeline import Pipeline, PipelineResult
 from quprep.core.recommender import recommend
+
+# Encoders
+from quprep.encode.amplitude import AmplitudeEncoder
+from quprep.encode.angle import AngleEncoder
+from quprep.encode.basis import BasisEncoder
+from quprep.encode.entangled_angle import EntangledAngleEncoder
+from quprep.encode.hamiltonian import HamiltonianEncoder
+from quprep.encode.iqp import IQPEncoder
+from quprep.encode.reupload import ReUploadEncoder
+
+# Exporters
+from quprep.export.qasm_export import QASMExporter
 from quprep.export.visualize import draw_ascii, draw_matplotlib
+
+# Normalizer
+from quprep.normalize.scalers import Scaler
+
+# Reducers
+from quprep.reduce.hardware_aware import HardwareAwareReducer
+from quprep.reduce.lda import LDAReducer
+from quprep.reduce.pca import PCAReducer
+from quprep.reduce.spectral import SpectralReducer, TSNEReducer, UMAPReducer
+
+# Validation
 from quprep.validation import (
     CostEstimate,
     DataSchema,
@@ -38,11 +83,38 @@ from quprep.validation import (
 
 __all__ = [
     "__version__",
+    # Core
     "Pipeline",
+    "PipelineResult",
     "recommend",
     "prepare",
+    # Encoders
+    "AngleEncoder",
+    "EntangledAngleEncoder",
+    "AmplitudeEncoder",
+    "BasisEncoder",
+    "IQPEncoder",
+    "ReUploadEncoder",
+    "HamiltonianEncoder",
+    # Cleaners
+    "Imputer",
+    "OutlierHandler",
+    "CategoricalEncoder",
+    "FeatureSelector",
+    # Normalizer
+    "Scaler",
+    # Reducers
+    "PCAReducer",
+    "LDAReducer",
+    "HardwareAwareReducer",
+    "SpectralReducer",
+    "TSNEReducer",
+    "UMAPReducer",
+    # Exporters
+    "QASMExporter",
     "draw_ascii",
     "draw_matplotlib",
+    # Validation
     "DataSchema",
     "FeatureSpec",
     "SchemaViolationError",

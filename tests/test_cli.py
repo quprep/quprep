@@ -199,3 +199,94 @@ class TestRecommend:
         rc = main(["recommend", "nonexistent.csv"])
         assert rc == 1
         assert "File not found" in capsys.readouterr().err
+
+
+# ---------------------------------------------------------------------------
+# quprep validate
+# ---------------------------------------------------------------------------
+
+class TestValidateCommand:
+    def test_validate_basic(self, csv_file, capsys):
+        rc = main(["validate", csv_file])
+        assert rc == 0
+        out = capsys.readouterr().out
+        assert "Shape" in out
+        assert "3 samples" in out
+
+    def test_validate_prints_columns(self, csv_file, capsys):
+        main(["validate", csv_file])
+        out = capsys.readouterr().out
+        assert "x0" in out
+
+    def test_validate_no_nan(self, csv_file, capsys):
+        main(["validate", csv_file])
+        out = capsys.readouterr().out
+        assert "none" in out  # "NaN     : none"
+
+    def test_validate_reports_nan(self, tmp_path, capsys):
+        f = tmp_path / "nan.csv"
+        f.write_text("a,b\n1.0,2.0\n,3.0\n1.0,\n")
+        rc = main(["validate", str(f)])
+        assert rc == 0
+        out = capsys.readouterr().out
+        assert "missing values" in out
+
+    def test_validate_missing_file(self, capsys):
+        rc = main(["validate", "nonexistent.csv"])
+        assert rc == 1
+        assert "File not found" in capsys.readouterr().err
+
+    def test_validate_with_valid_schema(self, tmp_path, capsys):
+        import json
+        csv_f = tmp_path / "data.csv"
+        csv_f.write_text("age,score\n25.0,0.8\n30.0,0.9\n")
+        schema_f = tmp_path / "schema.json"
+        schema_f.write_text(json.dumps([
+            {"name": "age", "dtype": "continuous", "min_value": 0, "max_value": 120},
+            {"name": "score", "dtype": "continuous", "min_value": 0.0, "max_value": 1.0},
+        ]))
+        rc = main(["validate", str(csv_f), "--schema", str(schema_f)])
+        assert rc == 0
+        out = capsys.readouterr().out
+        assert "OK" in out
+
+    def test_validate_with_violated_schema(self, tmp_path, capsys):
+        import json
+        csv_f = tmp_path / "data.csv"
+        csv_f.write_text("age,score\n-5.0,0.8\n30.0,0.9\n")
+        schema_f = tmp_path / "schema.json"
+        schema_f.write_text(json.dumps([
+            {"name": "age", "dtype": "continuous", "min_value": 0},
+            {"name": "score", "dtype": "continuous"},
+        ]))
+        rc = main(["validate", str(csv_f), "--schema", str(schema_f)])
+        assert rc == 1
+        assert "FAILED" in capsys.readouterr().err
+
+    def test_validate_parser_defaults(self):
+        args = build_parser().parse_args(["validate", "data.csv"])
+        assert args.source == "data.csv"
+        assert args.schema is None
+        assert args.infer_schema is None
+
+    def test_validate_infer_schema_to_stdout(self, csv_file, capsys):
+        rc = main(["validate", csv_file, "--infer-schema", "-"])
+        assert rc == 0
+        out = capsys.readouterr().out
+        assert "x0" in out  # column name appears in inferred schema JSON
+
+    def test_validate_infer_schema_to_file(self, csv_file, tmp_path, capsys):
+        import json
+        out_path = str(tmp_path / "schema.json")
+        rc = main(["validate", csv_file, "--infer-schema", out_path])
+        assert rc == 0
+        data = json.loads(open(out_path).read())
+        assert isinstance(data, list)
+        assert data[0]["name"] == "x0"
+
+    def test_validate_infer_then_validate(self, csv_file, tmp_path):
+        schema_path = str(tmp_path / "schema.json")
+        main(["validate", csv_file, "--infer-schema", schema_path])
+        # inferred schema should validate the same file cleanly
+        rc = main(["validate", csv_file, "--schema", schema_path])
+        assert rc == 0

@@ -22,12 +22,12 @@ where $R_G$ is Ry (default), Rx, or Rz.
 | Best for | Most QML tasks — default recommendation |
 
 ```python
-from quprep.encode.angle import AngleEncoder
+import quprep as qd
 
-enc = AngleEncoder(rotation="ry")   # or "rx", "rz"
-result = enc.encode(x)              # x must be in [0, π] for ry
-print(result.parameters)            # rotation angles
-print(result.metadata)              # {"n_qubits": 4, "depth": 1, ...}
+enc = qd.AngleEncoder(rotation="ry")  # or "rx", "rz"
+result = enc.encode(x)                # x must be in [0, π] for ry
+print(result.parameters)              # rotation angles
+print(result.metadata)                # {"n_qubits": 4, "depth": 1, ...}
 ```
 
 **Normalization:** Use `Scaler("minmax_pi")` for Ry, `Scaler("minmax_pm_pi")` for Rx/Rz. The pipeline applies this automatically.
@@ -50,15 +50,14 @@ Requires $\|x\|_2 = 1$. If $d$ is not a power of two, pads with zeros and re-nor
 | Best for | Qubit-limited scenarios, high expressivity |
 
 ```python
-from quprep.encode.amplitude import AmplitudeEncoder
-from quprep.normalize.scalers import Scaler
+import quprep as qd
 import numpy as np
 
 # Normalize first (pipeline does this automatically)
 x = np.array([1.0, 2.0, 3.0, 4.0])
 x = x / np.linalg.norm(x)
 
-enc = AmplitudeEncoder(pad=True)  # pad=False raises if d is not power of two
+enc = qd.AmplitudeEncoder(pad=True)  # pad=False raises if d is not power of two
 result = enc.encode(x)
 print(result.metadata["n_qubits"])   # 2 (log2(4))
 print(result.metadata["padded"])     # False
@@ -85,9 +84,9 @@ $$|\psi(x)\rangle = |x_1 x_2 \ldots x_d\rangle$$
 | Best for | Binary data, QAOA, combinatorial optimization |
 
 ```python
-from quprep.encode.basis import BasisEncoder
+import quprep as qd
 
-enc = BasisEncoder(threshold=0.5)  # values >= 0.5 → |1⟩, else → |0⟩
+enc = qd.BasisEncoder(threshold=0.5)  # values >= 0.5 → |1⟩, else → |0⟩
 result = enc.encode(x)
 print(result.parameters)  # binary {0.0, 1.0}
 ```
@@ -112,9 +111,9 @@ $$|\psi(x)\rangle = U_\Phi(x) H^{\otimes n} |0\rangle^n$$
 | Best for | Kernel methods, quantum advantage arguments |
 
 ```python
-from quprep.encode.iqp import IQPEncoder
+import quprep as qd
 
-enc = IQPEncoder(reps=2)
+enc = qd.IQPEncoder(reps=2)
 result = enc.encode(x)   # x in [−π, π]
 ```
 
@@ -137,9 +136,9 @@ Alternates rotation layers (Ry/Rx/Rz per qubit) with CNOT entangling layers, rep
 | Best for | Feature correlations, expressivity beyond angle encoding |
 
 ```python
-from quprep.encode.entangled_angle import EntangledAngleEncoder
+import quprep as qd
 
-enc = EntangledAngleEncoder(rotation="ry", layers=2, entanglement="circular")
+enc = qd.EntangledAngleEncoder(rotation="ry", layers=2, entanglement="circular")
 result = enc.encode(x)
 print(result.metadata["cnot_pairs"])  # [(0,1), (1,2), (2,0)] for circular
 ```
@@ -158,9 +157,9 @@ Pérez-Salinas et al. 2020. Applies the same rotation layer `layers` times, inte
 | Best for | High-expressivity QNNs |
 
 ```python
-from quprep.encode.reupload import ReUploadEncoder
+import quprep as qd
 
-enc = ReUploadEncoder(layers=3, rotation="ry")
+enc = qd.ReUploadEncoder(layers=3, rotation="ry")
 result = enc.encode(x)   # x in [−π, π]
 ```
 
@@ -181,9 +180,9 @@ Trotterized time evolution under a single-qubit Z Hamiltonian $H(x) = \sum_i x_i
 | Best for | Physics simulation, VQE |
 
 ```python
-from quprep.encode.hamiltonian import HamiltonianEncoder
+import quprep as qd
 
-enc = HamiltonianEncoder(evolution_time=1.0, trotter_steps=4)
+enc = qd.HamiltonianEncoder(evolution_time=1.0, trotter_steps=4)
 result = enc.encode(x)
 ```
 
@@ -196,8 +195,8 @@ result = enc.encode(x)
 Not sure? Use `quprep.recommend()`:
 
 ```python
-import quprep
-rec = quprep.recommend("data.csv", task="classification", qubits=8)
+import quprep as qd
+rec = qd.recommend("data.csv", task="classification", qubits=8)
 print(rec)
 ```
 
@@ -223,11 +222,10 @@ Is your data binary?
 The pipeline selects the correct normalization automatically:
 
 ```python
-from quprep import Pipeline
-from quprep.encode.angle import AngleEncoder
+import quprep as qd
 
 # No manual normalization needed — pipeline handles it
-pipeline = Pipeline(encoder=AngleEncoder(rotation="ry"))
+pipeline = qd.Pipeline(encoder=qd.AngleEncoder(rotation="ry"))
 result = pipeline.fit_transform(data)
 # data was automatically scaled to [0, π] before encoding
 ```
@@ -235,10 +233,10 @@ result = pipeline.fit_transform(data)
 To override:
 
 ```python
-from quprep.normalize.scalers import Scaler
+import quprep as qd
 
-pipeline = Pipeline(
-    encoder=AngleEncoder(),
-    normalizer=Scaler("zscore"),  # explicit override
+pipeline = qd.Pipeline(
+    encoder=qd.AngleEncoder(),
+    normalizer=qd.Scaler("zscore"),  # explicit override
 )
 ```

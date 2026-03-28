@@ -12,6 +12,55 @@ QuPrep uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.4.0] — 2026-03-28
+
+### Added
+
+**Validation & schema** (`quprep.validation`)
+- `QuPrepWarning` — custom warning class; all pipeline warnings use this category so they can be filtered precisely
+- `validate_dataset(dataset)` — structural checks at pipeline entry: shape, dtype, NaN detection with fractional coverage warning
+- `warn_qubit_mismatch(n_features, n_qubits, encoding)` — warns when features exceed qubit budget
+- `DataSchema` / `FeatureSpec` / `SchemaViolationError` — declare expected feature names, types, and value ranges; attach via `Pipeline(schema=...)` to enforce at entry; all violations collected and reported together
+- `DataSchema.infer(dataset)` — auto-builds schema from a reference dataset
+- `DataSchema.to_json()` / `from_json()` / `to_dict()` / `from_dict()` — full serialisation round-trip; terse output (omits `None` fields and `nullable=False`)
+
+**Cost estimation** (`quprep.validation.cost`)
+- `CostEstimate` — dataclass: `encoding`, `n_features`, `n_qubits`, `gate_count`, `circuit_depth`, `two_qubit_gates`, `nisq_safe`, `warning`
+- `estimate_cost(encoder, n_features)` — formula-accurate gate counts for all 7 encoders; NISQ-safe flag (depth < 200, CNOTs < 50)
+
+**Pipeline & PipelineResult** (`quprep.core.pipeline`)
+- `PipelineResult.cost` — `CostEstimate | None`; populated at fit time whenever an encoder is configured; shown in `repr()`
+- `PipelineResult.audit_log` — `list[dict] | None`; one entry per preprocessing stage with `{stage, n_samples_in, n_features_in, n_samples_out, n_features_out}`
+- `PipelineResult.summary()` — prints audit log as an aligned table and cost breakdown
+- `Pipeline.fit(source, y=None)` / `.transform(source)` — full sklearn-compatible split; `transform()` raises `RuntimeError` before `fit()`
+- `Pipeline.get_params()` / `.set_params(**params)` — hyperparameter search ready
+- `Pipeline(schema=...)` — validates dataset at entry before any stage runs
+- `Pipeline.summary()` / `__str__` — human-readable snapshot: configured stages, fitted status, resolved normalizer, schema feature count, last cost estimate
+
+**Sklearn-compatible fit/transform on all stateful stages**
+- Every stage now has separate `fit(dataset)` and `transform(dataset)` methods; `fit_transform` delegates; `NotFittedError` raised on `transform()` before `fit()`
+- Stages: `Scaler`, `Imputer`, `OutlierHandler`, `CategoricalEncoder`, `FeatureSelector`, `PCAReducer`, `LDAReducer`, `HardwareAwareReducer`, `SpectralReducer`, `TSNEReducer`, `UMAPReducer`
+- `CategoricalEncoder` aligns one-hot columns between train and test sets at transform time
+- `Dataset.copy()` — deep copy for safe fit/transform stage splitting
+
+**`import quprep as qd`** — top-level namespace alias
+- All public classes exported directly: all 7 encoders, all cleaners (`Imputer`, `OutlierHandler`, `CategoricalEncoder`, `FeatureSelector`), `Scaler`, all reducers, `QASMExporter`, `PipelineResult`, all validation classes
+- No sub-imports needed: `qd.AngleEncoder()`, `qd.PCAReducer()`, `qd.DataSchema(...)`, etc.
+
+**`quprep validate` CLI**
+- `quprep validate dataset.csv` — shape, column names, NaN report per column (count + %), value ranges
+- `quprep validate dataset.csv --schema schema.json` — validates against a JSON schema (array of `{name, dtype, min_value?, max_value?, nullable?}`); exits 1 on violation
+- `quprep validate dataset.csv --infer-schema output.json` — infers schema from the CSV and writes it to a file; use `"-"` to print to stdout
+
+**Type stubs** (`.pyi` files)
+- Stubs added for: `Dataset`, `Pipeline` / `PipelineResult`, `Scaler`, `BaseEncoder` / `EncodedResult`, and the full `validation` public API
+
+**Zenodo DOI**
+- Placeholder badge and `doi` field added to README and BibTeX citation
+- No custom GitHub Actions workflow needed — Zenodo's native GitHub integration archives each Release automatically
+
+---
+
 ## [0.3.0] — 2026-03-21
 
 ### Added
@@ -152,7 +201,8 @@ First public release. Covers the full ingest → clean → normalize → encode 
 
 ---
 
-[Unreleased]: https://github.com/quprep/quprep/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/quprep/quprep/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/quprep/quprep/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/quprep/quprep/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/quprep/quprep/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/quprep/quprep/releases/tag/v0.1.0

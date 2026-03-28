@@ -75,6 +75,7 @@ QuPrep converts classical datasets into quantum-circuit-ready format. It is not 
 | **Export+** | v0.2.0 | PennyLane, Cirq, TKET, ASCII + matplotlib visualization |
 | **Recommend** | v0.2.0 | Automatic encoding selection for your dataset and task |
 | **QUBO** | v0.3.0 | QUBO/Ising, 7 problem formulations, solvers, QAOA, D-Wave export |
+| **Validate** | v0.4.0 | Input validation, schema enforcement, cost estimation, sklearn fit/transform, `import quprep as qd` |
 
 ---
 

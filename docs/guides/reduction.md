@@ -22,13 +22,11 @@ If your dataset has 512 features and your backend has 127 qubits, angle encoding
 Good general-purpose default. `n_components` can be an integer (exact) or float (variance fraction, e.g. `0.95`).
 
 ```python
-from quprep import Pipeline
-from quprep.reduce.pca import PCAReducer
-from quprep.encode.angle import AngleEncoder
+import quprep as qd
 
-pipeline = Pipeline(
-    reducer=PCAReducer(n_components=8),
-    encoder=AngleEncoder(),
+pipeline = qd.Pipeline(
+    reducer=qd.PCAReducer(n_components=8),
+    encoder=qd.AngleEncoder(),
 )
 result = pipeline.fit_transform("data.csv")
 
@@ -43,11 +41,11 @@ print(pipeline.reducer.explained_variance_ratio_)
 Maximises class separability. Research shows LDA outperforms PCA for quantum classification tasks. Requires class labels. Maximum components: n_classes − 1.
 
 ```python
-from quprep.reduce.lda import LDAReducer
+import quprep as qd
 
-pipeline = Pipeline(
-    reducer=LDAReducer(n_components=4, labels=y),
-    encoder=AngleEncoder(),
+pipeline = qd.Pipeline(
+    reducer=qd.LDAReducer(n_components=4, labels=y),
+    encoder=qd.AngleEncoder(),
 )
 ```
 
@@ -58,11 +56,11 @@ pipeline = Pipeline(
 Row-wise FFT — keeps the first `n_components` frequency magnitudes. Outputs are always ≥ 0. Best for time-series and signal data.
 
 ```python
-from quprep.reduce.spectral import SpectralReducer
+import quprep as qd
 
-pipeline = Pipeline(
-    reducer=SpectralReducer(n_components=8),
-    encoder=AngleEncoder(),
+pipeline = qd.Pipeline(
+    reducer=qd.SpectralReducer(n_components=8),
+    encoder=qd.AngleEncoder(),
 )
 ```
 
@@ -73,9 +71,9 @@ pipeline = Pipeline(
 Preserves local structure. Best suited to 2–3 qubit circuits and visualization tasks.
 
 ```python
-from quprep.reduce.spectral import TSNEReducer
+import quprep as qd
 
-reducer = TSNEReducer(n_components=2, perplexity=30)
+reducer = qd.TSNEReducer(n_components=2, perplexity=30)
 ```
 
 !!! warning
@@ -92,9 +90,9 @@ pip install umap-learn
 Faster than t-SNE and scales to large datasets. Preserves both local and global structure.
 
 ```python
-from quprep.reduce.spectral import UMAPReducer
+import quprep as qd
 
-reducer = UMAPReducer(n_components=4)
+reducer = qd.UMAPReducer(n_components=4)
 ```
 
 Raises `ImportError` with install hint if `umap-learn` is not installed.
@@ -106,18 +104,18 @@ Raises `ImportError` with install hint if `umap-learn` is not installed.
 Automatically calculates the qubit budget for a target backend and reduces to fit. No manual calculation needed.
 
 ```python
-from quprep.reduce.hardware_aware import HardwareAwareReducer
+import quprep as qd
 
 # By backend name
-pipeline = Pipeline(
-    reducer=HardwareAwareReducer(backend="ibm_brisbane"),
-    encoder=AngleEncoder(),
+pipeline = qd.Pipeline(
+    reducer=qd.HardwareAwareReducer(backend="ibm_brisbane"),
+    encoder=qd.AngleEncoder(),
 )
 
 # By qubit count
-pipeline = Pipeline(
-    reducer=HardwareAwareReducer(backend=16),
-    encoder=AngleEncoder(),
+pipeline = qd.Pipeline(
+    reducer=qd.HardwareAwareReducer(backend=16),
+    encoder=qd.AngleEncoder(),
 )
 ```
 

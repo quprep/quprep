@@ -1,12 +1,12 @@
 # API Reference
 
-QuPrep's public API has three top-level entry points:
+QuPrep's public API has three top-level entry points (use `import quprep as qd`):
 
 | Name | Description |
 |---|---|
-| `quprep.prepare()` | One-liner: source → circuits |
-| `quprep.Pipeline` | Composable pipeline with full stage control |
-| `quprep.recommend()` | Encoding recommendation engine |
+| `qd.prepare()` | One-liner: source → circuits |
+| `qd.Pipeline` | Composable pipeline with full stage control |
+| `qd.recommend()` | Encoding recommendation engine |
 
 Everything else is accessed via submodules.
 
@@ -15,14 +15,21 @@ Everything else is accessed via submodules.
 ## Top-level
 
 ```python
-import quprep
+import quprep as qd
 
-quprep.__version__   # "0.3.0"
-quprep.prepare(...)
-quprep.Pipeline(...)
-quprep.recommend(...)
-quprep.draw_ascii(...)
-quprep.draw_matplotlib(...)
+qd.__version__         # "0.4.0"
+qd.prepare(...)
+qd.Pipeline(...)
+qd.recommend(...)
+qd.draw_ascii(...)
+qd.draw_matplotlib(...)
+
+# All classes are on the top-level namespace — no sub-imports needed:
+qd.AngleEncoder()
+qd.Imputer()
+qd.PCAReducer()
+qd.DataSchema(...)
+qd.estimate_cost(...)
 ```
 
 ---

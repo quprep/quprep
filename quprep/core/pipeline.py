@@ -17,12 +17,21 @@ class PipelineResult:
         One EncodedResult per sample. None if no encoder was configured.
     circuits : list or None
         Exported circuit objects (framework-specific). None if no exporter was configured.
+    cost : CostEstimate or None
+        Gate-count and NISQ-safety estimate for the chosen encoder. None if no encoder
+        was configured.
+    audit_log : list[dict] or None
+        One entry per preprocessing stage that ran, in order. Each dict has keys:
+        ``stage``, ``n_samples_in``, ``n_features_in``, ``n_samples_out``,
+        ``n_features_out``. None if no preprocessing stages ran.
     """
 
-    def __init__(self, dataset, encoded, circuits):
+    def __init__(self, dataset, encoded, circuits, cost=None, audit_log=None):
         self.dataset = dataset
         self.encoded = encoded
         self.circuits = circuits
+        self.cost = cost
+        self.audit_log = audit_log
 
     @property
     def circuit(self):
@@ -39,12 +48,73 @@ class PipelineResult:
             return self.encoded[0]
         return None
 
+    def summary(self) -> str:
+        """
+        Return a human-readable report of the pipeline result.
+
+        Includes the audit log as a formatted table (if any preprocessing
+        stages ran) and the cost estimate breakdown (if an encoder was used).
+
+        Returns
+        -------
+        str
+        """
+        lines = ["PipelineResult"]
+
+        n_samples = len(self.encoded) if self.encoded else (
+            self.dataset.n_samples if self.dataset is not None else 0
+        )
+        n_features = self.dataset.n_features if self.dataset is not None else 0
+        lines.append(f"  samples  : {n_samples}")
+        lines.append(f"  features : {n_features} (post-preprocessing)")
+
+        if self.audit_log:
+            lines.append("")
+            lines.append("  Preprocessing stages:")
+            col_w = 12
+            header = (
+                f"  {'stage':<{col_w}}  {'samples in':>10}  {'feat in':>7}"
+                f"  {'samples out':>11}  {'feat out':>8}"
+            )
+            lines.append(header)
+            lines.append("  " + "-" * (len(header) - 2))
+            for entry in self.audit_log:
+                lines.append(
+                    f"  {entry['stage']:<{col_w}}  "
+                    f"{entry['n_samples_in']:>10}  "
+                    f"{entry['n_features_in']:>7}  "
+                    f"{entry['n_samples_out']:>11}  "
+                    f"{entry['n_features_out']:>8}"
+                )
+
+        if self.cost is not None:
+            c = self.cost
+            lines.append("")
+            lines.append("  Cost estimate:")
+            lines.append(f"    encoding     : {c.encoding}")
+            lines.append(f"    qubits       : {c.n_qubits}")
+            lines.append(f"    gate count   : {c.gate_count}")
+            lines.append(f"    circuit depth: {c.circuit_depth}")
+            lines.append(f"    2-qubit gates: {c.two_qubit_gates}")
+            nisq_label = "yes" if c.nisq_safe else "NO — exceeds NISQ thresholds"
+            lines.append(f"    NISQ-safe    : {nisq_label}")
+            if c.warning:
+                lines.append(f"    warning      : {c.warning}")
+
+        return "\n".join(lines)
+
     def __repr__(self) -> str:
         n = len(self.encoded) if self.encoded else 0
         has_circuits = self.circuits is not None
+        nisq = (
+            f", nisq_safe={self.cost.nisq_safe}"
+            if self.cost is not None
+            else ""
+        )
         return (
             f"PipelineResult(n_samples={n}, "
-            f"circuits={'yes' if has_circuits else 'no'})"
+            f"circuits={'yes' if has_circuits else 'no'}"
+            f"{nisq})"
         )
 
 
@@ -105,6 +175,8 @@ class Pipeline:
         self.schema = schema
         self._fitted = False
         self._resolved_normalizer = None
+        self._last_cost = None
+        self._last_audit_log = None
 
     # ------------------------------------------------------------------
     # Primary API
@@ -184,6 +256,51 @@ class Pipeline:
     # sklearn estimator interface
     # ------------------------------------------------------------------
 
+    def summary(self) -> str:
+        """
+        Return a human-readable snapshot of the pipeline configuration.
+
+        Shows which stages are configured, whether the pipeline has been
+        fitted, the resolved normalizer, and the last cost estimate (if
+        available).
+
+        Returns
+        -------
+        str
+        """
+        lines = ["Pipeline"]
+        lines.append(f"  fitted       : {'yes' if self._fitted else 'no'}")
+
+        stage_names = [
+            ("ingester",   self.ingester),
+            ("cleaner",    self.cleaner),
+            ("reducer",    self.reducer),
+            ("normalizer", self._resolved_normalizer or self.normalizer),
+            ("encoder",    self.encoder),
+            ("exporter",   self.exporter),
+        ]
+        for name, stage in stage_names:
+            if stage is not None:
+                lines.append(f"  {name:<12} : {type(stage).__name__}")
+
+        if self.schema is not None:
+            lines.append(f"  schema       : {len(self.schema.features)} feature(s)")
+
+        if self._last_cost is not None:
+            c = self._last_cost
+            lines.append(
+                f"  cost         : {c.encoding} | "
+                f"{c.n_qubits} qubits | "
+                f"depth {c.circuit_depth} | "
+                f"gates {c.gate_count} | "
+                f"NISQ-safe {'yes' if c.nisq_safe else 'NO'}"
+            )
+
+        return "\n".join(lines)
+
+    def __str__(self) -> str:
+        return self.summary()
+
     def get_params(self, deep: bool = True) -> dict:
         """
         Return pipeline parameters (sklearn convention).
@@ -254,14 +371,29 @@ class Pipeline:
         applied to produce the dataset for the next stage.
 
         Returns the fully transformed dataset (after all fitted stages).
+        Also populates ``self._last_audit_log`` and ``self._last_cost``.
         """
+        audit: list[dict] = []
+
         if self.cleaner is not None:
+            n_s_in, n_f_in = dataset.n_samples, dataset.n_features
             self.cleaner.fit(dataset)
             dataset = self.cleaner.transform(dataset)
+            audit.append({
+                "stage": "cleaner",
+                "n_samples_in": n_s_in, "n_features_in": n_f_in,
+                "n_samples_out": dataset.n_samples, "n_features_out": dataset.n_features,
+            })
 
         if self.reducer is not None:
+            n_s_in, n_f_in = dataset.n_samples, dataset.n_features
             self.reducer.fit(dataset)
             dataset = self.reducer.transform(dataset)
+            audit.append({
+                "stage": "reducer",
+                "n_samples_in": n_s_in, "n_features_in": n_f_in,
+                "n_samples_out": dataset.n_samples, "n_features_out": dataset.n_features,
+            })
 
         self._resolved_normalizer = self.normalizer
         if self._resolved_normalizer is None and self.encoder is not None:
@@ -271,8 +403,14 @@ class Pipeline:
                 self._resolved_normalizer = auto_normalizer(key)
 
         if self._resolved_normalizer is not None:
+            n_s_in, n_f_in = dataset.n_samples, dataset.n_features
             self._resolved_normalizer.fit(dataset)
             dataset = self._resolved_normalizer.transform(dataset)
+            audit.append({
+                "stage": "normalizer",
+                "n_samples_in": n_s_in, "n_features_in": n_f_in,
+                "n_samples_out": dataset.n_samples, "n_features_out": dataset.n_features,
+            })
 
         # Cost / qubit warning after all reductions are applied
         if self.encoder is not None:
@@ -283,34 +421,68 @@ class Pipeline:
             cost = estimate_cost(self.encoder, dataset.n_features)
             if cost.warning:
                 warnings.warn(cost.warning, QuPrepWarning, stacklevel=4)
+            self._last_cost = cost
+        else:
+            self._last_cost = None
 
+        self._last_audit_log = audit if audit else None
         return dataset
 
     def _apply_stages(self, dataset) -> PipelineResult:
         """Apply fitted stages to dataset and return PipelineResult."""
+        audit: list[dict] = []
+
         if self.cleaner is not None:
+            n_s_in, n_f_in = dataset.n_samples, dataset.n_features
             dataset = self.cleaner.transform(dataset)
+            audit.append({
+                "stage": "cleaner",
+                "n_samples_in": n_s_in, "n_features_in": n_f_in,
+                "n_samples_out": dataset.n_samples, "n_features_out": dataset.n_features,
+            })
 
         if self.reducer is not None:
+            n_s_in, n_f_in = dataset.n_samples, dataset.n_features
             dataset = self.reducer.transform(dataset)
+            audit.append({
+                "stage": "reducer",
+                "n_samples_in": n_s_in, "n_features_in": n_f_in,
+                "n_samples_out": dataset.n_samples, "n_features_out": dataset.n_features,
+            })
 
         if self._resolved_normalizer is not None:
+            n_s_in, n_f_in = dataset.n_samples, dataset.n_features
             dataset = self._resolved_normalizer.transform(dataset)
+            audit.append({
+                "stage": "normalizer",
+                "n_samples_in": n_s_in, "n_features_in": n_f_in,
+                "n_samples_out": dataset.n_samples, "n_features_out": dataset.n_features,
+            })
 
+        self._last_audit_log = audit if audit else None
         return self._encode_export(dataset)
 
     def _encode_export(self, dataset) -> PipelineResult:
-        """Run encoder + exporter on a already-transformed dataset."""
+        """Run encoder + exporter on an already-transformed dataset."""
         if self.encoder is None:
-            return PipelineResult(dataset=dataset, encoded=None, circuits=None)
+            return PipelineResult(
+                dataset=dataset, encoded=None, circuits=None,
+                cost=None, audit_log=self._last_audit_log,
+            )
 
         encoded = self.encoder.encode_batch(dataset)
 
         if self.exporter is None:
-            return PipelineResult(dataset=dataset, encoded=encoded, circuits=None)
+            return PipelineResult(
+                dataset=dataset, encoded=encoded, circuits=None,
+                cost=self._last_cost, audit_log=self._last_audit_log,
+            )
 
         circuits = self.exporter.export_batch(encoded)
-        return PipelineResult(dataset=dataset, encoded=encoded, circuits=circuits)
+        return PipelineResult(
+            dataset=dataset, encoded=encoded, circuits=circuits,
+            cost=self._last_cost, audit_log=self._last_audit_log,
+        )
 
     def _ingest(self, source):
         """Return a Dataset regardless of what source type is passed in."""

@@ -9,7 +9,7 @@ The fastest way to go from a CSV file to quantum circuits.
 import numpy as np
 import pandas as pd
 
-import quprep
+import quprep as qd
 
 # ── 1. Create a small dataset ────────────────────────────────────────────────
 
@@ -25,7 +25,7 @@ data.to_csv("/tmp/customers.csv", index=False)
 
 # ── 2. One call: CSV → QASM circuits ─────────────────────────────────────────
 
-result = quprep.prepare("/tmp/customers.csv", encoding="angle", framework="qasm")
+result = qd.prepare("/tmp/customers.csv", encoding="angle", framework="qasm")
 
 print(f"Samples encoded : {len(result.circuits)}")
 print(f"First circuit   :\n{result.circuit}")
@@ -33,7 +33,7 @@ print(f"First circuit   :\n{result.circuit}")
 # ── 3. Encode a raw numpy array ───────────────────────────────────────────────
 
 X = np.random.default_rng(42).uniform(0, 1, size=(3, 4))
-result2 = quprep.prepare(X, encoding="basis", framework="qasm")
+result2 = qd.prepare(X, encoding="basis", framework="qasm")
 
 print("Basis circuits:")
 for i, c in enumerate(result2.circuits):

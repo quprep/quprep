@@ -9,9 +9,9 @@ QuPrep encodes your data into circuit parameters. The exporter converts those pa
 No dependencies required. Universal interchange format accepted by all major frameworks and hardware platforms.
 
 ```python
-from quprep.export.qasm_export import QASMExporter
+import quprep as qd
 
-exp = QASMExporter()
+exp = qd.QASMExporter()
 qasm_str = exp.export(encoded_result)
 print(qasm_str)
 ```
@@ -70,20 +70,16 @@ circuits = exp.export_batch(encoded_list)
 The easiest way — pass an exporter to `Pipeline` or use `prepare()`:
 
 ```python
-import quprep
+import quprep as qd
 
 # QASM (no deps)
-result = quprep.prepare("data.csv", encoding="angle")
+result = qd.prepare("data.csv", encoding="angle")
 
 # Qiskit
-result = quprep.prepare("data.csv", encoding="angle", framework="qiskit")
+result = qd.prepare("data.csv", encoding="angle", framework="qiskit")
 
 # Manual pipeline
-from quprep import Pipeline
-from quprep.encode.angle import AngleEncoder
-from quprep.export.qasm_export import QASMExporter
-
-pipeline = Pipeline(encoder=AngleEncoder(), exporter=QASMExporter())
+pipeline = qd.Pipeline(encoder=qd.AngleEncoder(), exporter=qd.QASMExporter())
 result = pipeline.fit_transform("data.csv")
 
 print(result.circuit)         # first circuit
@@ -157,19 +153,19 @@ circuit = exp.export(encoded_result)   # pytket.Circuit
 Draw circuit diagrams without any additional dependencies:
 
 ```python
-import quprep
+import quprep as qd
 
 encoded = result.encoded[0]
 
 # ASCII — always available
-print(quprep.draw_ascii(encoded))
+print(qd.draw_ascii(encoded))
 
 # matplotlib — requires pip install quprep[viz]
-fig = quprep.draw_matplotlib(encoded)
+fig = qd.draw_matplotlib(encoded)
 fig.savefig("circuit.png")
 
 # or save directly
-quprep.draw_matplotlib(encoded, filename="circuit.pdf")
+qd.draw_matplotlib(encoded, filename="circuit.pdf")
 ```
 
 Supports all 7 encodings. The matplotlib diagram shows qubit wires, gate boxes, and CNOT/ZZ connectors.
