@@ -18,6 +18,8 @@ import warnings
 import numpy as np
 
 import quprep as qd
+from quprep.core.dataset import Dataset
+from quprep.validation import QuPrepWarning, validate_dataset
 
 # ── shared data ────────────────────────────────────────────────────────────────
 
@@ -39,13 +41,10 @@ print(f"  qd.DataSchema   : {qd.DataSchema}")
 # ── 2. Basic validation warning ───────────────────────────────────────────────
 
 print("\n[2] validate_dataset — NaN warning")
-from quprep.validation import validate_dataset, QuPrepWarning
-
 X_with_nan = X.copy()
 X_with_nan[0, 0] = np.nan
 X_with_nan[2, 0] = np.nan
 
-from quprep.core.dataset import Dataset
 ds_nan = Dataset(data=X_with_nan, feature_names=[f"f{i}" for i in range(6)])
 
 with warnings.catch_warnings(record=True) as caught:
