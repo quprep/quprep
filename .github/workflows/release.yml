@@ -52,8 +52,6 @@ jobs:
 
       - name: Build
         run: uv build
-        working-directory: quprep
 
       - name: Publish
         run: uv publish --token ${{ secrets.PYPI_API_TOKEN }}
-        working-directory: quprep
