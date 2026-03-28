@@ -7,7 +7,7 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![CI](https://github.com/quprep/quprep/actions/workflows/ci.yml/badge.svg)](https://github.com/quprep/quprep/actions/workflows/ci.yml)
 [![Documentation](https://readthedocs.org/projects/quprep/badge/?version=latest)](https://quprep.readthedocs.io)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.pending.svg)](https://zenodo.org/search?q=quprep)
+[![DOI](https://zenodo.org/badge/1185611576.svg)](https://doi.org/10.5281/zenodo.19286258)
 
 ---
 
@@ -224,9 +224,7 @@ If you use QuPrep in your research, please cite:
   title   = {QuPrep: Quantum Data Preparation},
   year    = {2026},
   url     = {https://github.com/quprep/quprep},
-  doi     = {10.5281/zenodo.pending},
+  doi     = {10.5281/zenodo.19286258},
   license = {Apache-2.0},
 }
 ```
-
-A citable Zenodo record (with a permanent DOI) will be published alongside the v1.0.0 stable release. Until then the GitHub repository URL is the canonical reference.
