@@ -5,6 +5,9 @@ on:
     tags:
       - "v*.*.*"
 
+permissions:
+  contents: read
+
 jobs:
   release:
     name: Create GitHub Release
@@ -44,6 +47,8 @@ jobs:
     name: Publish to PyPI
     runs-on: ubuntu-latest
     needs: release
+    permissions:
+      contents: read
 
     steps:
       - uses: actions/checkout@v4
