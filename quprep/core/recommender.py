@@ -24,7 +24,9 @@ _ENCODINGS: dict[str, dict] = {
         },
         "continuous_bonus": 2,
         "binary_bonus": 0,
-        "description": "Single-qubit rotation per feature. Shallow, general-purpose, NISQ-safe.",
+        "description": (
+            "Single-qubit rotation per feature. Shallow, general-purpose, NISQ-safe."
+        ),
     },
     "amplitude": {
         "nisq_safe": False,
@@ -39,7 +41,9 @@ _ENCODINGS: dict[str, dict] = {
         },
         "continuous_bonus": 3,
         "binary_bonus": 0,
-        "description": "Entire vector as quantum amplitudes. Qubit-efficient but exponential depth.",  # noqa: E501
+        "description": (
+            "Entire vector as quantum amplitudes. Qubit-efficient but exponential depth."
+        ),
     },
     "basis": {
         "nisq_safe": True,
@@ -54,7 +58,9 @@ _ENCODINGS: dict[str, dict] = {
         },
         "continuous_bonus": 0,
         "binary_bonus": 5,
-        "description": "Binary feature map via X gates. Shallowest possible, ideal for QAOA.",
+        "description": (
+            "Binary feature map via X gates. Shallowest possible, ideal for QAOA."
+        ),
     },
     "iqp": {
         "nisq_safe": True,
@@ -69,7 +75,10 @@ _ENCODINGS: dict[str, dict] = {
         },
         "continuous_bonus": 2,
         "binary_bonus": 0,
-        "description": "Havlíček 2019 feature map with pairwise interactions. Best for kernel methods.",  # noqa: E501
+        "description": (
+            "Havlíček 2019 feature map with pairwise interactions. "
+            "Best for kernel methods and correlated features."
+        ),
     },
     "reupload": {
         "nisq_safe": True,
@@ -84,7 +93,28 @@ _ENCODINGS: dict[str, dict] = {
         },
         "continuous_bonus": 2,
         "binary_bonus": 0,
-        "description": "Pérez-Salinas 2020 data re-uploading. Universal approximation, high expressivity.",  # noqa: E501
+        "description": (
+            "Pérez-Salinas 2020 data re-uploading. "
+            "Universal approximation, best for large datasets."
+        ),
+    },
+    "entangled_angle": {
+        "nisq_safe": True,
+        "depth": "O(d·layers + CNOT layers)",
+        "qubit_fn": lambda d: d,
+        "task_scores": {
+            "classification": 7,
+            "regression": 7,
+            "qaoa": 3,
+            "kernel": 8,
+            "simulation": 4,
+        },
+        "continuous_bonus": 2,
+        "binary_bonus": 0,
+        "description": (
+            "Angle encoding with CNOT entanglement layers. "
+            "Captures feature correlations; good for kernel methods."
+        ),
     },
     "hamiltonian": {
         "nisq_safe": False,
@@ -99,7 +129,10 @@ _ENCODINGS: dict[str, dict] = {
         },
         "continuous_bonus": 2,
         "binary_bonus": 0,
-        "description": "Trotterized Z Hamiltonian evolution. Designed for physics simulation / VQE.",  # noqa: E501
+        "description": (
+            "Trotterized Z Hamiltonian evolution. "
+            "Designed for physics simulation / VQE."
+        ),
     },
 }
 
@@ -173,7 +206,7 @@ class EncodingRecommendation:
             lines.append("Alternatives         :")
             for alt in self.alternatives:
                 lines.append(
-                    f"  {alt.method:<12} score={alt.score:.1f}  {alt.depth}"
+                    f"  {alt.method:<16} score={alt.score:.1f}  {alt.depth}"
                 )
         return "\n".join(lines)
 
@@ -188,31 +221,89 @@ def _score(
     task: str,
     qubit_budget: int | None,
 ) -> float:
-    """Return a 0-100 score for an encoding given dataset profile and task."""
+    """Return a score for an encoding given dataset profile and task."""
     enc = _ENCODINGS[encoding]
     d = profile["n_features"]
+    n_samples = profile["n_samples"]
+    missing_rate = profile["missing_rate"]
+    sparsity = profile["sparsity"]
+    has_negatives = profile["has_negatives"]
+    feature_collinear = profile["feature_collinear"]
 
     # Base: task fit (0-10) × 5
     score = enc["task_scores"][task] * 5.0
 
-    # Data type bonus
-    binary_frac = profile["binary_fraction"]
-    continuous_frac = profile["continuous_fraction"]
-    score += enc["binary_bonus"] * binary_frac
-    score += enc["continuous_bonus"] * continuous_frac
+    # Data type bonus (binary/continuous fraction)
+    score += enc["binary_bonus"] * profile["binary_fraction"]
+    score += enc["continuous_bonus"] * profile["continuous_fraction"]
 
     # NISQ bonus (small but meaningful tiebreaker)
     if enc["nisq_safe"]:
         score += 3.0
 
-    # Qubit budget: penalise if this encoding needs more qubits than available
+    # ----------------------------------------------------------------
+    # Dataset-aware adjustments
+    # ----------------------------------------------------------------
+
+    if encoding == "amplitude":
+        # Amplitude state prep is expensive per sample — penalise large datasets
+        if n_samples > 5000:
+            score -= 15.0
+        elif n_samples > 1000:
+            score -= 8.0
+        elif n_samples > 500:
+            score -= 4.0
+
+        # Amplitude naturally handles negative values via superposition
+        if has_negatives:
+            score += 2.0
+
+        # High missing rate is dangerous: amplitude requires exact unit norm
+        if missing_rate > 0.2:
+            score -= 8.0
+        elif missing_rate > 0.1:
+            score -= 4.0
+
+    if encoding == "basis":
+        # Sparse data (many exact zeros) aligns naturally with basis encoding
+        if sparsity > 0.3:
+            score += 3.0 * sparsity
+        elif sparsity > 0.1:
+            score += 1.5 * sparsity
+
+        # Negative values: basis binarizes at 0.5, so all negatives map to 0 → info loss
+        if has_negatives:
+            score -= 4.0
+
+    if encoding in ("iqp", "entangled_angle"):
+        # Correlated features: entanglement captures inter-feature relationships
+        if feature_collinear:
+            score += 4.0
+
+        # IQP depth grows as O(d²) — penalise wide datasets
+        if encoding == "iqp" and d > 15:
+            score -= (d - 15) * 0.4
+
+    if encoding == "reupload":
+        # High expressivity can overfit with very few samples
+        if n_samples < 20:
+            score -= 8.0
+        elif n_samples < 50:
+            score -= 4.0
+
+        # Conversely, re-uploading shines on large datasets (universal approximation)
+        if n_samples > 500:
+            score += 3.0
+
+    # ----------------------------------------------------------------
+    # Qubit budget
+    # ----------------------------------------------------------------
     if qubit_budget is not None:
         needed = enc["qubit_fn"](d)
         if needed > qubit_budget:
-            # Hard over-budget: heavy penalty
             score -= 40.0
-        elif encoding == "amplitude" and needed == enc["qubit_fn"](d):
-            # Amplitude is qubit-efficient — reward within budget
+        elif encoding == "amplitude" and needed <= qubit_budget:
+            # Amplitude is qubit-efficient — reward when within budget
             score += 5.0
 
     return score
@@ -226,6 +317,12 @@ def _build_reason(
     qubit_budget: int | None,
 ) -> str:
     enc = _ENCODINGS[encoding]
+    d = profile["n_features"]
+    n_samples = profile["n_samples"]
+    missing_rate = profile["missing_rate"]
+    sparsity = profile["sparsity"]
+    has_negatives = profile["has_negatives"]
+    feature_collinear = profile["feature_collinear"]
     parts = []
 
     task_score = enc["task_scores"][task]
@@ -248,8 +345,38 @@ def _build_reason(
     else:
         parts.append("deep circuit — fault-tolerant hardware recommended")
 
+    # Dataset-specific observations
+    if encoding == "amplitude":
+        if n_samples > 1000:
+            parts.append(
+                f"note: {n_samples} samples — state prep overhead is high; "
+                "consider angle or reupload for large datasets"
+            )
+        if has_negatives:
+            parts.append("negative values handled naturally via superposition")
+        if missing_rate > 0.1:
+            parts.append(
+                f"warning: {missing_rate:.0%} missing values — impute before encoding"
+            )
+
+    if encoding == "basis" and sparsity > 0.3:
+        parts.append(f"{sparsity:.0%} near-zero values align naturally with X-gate encoding")
+
+    if encoding in ("iqp", "entangled_angle") and feature_collinear:
+        parts.append("correlated features benefit from entanglement structure")
+
+    if encoding == "reupload":
+        if n_samples > 500:
+            parts.append(
+                f"{n_samples} samples — re-uploading layers improve expressivity"
+            )
+        elif n_samples < 50:
+            parts.append(
+                f"only {n_samples} samples — monitor for overfitting with deep circuits"
+            )
+
     if qubit_budget is not None:
-        needed = enc["qubit_fn"](profile["n_features"])
+        needed = enc["qubit_fn"](d)
         parts.append(f"needs {needed} qubit(s) (budget: {qubit_budget})")
 
     return "; ".join(parts) + "."
@@ -269,9 +396,10 @@ def recommend(
     """
     Recommend the best encoding for a dataset and task.
 
-    Scores all encodings against the dataset profile (feature count, binary
-    fraction, continuous fraction) and the target task, then returns the
-    highest-scoring option with ranked alternatives.
+    Scores all encodings against the dataset profile (feature count, binary/
+    continuous fraction, missing rate, sparsity, correlations, sample count)
+    and the target task, then returns the highest-scoring option with ranked
+    alternatives.
 
     Parameters
     ----------
@@ -368,9 +496,40 @@ def _profile_source(source) -> dict:
     binary_fraction = binary_cols / n_features if n_features > 0 else 0.0
     continuous_fraction = 1.0 - binary_fraction
 
+    # Missing rate: fraction of NaN values across the full matrix
+    missing_rate = float(np.mean(np.isnan(data)))
+
+    # Sparsity: fraction of values that are exactly zero
+    non_nan = data[~np.isnan(data)]
+    sparsity = float(np.mean(non_nan == 0.0)) if len(non_nan) > 0 else 0.0
+
+    # Has negatives: any value strictly below zero
+    has_negatives = bool(np.any(non_nan < 0.0)) if len(non_nan) > 0 else False
+
+    # Feature collinearity: mean absolute pairwise Pearson correlation
+    # Only computed for manageable feature counts (≤ 50); defaults to False otherwise.
+    feature_collinear = False
+    if 2 <= n_features <= 50 and n_samples >= 5:
+        try:
+            # Drop columns that are all-NaN before computing correlation
+            valid_mask = ~np.all(np.isnan(data), axis=0)
+            clean = data[:, valid_mask]
+            if clean.shape[1] >= 2:
+                corr = np.corrcoef(clean, rowvar=False)
+                # Upper triangle excluding diagonal
+                idx = np.triu_indices(corr.shape[0], k=1)
+                mean_abs_corr = float(np.nanmean(np.abs(corr[idx])))
+                feature_collinear = mean_abs_corr > 0.3
+        except Exception:
+            pass
+
     return {
         "n_samples": n_samples,
         "n_features": n_features,
         "binary_fraction": binary_fraction,
         "continuous_fraction": continuous_fraction,
+        "missing_rate": missing_rate,
+        "sparsity": sparsity,
+        "has_negatives": has_negatives,
+        "feature_collinear": feature_collinear,
     }

@@ -11,6 +11,8 @@ Usage
     quprep qubo schedule --times "3,1,4,2" --machines 2
     quprep validate dataset.csv
     quprep validate dataset.csv --schema schema.json
+    quprep compare dataset.csv --task classification --qubits 8
+    quprep compare dataset.csv --include angle,iqp,amplitude
     quprep --version
 """
 
@@ -198,6 +200,40 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=None,
         help="Maximum qubit budget.",
+    )
+
+    # quprep compare
+    compare = subparsers.add_parser(
+        "compare",
+        help="Compare all encoders on a dataset and show side-by-side cost stats.",
+    )
+    compare.add_argument("source", help="Input file path (CSV, TSV).")
+    compare.add_argument(
+        "--task",
+        default=None,
+        choices=["classification", "regression", "qaoa", "kernel", "simulation"],
+        help="Highlight the recommended encoder for this task.",
+    )
+    compare.add_argument(
+        "--qubits",
+        type=int,
+        default=None,
+        help="Maximum qubit budget. Encoders exceeding it are flagged.",
+    )
+    compare.add_argument(
+        "--include",
+        default=None,
+        metavar="ENCODINGS",
+        help=(
+            "Comma-separated list of encoders to include "
+            "(e.g. --include angle,iqp,amplitude). Default: all."
+        ),
+    )
+    compare.add_argument(
+        "--exclude",
+        default=None,
+        metavar="ENCODINGS",
+        help="Comma-separated list of encoders to exclude.",
     )
 
     # quprep validate
@@ -533,6 +569,32 @@ def cmd_recommend(args) -> int:
     return 0
 
 
+def cmd_compare(args) -> int:
+    include = [s.strip() for s in args.include.split(",")] if args.include else None
+    exclude = [s.strip() for s in args.exclude.split(",")] if args.exclude else None
+    try:
+        from quprep.compare import compare_encodings
+        result = compare_encodings(
+            args.source,
+            task=args.task,
+            qubits=args.qubits,
+            include=include,
+            exclude=exclude,
+        )
+    except FileNotFoundError:
+        print(f"[quprep] File not found: {args.source}", file=sys.stderr)
+        return 1
+    except ValueError as exc:
+        print(f"[quprep] {exc}", file=sys.stderr)
+        return 1
+    except Exception as exc:
+        print(f"[quprep] Error: {exc}", file=sys.stderr)
+        return 1
+
+    print(str(result))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -552,6 +614,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "validate":
         return cmd_validate(args)
+
+    if args.command == "compare":
+        return cmd_compare(args)
 
     return 1
 

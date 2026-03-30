@@ -71,6 +71,9 @@ from quprep.reduce.lda import LDAReducer
 from quprep.reduce.pca import PCAReducer
 from quprep.reduce.spectral import SpectralReducer, TSNEReducer, UMAPReducer
 
+# Comparison
+from quprep.compare import ComparisonResult, compare_encodings
+
 # Validation
 from quprep.validation import (
     CostEstimate,
@@ -114,6 +117,9 @@ __all__ = [
     "QASMExporter",
     "draw_ascii",
     "draw_matplotlib",
+    # Comparison
+    "compare_encodings",
+    "ComparisonResult",
     # Validation
     "DataSchema",
     "FeatureSpec",
