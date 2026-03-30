@@ -61,6 +61,8 @@ qd.estimate_cost(...)
 | `quprep.ingest.numpy_ingester` | `NumpyIngester` |
 | `quprep.ingest.profiler` | `profile`, `DatasetProfile` |
 | `quprep.core.dataset` | `Dataset` |
+| `quprep.validation` | `DataSchema`, `FeatureSpec`, `SchemaViolationError`, `validate_dataset`, `warn_qubit_mismatch`, `QuPrepWarning` |
+| `quprep.validation.cost` | `CostEstimate`, `estimate_cost` |
 | `quprep.qubo` | `to_qubo`, `QUBOResult`, `qubo_to_ising`, `ising_to_qubo`, `IsingResult` |
 | `quprep.qubo.problems` | `max_cut`, `knapsack`, `tsp`, `portfolio`, `graph_color`, `scheduling`, `number_partition` |
 | `quprep.qubo.solver` | `solve_brute`, `solve_sa`, `SolveResult` |

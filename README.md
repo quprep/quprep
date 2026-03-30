@@ -8,6 +8,7 @@
 [![CI](https://github.com/quprep/quprep/actions/workflows/ci.yml/badge.svg)](https://github.com/quprep/quprep/actions/workflows/ci.yml)
 [![Documentation](https://readthedocs.org/projects/quprep/badge/?version=latest)](https://docs.quprep.org)
 [![DOI](https://zenodo.org/badge/1185611576.svg)](https://doi.org/10.5281/zenodo.19286258)
+[![codecov](https://codecov.io/github/quprep/quprep/graph/badge.svg?token=I26OBPRZ86)](https://codecov.io/github/quprep/quprep)
 
 ---
 

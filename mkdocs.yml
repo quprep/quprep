@@ -109,4 +109,5 @@ nav:
     - Encoders: api/encoders.md
     - Exporters: api/exporters.md
     - QUBO / Ising: api/qubo.md
+    - Validation & Cost: api/validation.md
   - Contributing: contributing.md
