@@ -49,6 +49,7 @@ from quprep.clean.selector import FeatureSelector
 
 # Comparison
 from quprep.compare import ComparisonResult, compare_encodings
+from quprep.core.drift import DriftDetector, DriftReport
 from quprep.core.pipeline import Pipeline, PipelineResult
 from quprep.core.qubit_suggestion import QubitSuggestion, suggest_qubits
 from quprep.core.recommender import recommend
@@ -124,6 +125,9 @@ __all__ = [
     # Qubit suggestion
     "suggest_qubits",
     "QubitSuggestion",
+    # Drift detection
+    "DriftDetector",
+    "DriftReport",
     # Batch export
     "batch_export",
     # Validation

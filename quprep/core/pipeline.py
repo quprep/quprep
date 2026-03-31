@@ -26,12 +26,13 @@ class PipelineResult:
         ``n_features_out``. None if no preprocessing stages ran.
     """
 
-    def __init__(self, dataset, encoded, circuits, cost=None, audit_log=None):
+    def __init__(self, dataset, encoded, circuits, cost=None, audit_log=None, drift_report=None):
         self.dataset = dataset
         self.encoded = encoded
         self.circuits = circuits
         self.cost = cost
         self.audit_log = audit_log
+        self.drift_report = drift_report
 
     @property
     def circuit(self):
@@ -165,6 +166,7 @@ class Pipeline:
         encoder=None,
         exporter=None,
         schema=None,
+        drift_detector=None,
     ):
         self.ingester = ingester
         self.cleaner = cleaner
@@ -173,10 +175,12 @@ class Pipeline:
         self.encoder = encoder
         self.exporter = exporter
         self.schema = schema
+        self.drift_detector = drift_detector
         self._fitted = False
         self._resolved_normalizer = None
         self._last_cost = None
         self._last_audit_log = None
+        self._last_drift_report = None
 
     # ------------------------------------------------------------------
     # Primary API
@@ -322,6 +326,7 @@ class Pipeline:
             "encoder": self.encoder,
             "exporter": self.exporter,
             "schema": self.schema,
+            "drift_detector": self.drift_detector,
         }
 
     def set_params(self, **params) -> Pipeline:
@@ -461,6 +466,10 @@ class Pipeline:
                 "n_samples_out": dataset.n_samples, "n_features_out": dataset.n_features,
             })
 
+        # Fit drift detector on the post-reduction feature matrix
+        if self.drift_detector is not None:
+            self.drift_detector.fit(dataset)
+
         # Cost / qubit warning after all reductions are applied
         if self.encoder is not None:
             import warnings
@@ -499,6 +508,13 @@ class Pipeline:
                 "n_samples_out": dataset.n_samples, "n_features_out": dataset.n_features,
             })
 
+        # Check drift against training distribution (post-reduction, pre-normalization —
+        # same point in the pipeline where the detector was fitted)
+        if self.drift_detector is not None:
+            self._last_drift_report = self.drift_detector.check(dataset)
+        else:
+            self._last_drift_report = None
+
         if self._resolved_normalizer is not None:
             n_s_in, n_f_in = dataset.n_samples, dataset.n_features
             dataset = self._resolved_normalizer.transform(dataset)
@@ -513,10 +529,12 @@ class Pipeline:
 
     def _encode_export(self, dataset) -> PipelineResult:
         """Run encoder + exporter on an already-transformed dataset."""
+        drift = self._last_drift_report
+
         if self.encoder is None:
             return PipelineResult(
                 dataset=dataset, encoded=None, circuits=None,
-                cost=None, audit_log=self._last_audit_log,
+                cost=None, audit_log=self._last_audit_log, drift_report=drift,
             )
 
         encoded = self.encoder.encode_batch(dataset)
@@ -524,13 +542,13 @@ class Pipeline:
         if self.exporter is None:
             return PipelineResult(
                 dataset=dataset, encoded=encoded, circuits=None,
-                cost=self._last_cost, audit_log=self._last_audit_log,
+                cost=self._last_cost, audit_log=self._last_audit_log, drift_report=drift,
             )
 
         circuits = self.exporter.export_batch(encoded)
         return PipelineResult(
             dataset=dataset, encoded=encoded, circuits=circuits,
-            cost=self._last_cost, audit_log=self._last_audit_log,
+            cost=self._last_cost, audit_log=self._last_audit_log, drift_report=drift,
         )
 
     def _ingest(self, source):
