@@ -12,6 +12,52 @@ QuPrep uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.5.0] — 2026-04-01
+
+### Added
+
+**Encoding comparison** (`quprep.compare`)
+- `compare_encodings(source, *, include, exclude, task, qubits)` — analytical side-by-side cost comparison of all (or selected) encoders; no circuits generated
+- `ComparisonResult` — `.rows` (list of `CostEstimate`), `.best(prefer="nisq"|"depth"|"gates"|"qubits")`, `.to_dict()`, `__str__()` ASCII table with starred recommendation when `task=` is passed
+- `quprep compare <file> [--task] [--qubits] [--include] [--exclude]` CLI subcommand
+- Exported: `qd.compare_encodings`, `qd.ComparisonResult`
+
+**Smarter encoding recommendation** (`quprep.core.recommender`)
+- `entangled_angle` added to recommendation engine (was an encoder but previously invisible to `recommend()`)
+- 4 new dataset profile signals: `missing_rate`, `sparsity`, `has_negatives`, `feature_collinear` (mean pairwise Pearson correlation)
+- 9 new dataset-aware scoring rules: amplitude penalised for large sample counts and high missing rate; basis boosted for sparse data, penalised for negative values; IQP/entangled_angle boosted for correlated features; IQP penalised for wide data; reupload penalised for tiny datasets, boosted for large ones
+
+**Auto qubit count suggestion** (`quprep.core.qubit_suggestion`)
+- `suggest_qubits(source, *, task, max_qubits)` → `QubitSuggestion` — recommends a qubit budget based on dataset size and target task
+- `QubitSuggestion` — `.n_qubits`, `.n_features`, `.nisq_safe`, `.encoding_hint`, `.reasoning`, `.warning` (set when reduction is needed)
+- `quprep suggest <file> [--task] [--max-qubits]` CLI subcommand
+- Exported: `qd.suggest_qubits`, `qd.QubitSuggestion`
+
+**Pipeline serialization** (`quprep.core.pipeline`)
+- `Pipeline.save(path)` — pickles the fitted pipeline; creates parent directories automatically
+- `Pipeline.load(path)` — classmethod; restores a fitted pipeline ready for `transform()` without re-fitting; raises `TypeError` for non-Pipeline files
+
+**Batch export** (`quprep.export.qasm_export`, `quprep.__init__`)
+- `QASMExporter.save_batch(encoded_list, directory, stem)` — saves each sample as `{stem}_{i:04d}.qasm`; creates output directory automatically; returns list of `Path` objects
+- `qd.batch_export(source, directory, *, encoding, stem)` — top-level one-liner: runs `prepare()` then `save_batch()`
+- `quprep convert <file> --save-dir <dir> [--stem <stem>]` — CLI flag added to `convert` subcommand
+
+**Data drift detection** (`quprep.core.drift`)
+- `DriftDetector(mean_threshold=3.0, std_threshold=2.0, warn=True)` — detects statistical drift between training and new data
+- `fit(dataset)` — records per-feature mean and std from training data (NaN-safe)
+- `check(dataset)` → `DriftReport` — flags features where mean shifts > threshold σ or std ratio exceeds bounds; issues `QuPrepWarning` when drift found
+- `DriftReport` — `.overall_drift`, `.drifted_features`, `.n_features_drifted`, `.feature_stats` (per-feature train/new mean, std, σ-shift, std_ratio)
+- `Pipeline(drift_detector=DriftDetector())` — detector fitted post-reduction, checked on every `transform()` call
+- `PipelineResult.drift_report` — `DriftReport | None`; preserved through `save()`/`load()`
+- Exported: `qd.DriftDetector`, `qd.DriftReport`
+
+### Changed
+- `Pipeline.__init__` — new `drift_detector` parameter (default `None`; backwards compatible)
+- `PipelineResult.__init__` — new `drift_report` attribute (default `None`; backwards compatible)
+- `Pipeline.get_params()` / `set_params()` — `drift_detector` included in parameter dict
+
+---
+
 ## [0.4.0] — 2026-03-28
 
 ### Added
