@@ -7,7 +7,6 @@ import pytest
 
 from quprep.core.qubit_suggestion import QubitSuggestion, suggest_qubits
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
