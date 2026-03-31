@@ -11,6 +11,7 @@
 [![codecov](https://codecov.io/github/quprep/quprep/graph/badge.svg?token=I26OBPRZ86)](https://codecov.io/github/quprep/quprep)
 [![CodeQL](https://github.com/quprep/quprep/actions/workflows/codeql.yml/badge.svg)](https://github.com/quprep/quprep/actions/workflows/codeql.yml)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/quprep/quprep/badge)](https://scorecard.dev/viewer/?uri=github.com/quprep/quprep)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/12341/badge)](https://www.bestpractices.dev/projects/12341)
 
 ---
 
