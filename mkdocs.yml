@@ -103,6 +103,7 @@ nav:
     - Framework Export: guides/export.md
     - QUBO / Ising: guides/qubo.md
     - Validation & Cost: guides/validation.md
+    - Encoding Comparison: guides/comparison.md
   - API Reference:
     - Overview: api/index.md
     - Pipeline: api/pipeline.md
@@ -110,4 +111,5 @@ nav:
     - Exporters: api/exporters.md
     - QUBO / Ising: api/qubo.md
     - Validation & Cost: api/validation.md
+    - Comparison: api/comparison.md
   - Contributing: contributing.md

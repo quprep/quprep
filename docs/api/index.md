@@ -1,12 +1,13 @@
 # API Reference
 
-QuPrep's public API has three top-level entry points (use `import quprep as qd`):
+QuPrep's public API has four top-level entry points (use `import quprep as qd`):
 
 | Name | Description |
 |---|---|
 | `qd.prepare()` | One-liner: source → circuits |
 | `qd.Pipeline` | Composable pipeline with full stage control |
 | `qd.recommend()` | Encoding recommendation engine |
+| `qd.compare_encodings()` | Side-by-side cost comparison of all encoders |
 
 Everything else is accessed via submodules.
 
@@ -30,6 +31,8 @@ qd.Imputer()
 qd.PCAReducer()
 qd.DataSchema(...)
 qd.estimate_cost(...)
+qd.compare_encodings(...)
+qd.ComparisonResult
 ```
 
 ---
@@ -61,6 +64,7 @@ qd.estimate_cost(...)
 | `quprep.ingest.numpy_ingester` | `NumpyIngester` |
 | `quprep.ingest.profiler` | `profile`, `DatasetProfile` |
 | `quprep.core.dataset` | `Dataset` |
+| `quprep.compare` | `compare_encodings`, `ComparisonResult` |
 | `quprep.validation` | `DataSchema`, `FeatureSpec`, `SchemaViolationError`, `validate_dataset`, `warn_qubit_mismatch`, `QuPrepWarning` |
 | `quprep.validation.cost` | `CostEstimate`, `estimate_cost` |
 | `quprep.qubo` | `to_qubo`, `QUBOResult`, `qubo_to_ising`, `ising_to_qubo`, `IsingResult` |
@@ -82,5 +86,6 @@ qd.estimate_cost(...)
         - prepare
         - Pipeline
         - recommend
+        - compare_encodings
         - draw_ascii
         - draw_matplotlib

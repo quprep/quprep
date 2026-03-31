@@ -46,6 +46,9 @@ from quprep.clean.categorical import CategoricalEncoder
 from quprep.clean.imputer import Imputer
 from quprep.clean.outlier import OutlierHandler
 from quprep.clean.selector import FeatureSelector
+
+# Comparison
+from quprep.compare import ComparisonResult, compare_encodings
 from quprep.core.pipeline import Pipeline, PipelineResult
 from quprep.core.recommender import recommend
 
@@ -70,9 +73,6 @@ from quprep.reduce.hardware_aware import HardwareAwareReducer
 from quprep.reduce.lda import LDAReducer
 from quprep.reduce.pca import PCAReducer
 from quprep.reduce.spectral import SpectralReducer, TSNEReducer, UMAPReducer
-
-# Comparison
-from quprep.compare import ComparisonResult, compare_encodings
 
 # Validation
 from quprep.validation import (
