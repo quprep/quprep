@@ -192,3 +192,38 @@ class QASMExporter:
         """
         qasm_str = self.export(encoded)
         Path(path).write_text(qasm_str, encoding="utf-8")
+
+    def save_batch(
+        self,
+        encoded_list: list,
+        directory: str | Path,
+        stem: str = "circuit",
+    ) -> list[Path]:
+        """
+        Export a batch of EncodedResults to individual QASM files.
+
+        Files are named ``{stem}_0000.qasm``, ``{stem}_0001.qasm``, etc.
+        The output directory is created automatically if it does not exist.
+
+        Parameters
+        ----------
+        encoded_list : list of EncodedResult
+            Outputs from any QuPrep encoder.
+        directory : str or Path
+            Output directory.
+        stem : str
+            Filename stem (default: ``'circuit'``).
+
+        Returns
+        -------
+        list of Path
+            Paths of the written files, in sample order.
+        """
+        directory = Path(directory)
+        directory.mkdir(parents=True, exist_ok=True)
+        paths = []
+        for i, encoded in enumerate(encoded_list):
+            path = directory / f"{stem}_{i:04d}.qasm"
+            self.save(encoded, path)
+            paths.append(path)
+        return paths

@@ -352,6 +352,55 @@ class Pipeline:
             setattr(self, key, value)
         return self
 
+    def save(self, path: str | Path) -> None:
+        """
+        Persist the pipeline (configuration and fitted state) to a file.
+
+        Uses Python's ``pickle`` protocol. The saved file can be reloaded
+        with :meth:`Pipeline.load` and applied to new data without re-fitting.
+
+        Parameters
+        ----------
+        path : str or Path
+            Destination file path (e.g. ``'pipeline.pkl'``). Parent
+            directories are created automatically.
+        """
+        import pickle
+
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "wb") as f:
+            pickle.dump(self, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+    @classmethod
+    def load(cls, path: str | Path) -> Pipeline:
+        """
+        Load a previously saved pipeline from a file.
+
+        Parameters
+        ----------
+        path : str or Path
+            Path to a file created by :meth:`Pipeline.save`.
+
+        Returns
+        -------
+        Pipeline
+
+        Raises
+        ------
+        TypeError
+            If the file does not contain a Pipeline object.
+        """
+        import pickle
+
+        with open(Path(path), "rb") as f:
+            obj = pickle.load(f)  # noqa: S301
+        if not isinstance(obj, cls):
+            raise TypeError(
+                f"Expected a Pipeline object, got {type(obj).__name__}."
+            )
+        return obj
+
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------

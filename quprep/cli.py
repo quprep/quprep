@@ -3,8 +3,9 @@
 Usage
 -----
     quprep convert dataset.csv --encoding angle --framework qasm
-    quprep convert dataset.csv --encoding angle --framework qasm --output circuit.qasm
+    quprep convert dataset.csv --encoding angle --save-dir ./circuits/
     quprep recommend dataset.csv --task classification --qubits 8
+    quprep suggest dataset.csv --task classification
     quprep qubo maxcut --adjacency "0,1,1;1,0,1;1,1,0"
     quprep qubo knapsack --weights "2,3,4" --values "3,4,5" --capacity 5
     quprep qubo tsp --distances "0,1,2;1,0,1;2,1,0"
@@ -69,6 +70,20 @@ def build_parser() -> argparse.ArgumentParser:
         "--output", "-o",
         default=None,
         help="Output file path. Prints to stdout if omitted.",
+    )
+    convert.add_argument(
+        "--save-dir",
+        default=None,
+        metavar="DIR",
+        help=(
+            "Save each sample as a separate QASM file in DIR "
+            "(e.g. --save-dir ./circuits/). Only valid with --framework qasm."
+        ),
+    )
+    convert.add_argument(
+        "--stem",
+        default="circuit",
+        help="Filename stem for --save-dir output (default: circuit).",
     )
     convert.add_argument(
         "--samples",
@@ -184,6 +199,25 @@ def build_parser() -> argparse.ArgumentParser:
     ex.add_argument("--format", choices=["json", "npy"], default="json")
     ex.add_argument("--output", "-o", default=None, help="Output file path.")
 
+    # quprep suggest
+    suggest = subparsers.add_parser(
+        "suggest",
+        help="Suggest an appropriate qubit count for a dataset.",
+    )
+    suggest.add_argument("source", help="Input file path.")
+    suggest.add_argument(
+        "--task",
+        default="classification",
+        choices=["classification", "regression", "qaoa", "kernel", "simulation"],
+        help="Target task (default: classification).",
+    )
+    suggest.add_argument(
+        "--max-qubits",
+        type=int,
+        default=None,
+        help="Hard upper bound on the qubit budget (default: 20).",
+    )
+
     # quprep recommend
     recommend = subparsers.add_parser(
         "recommend",
@@ -288,13 +322,23 @@ def cmd_convert(args) -> int:
         circuits = circuits[: args.samples]
 
     if args.framework == "qasm":
-        output_lines = "\n".join(circuits)
-        if args.output:
+        if args.save_dir:
             from pathlib import Path
-            Path(args.output).write_text(output_lines, encoding="utf-8")
-            print(f"[quprep] Wrote {len(circuits)} circuit(s) to {args.output}")
+
+            from quprep.export.qasm_export import QASMExporter
+            encoded = result.encoded or []
+            if args.samples is not None:
+                encoded = encoded[: args.samples]
+            paths = QASMExporter().save_batch(encoded, Path(args.save_dir), stem=args.stem)
+            print(f"[quprep] Wrote {len(paths)} circuit(s) to {args.save_dir}/")
         else:
-            print(output_lines)
+            output_lines = "\n".join(circuits)
+            if args.output:
+                from pathlib import Path
+                Path(args.output).write_text(output_lines, encoding="utf-8")
+                print(f"[quprep] Wrote {len(circuits)} circuit(s) to {args.output}")
+            else:
+                print(output_lines)
     else:
         # Non-QASM: print repr of each circuit object
         for i, circuit in enumerate(circuits):
@@ -551,6 +595,28 @@ def cmd_validate(args) -> int:
     return 0
 
 
+def cmd_suggest(args) -> int:
+    try:
+        from quprep.core.qubit_suggestion import suggest_qubits
+        suggestion = suggest_qubits(
+            args.source,
+            task=args.task,
+            max_qubits=args.max_qubits,
+        )
+    except FileNotFoundError:
+        print(f"[quprep] File not found: {args.source}", file=sys.stderr)
+        return 1
+    except ValueError as exc:
+        print(f"[quprep] {exc}", file=sys.stderr)
+        return 1
+    except Exception as exc:
+        print(f"[quprep] Error: {exc}", file=sys.stderr)
+        return 1
+
+    print(str(suggestion))
+    return 0
+
+
 def cmd_recommend(args) -> int:
     try:
         from quprep.core.recommender import recommend
@@ -608,6 +674,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "qubo":
         return cmd_qubo(args)
+
+    if args.command == "suggest":
+        return cmd_suggest(args)
 
     if args.command == "recommend":
         return cmd_recommend(args)

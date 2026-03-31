@@ -324,7 +324,7 @@ class TestPrepare:
 
     def test_version_accessible(self):
         import quprep
-        assert quprep.__version__ == "0.4.0"
+        assert quprep.__version__ == "0.5.0"
 
 
 # ---------------------------------------------------------------------------
@@ -557,3 +557,150 @@ class TestQdAlias:
         assert qd.DataSchema is not None
         assert qd.FeatureSpec is not None
         assert qd.SchemaViolationError is not None
+
+
+# ---------------------------------------------------------------------------
+# Pipeline serialization (save / load)
+# ---------------------------------------------------------------------------
+
+class TestPipelineSerialization:
+    def test_save_creates_file(self, tmp_path, simple_array):
+        pipeline = Pipeline(encoder=AngleEncoder())
+        pipeline.fit(simple_array)
+        path = tmp_path / "pipeline.pkl"
+        pipeline.save(path)
+        assert path.exists()
+
+    def test_load_returns_pipeline(self, tmp_path, simple_array):
+        pipeline = Pipeline(encoder=AngleEncoder())
+        pipeline.fit(simple_array)
+        path = tmp_path / "pipeline.pkl"
+        pipeline.save(path)
+        loaded = Pipeline.load(path)
+        assert isinstance(loaded, Pipeline)
+
+    def test_loaded_pipeline_is_fitted(self, tmp_path, simple_array):
+        pipeline = Pipeline(encoder=AngleEncoder())
+        pipeline.fit(simple_array)
+        path = tmp_path / "pipeline.pkl"
+        pipeline.save(path)
+        loaded = Pipeline.load(path)
+        assert loaded._fitted is True
+
+    def test_loaded_pipeline_can_transform(self, tmp_path, simple_array):
+        pipeline = Pipeline(encoder=AngleEncoder(), exporter=QASMExporter())
+        pipeline.fit(simple_array)
+        path = tmp_path / "pipeline.pkl"
+        pipeline.save(path)
+        loaded = Pipeline.load(path)
+        result = loaded.transform(simple_array)
+        assert result.circuits is not None
+        assert len(result.circuits) == simple_array.shape[0]
+
+    def test_save_creates_parent_dirs(self, tmp_path, simple_array):
+        pipeline = Pipeline(encoder=AngleEncoder())
+        pipeline.fit(simple_array)
+        path = tmp_path / "nested" / "dir" / "pipeline.pkl"
+        pipeline.save(path)
+        assert path.exists()
+
+    def test_load_wrong_type_raises(self, tmp_path):
+        import pickle
+        path = tmp_path / "bad.pkl"
+        with open(path, "wb") as f:
+            pickle.dump({"not": "a pipeline"}, f)
+        with pytest.raises(TypeError, match="Expected a Pipeline"):
+            Pipeline.load(path)
+
+    def test_save_load_with_str_path(self, tmp_path, simple_array):
+        pipeline = Pipeline(encoder=AngleEncoder())
+        pipeline.fit(simple_array)
+        path = str(tmp_path / "pipeline.pkl")
+        pipeline.save(path)
+        loaded = Pipeline.load(path)
+        assert isinstance(loaded, Pipeline)
+
+    def test_roundtrip_preserves_encoder_type(self, tmp_path, simple_array):
+        pipeline = Pipeline(encoder=BasisEncoder())
+        pipeline.fit(simple_array)
+        path = tmp_path / "pipeline.pkl"
+        pipeline.save(path)
+        loaded = Pipeline.load(path)
+        assert isinstance(loaded.encoder, BasisEncoder)
+
+
+# ---------------------------------------------------------------------------
+# Batch export (batch_export top-level)
+# ---------------------------------------------------------------------------
+
+class TestBatchExport:
+    def test_batch_export_creates_files(self, tmp_path, simple_array):
+        import quprep as qd
+        paths = qd.batch_export(simple_array, tmp_path / "out")
+        assert len(paths) == simple_array.shape[0]
+        for p in paths:
+            assert p.exists()
+
+    def test_batch_export_qasm_content(self, tmp_path, simple_array):
+        import quprep as qd
+        paths = qd.batch_export(simple_array, tmp_path / "out")
+        content = paths[0].read_text()
+        assert "OPENQASM" in content
+
+    def test_batch_export_stem(self, tmp_path, simple_array):
+        import quprep as qd
+        paths = qd.batch_export(simple_array, tmp_path / "out", stem="sample")
+        assert paths[0].name == "sample_0000.qasm"
+
+    def test_batch_export_file_count(self, tmp_path):
+        arr = np.ones((3, 2))
+        import quprep as qd
+        paths = qd.batch_export(arr, tmp_path / "out")
+        assert len(paths) == 3
+
+
+# ---------------------------------------------------------------------------
+# CLI --save-dir
+# ---------------------------------------------------------------------------
+
+class TestCLISaveDir:
+    def test_save_dir_creates_files(self, tmp_path):
+        import csv
+
+        csv_file = tmp_path / "data.csv"
+        with open(csv_file, "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(["a", "b"])
+            for _ in range(3):
+                writer.writerow([0.5, 0.7])
+
+        out_dir = tmp_path / "circuits"
+        from quprep.cli import main
+        rc = main([
+            "convert", str(csv_file),
+            "--encoding", "angle",
+            "--save-dir", str(out_dir),
+        ])
+        assert rc == 0
+        qasm_files = list(out_dir.glob("*.qasm"))
+        assert len(qasm_files) == 3
+
+    def test_save_dir_with_custom_stem(self, tmp_path):
+        import csv
+
+        csv_file = tmp_path / "data.csv"
+        with open(csv_file, "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(["x"])
+            writer.writerow([0.1])
+
+        out_dir = tmp_path / "out"
+        from quprep.cli import main
+        rc = main([
+            "convert", str(csv_file),
+            "--encoding", "angle",
+            "--save-dir", str(out_dir),
+            "--stem", "enc",
+        ])
+        assert rc == 0
+        assert (out_dir / "enc_0000.qasm").exists()

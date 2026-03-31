@@ -527,3 +527,59 @@ class TestTKETExporter:
         circuits = TKETExporter().export_batch([_angle_result(n=2) for _ in range(3)])
         assert len(circuits) == 3
         assert all(isinstance(c, pytket.Circuit) for c in circuits)
+
+
+# ---------------------------------------------------------------------------
+# QASMExporter.save_batch
+# ---------------------------------------------------------------------------
+
+class TestQASMSaveBatch:
+    def test_save_batch_creates_files(self, tmp_path):
+        exporter = QASMExporter()
+        encoded = [_angle_result(n=3) for _ in range(4)]
+        paths = exporter.save_batch(encoded, tmp_path / "circuits")
+        assert len(paths) == 4
+        for p in paths:
+            assert p.exists()
+
+    def test_save_batch_default_stem(self, tmp_path):
+        exporter = QASMExporter()
+        encoded = [_angle_result(n=2)]
+        paths = exporter.save_batch(encoded, tmp_path / "out")
+        assert paths[0].name == "circuit_0000.qasm"
+
+    def test_save_batch_custom_stem(self, tmp_path):
+        exporter = QASMExporter()
+        encoded = [_angle_result(n=2), _angle_result(n=2)]
+        paths = exporter.save_batch(encoded, tmp_path / "out", stem="sample")
+        assert paths[0].name == "sample_0000.qasm"
+        assert paths[1].name == "sample_0001.qasm"
+
+    def test_save_batch_creates_directory(self, tmp_path):
+        exporter = QASMExporter()
+        out_dir = tmp_path / "new" / "nested" / "dir"
+        exporter.save_batch([_angle_result(n=2)], out_dir)
+        assert out_dir.exists()
+
+    def test_save_batch_file_content_is_qasm(self, tmp_path):
+        exporter = QASMExporter()
+        paths = exporter.save_batch([_angle_result(n=3)], tmp_path / "out")
+        content = paths[0].read_text()
+        assert content.startswith("OPENQASM 3.0;")
+
+    def test_save_batch_returns_paths_list(self, tmp_path):
+        from pathlib import Path
+        exporter = QASMExporter()
+        paths = exporter.save_batch([_angle_result(n=2)], tmp_path / "out")
+        assert isinstance(paths, list)
+        assert all(isinstance(p, Path) for p in paths)
+
+    def test_save_batch_empty_list(self, tmp_path):
+        exporter = QASMExporter()
+        paths = exporter.save_batch([], tmp_path / "out")
+        assert paths == []
+
+    def test_save_batch_basis_encoding(self, tmp_path):
+        exporter = QASMExporter()
+        paths = exporter.save_batch([_basis_result()], tmp_path / "out")
+        assert paths[0].read_text().startswith("OPENQASM 3.0;")

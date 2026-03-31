@@ -36,7 +36,7 @@ Recommendation::
     rec = qd.recommend(df, task="classification", qubits=8)
 """
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 __author__ = "Hasarindu Perera"
 __license__ = "Apache-2.0"
 
@@ -50,6 +50,7 @@ from quprep.clean.selector import FeatureSelector
 # Comparison
 from quprep.compare import ComparisonResult, compare_encodings
 from quprep.core.pipeline import Pipeline, PipelineResult
+from quprep.core.qubit_suggestion import QubitSuggestion, suggest_qubits
 from quprep.core.recommender import recommend
 
 # Encoders
@@ -120,6 +121,11 @@ __all__ = [
     # Comparison
     "compare_encodings",
     "ComparisonResult",
+    # Qubit suggestion
+    "suggest_qubits",
+    "QubitSuggestion",
+    # Batch export
+    "batch_export",
     # Validation
     "DataSchema",
     "FeatureSpec",
@@ -201,6 +207,48 @@ def prepare(source, *, encoding: str = "angle", framework: str = "qasm", **kwarg
     encoder = _encoders[encoding]()
     exporter = _exporters[framework]()
     return Pipeline(encoder=encoder, exporter=exporter).fit_transform(source)
+
+
+def batch_export(
+    source,
+    directory: str,
+    *,
+    encoding: str = "angle",
+    stem: str = "circuit",
+    **kwargs,
+) -> list:
+    """
+    Convert a dataset to QASM circuits and save each sample to a file.
+
+    Combines :func:`prepare` with :meth:`QASMExporter.save_batch`. Output
+    files are named ``{stem}_0000.qasm``, ``{stem}_0001.qasm``, etc. in
+    the given directory.
+
+    Parameters
+    ----------
+    source : str, Path, np.ndarray, or pd.DataFrame
+        Input data.
+    directory : str or Path
+        Output directory (created if it does not exist).
+    encoding : str
+        Encoding method (default: ``'angle'``).
+    stem : str
+        Filename stem (default: ``'circuit'``).
+    **kwargs
+        Extra keyword arguments forwarded to :func:`prepare`.
+
+    Returns
+    -------
+    list of Path
+        Paths of the written files, in sample order.
+    """
+    from pathlib import Path as _Path
+
+    from quprep.export.qasm_export import QASMExporter
+
+    result = prepare(source, encoding=encoding, framework="qasm", **kwargs)
+    exporter = QASMExporter()
+    return exporter.save_batch(result.encoded, _Path(directory), stem=stem)
 
 
 def _lazy_qiskit_exporter():
