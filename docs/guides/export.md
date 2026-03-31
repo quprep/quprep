@@ -38,6 +38,28 @@ Export a full batch:
 qasm_strings = exp.export_batch(encoded_list)
 ```
 
+Save an entire batch as individual files:
+
+```python
+paths = exp.save_batch(encoded_list, "circuits/")
+# writes circuits/circuit_0000.qasm, circuit_0001.qasm, …
+
+# custom stem
+paths = exp.save_batch(encoded_list, "out/", stem="sample")
+# writes out/sample_0000.qasm, sample_0001.qasm, …
+```
+
+The directory is created automatically if it does not exist. Returns a `list[Path]` of the written files.
+
+Via the top-level helper (takes raw data, encodes internally):
+
+```python
+import quprep as qd
+
+paths = qd.batch_export("data.csv", "circuits/", encoding="angle", stem="circuit")
+# also works with np.ndarray or pd.DataFrame
+```
+
 **Supported encodings:** `angle`, `entangled_angle`, `basis`, `iqp`, `reupload`, `hamiltonian`. Amplitude encoding requires exponential-depth state preparation — use Qiskit for that.
 
 ---

@@ -89,3 +89,42 @@ pipeline = qd.Pipeline(
     normalizer=qd.Scaler("zscore"),  # override auto-selection
 )
 ```
+
+### Saving and loading a fitted pipeline
+
+```python
+import quprep as qd
+
+pipeline = qd.Pipeline(
+    reducer=qd.PCAReducer(n_components=4),
+    encoder=qd.AngleEncoder(),
+)
+pipeline.fit(X_train)
+pipeline.save("pipeline.pkl")
+
+# Later — in a different process or deployment
+loaded = qd.Pipeline.load("pipeline.pkl")
+result = loaded.transform(X_new)
+```
+
+The parent directory is created automatically. All fitted state (reducer, normalizer, encoder) is preserved.
+
+### With drift detection
+
+```python
+import quprep as qd
+
+det = qd.DriftDetector(mean_threshold=3.0, std_threshold=2.0)
+
+pipeline = qd.Pipeline(
+    encoder=qd.AngleEncoder(),
+    drift_detector=det,
+)
+pipeline.fit(X_train)
+result = pipeline.transform(X_test)
+
+print(result.drift_report.overall_drift)      # True / False
+print(result.drift_report.drifted_features)   # list of feature names
+```
+
+Drift is checked automatically on every `transform()` call. A `QuPrepWarning` is issued when drift is detected. The drift detector state is preserved through `save()`/`load()`.

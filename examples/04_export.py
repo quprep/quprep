@@ -17,6 +17,9 @@ import numpy as np
 
 import quprep as qd
 
+rng = np.random.default_rng(42)
+X = rng.uniform(0, 1, size=(5, 3))
+
 enc = qd.AngleEncoder(rotation="ry").encode(np.array([0.3, 1.1, 0.7]) * np.pi)
 
 # ── OpenQASM 3.0 — no dependencies ───────────────────────────────────────────
@@ -25,7 +28,16 @@ print("=" * 55)
 print("OpenQASM 3.0  (no extra dependencies)")
 print("=" * 55)
 
-print(qd.QASMExporter().export(enc))
+exp = qd.QASMExporter()
+print(exp.export(enc))
+
+# Save a batch of circuits to individual files
+result = qd.prepare(X, encoding="angle")
+paths = exp.save_batch(result.encoded, "/tmp/quprep_batch/", stem="circuit")
+print(f"Saved {len(paths)} circuits → {paths[0].parent}/")
+print(f"  first : {paths[0].name}")
+print(f"  last  : {paths[-1].name}")
+print()
 
 # ── Qiskit ───────────────────────────────────────────────────────────────────
 

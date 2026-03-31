@@ -104,6 +104,8 @@ nav:
     - QUBO / Ising: guides/qubo.md
     - Validation & Cost: guides/validation.md
     - Encoding Comparison: guides/comparison.md
+    - Qubit Suggestion: guides/suggest.md
+    - Data Drift Detection: guides/drift.md
   - API Reference:
     - Overview: api/index.md
     - Pipeline: api/pipeline.md
@@ -112,4 +114,6 @@ nav:
     - QUBO / Ising: api/qubo.md
     - Validation & Cost: api/validation.md
     - Comparison: api/comparison.md
+    - Qubit Suggestion: api/suggest.md
+    - Drift Detection: api/drift.md
   - Contributing: contributing.md

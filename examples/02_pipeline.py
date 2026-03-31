@@ -46,10 +46,17 @@ print()
 print("First QASM circuit:")
 print(result.circuit)
 
-# ── 4. Save all circuits to disk ─────────────────────────────────────────────
+# ── 4. Save all circuits to disk (save_batch) ────────────────────────────────
 
 exporter = qd.QASMExporter()
-for i, enc in enumerate(result.encoded):
-    path = f"/tmp/circuit_{i:02d}.qasm"
-    exporter.save(enc, path)
-    print(f"Saved → {path}")
+paths = exporter.save_batch(result.encoded, "/tmp/quprep_circuits/", stem="circuit")
+print(f"Saved {len(paths)} circuits → {paths[0].parent}/")
+
+# ── 5. Save and reload a fitted pipeline ─────────────────────────────────────
+
+pipeline.save("/tmp/quprep_pipeline.pkl")
+loaded = qd.Pipeline.load("/tmp/quprep_pipeline.pkl")
+
+X_new = df.fillna(df.mean(numeric_only=True)).to_numpy()[:3]
+result2 = loaded.transform(X_new)
+print(f"Loaded pipeline → {len(result2.encoded)} samples encoded")

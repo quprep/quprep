@@ -219,6 +219,8 @@ See the [`examples/`](examples/) directory:
 | 06 | Circuit visualization |
 | 07 | QUBO / Ising — Max-Cut, Knapsack, solvers, D-Wave export, QAOA |
 | 08 | Validation, schema & cost — `DataSchema`, `estimate_cost`, `result.summary()` |
+| 09 | Data drift detection — `DriftDetector`, pipeline integration, serialization |
+| 10 | Qubit suggestion — `suggest_qubits`, task hints, NISQ ceiling |
 
 ---
 
