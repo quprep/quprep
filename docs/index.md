@@ -77,6 +77,9 @@ QuPrep converts classical datasets into quantum-circuit-ready format. It is not 
 | **QUBO** | v0.3.0 | QUBO/Ising, 7 problem formulations, solvers, QAOA, D-Wave export |
 | **Validate** | v0.4.0 | Input validation, schema enforcement, cost estimation, sklearn fit/transform, `import quprep as qd` |
 | **Intelligence** | v0.5.0 | Qubit suggestion, encoding comparison, data drift detection, pipeline save/load, batch QASM export |
+| **Encode++** | v0.6.0 | ZZFeatureMap, PauliFeatureMap, RandomFourier, TensorProduct encoders |
+| **Export++** | v0.6.0 | Amazon Braket, Q# (Azure Quantum), IQM native format |
+| **Plugins** | v0.6.0 | `register_encoder` / `register_exporter` — custom encoders/exporters via `prepare()` |
 
 ---
 
@@ -89,6 +92,9 @@ QuPrep converts classical datasets into quantum-circuit-ready format. It is not 
 | PennyLane | `quprep[pennylane]` | `qml.QNode` |
 | Cirq | `quprep[cirq]` | `cirq.Circuit` |
 | TKET | `quprep[tket]` | `pytket.Circuit` |
+| Amazon Braket | `quprep[braket]` | `braket.circuits.Circuit` |
+| Q# / Azure Quantum | `quprep[qsharp]` | `str` (Q# 1.0 source) |
+| IQM | `quprep[iqm]` | `dict` (PRX+CZ JSON) |
 | D-Wave Ocean | *(via `.to_dwave()`)* | BQM dict |
 
 ---

@@ -59,6 +59,58 @@ Requires `pip install quprep[tket]`.
 
 ---
 
+## BraketExporter
+
+Requires `pip install quprep[braket]`.
+
+::: quprep.export.braket_export.BraketExporter
+    options:
+      show_source: true
+
+---
+
+## QSharpExporter
+
+No dependencies for string generation. Requires `pip install quprep[qsharp]` for Azure Quantum submission.
+
+::: quprep.export.qsharp_export.QSharpExporter
+    options:
+      show_source: true
+
+---
+
+## IQMExporter
+
+No dependencies for dict generation. Requires `pip install quprep[iqm]` for hardware submission.
+
+::: quprep.export.iqm_export.IQMExporter
+    options:
+      show_source: true
+
+---
+
+## Plugin registry
+
+Register custom encoders and exporters for use with `prepare()`.
+
+::: quprep.plugins.register_encoder
+
+::: quprep.plugins.register_exporter
+
+::: quprep.plugins.list_encoders
+
+::: quprep.plugins.list_exporters
+
+::: quprep.plugins.get_encoder_class
+
+::: quprep.plugins.get_exporter_class
+
+::: quprep.plugins.unregister_encoder
+
+::: quprep.plugins.unregister_exporter
+
+---
+
 ## Visualization
 
 No dependencies for `draw_ascii`. Requires `pip install quprep[viz]` for `draw_matplotlib`.

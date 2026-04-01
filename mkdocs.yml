@@ -106,6 +106,7 @@ nav:
     - Encoding Comparison: guides/comparison.md
     - Qubit Suggestion: guides/suggest.md
     - Data Drift Detection: guides/drift.md
+    - Plugin System: guides/plugins.md
   - API Reference:
     - Overview: api/index.md
     - Pipeline: api/pipeline.md

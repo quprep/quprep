@@ -190,6 +190,123 @@ result = enc.encode(x)
 
 ---
 
+### ZZ feature map
+
+Havlíček et al. 2019 ZZ feature map (Qiskit convention). Applies a Hadamard layer, single-qubit Rz gates, and pairwise ZZ interactions, repeated `reps` times.
+
+$$\phi_i = 2(\pi - x_i), \quad \phi_{ij} = 2(\pi - x_i)(\pi - x_j)$$
+
+| Property | Value |
+|---|---|
+| Qubits | n = d |
+| Depth | $O(d^2 \cdot \text{reps})$ |
+| NISQ-safe | ⚠️ Medium — $d^2$ two-qubit gates |
+| Best for | Kernel methods, QSVMs, quantum advantage |
+
+```python
+from quprep.encode.zz_feature_map import ZZFeatureMapEncoder
+
+enc = ZZFeatureMapEncoder(reps=2)
+result = enc.encode(x)   # x in [0, π]
+print(result.metadata["single_angles"])  # [2(π−x₀), 2(π−x₁), ...]
+print(result.metadata["pair_angles"])    # pairwise ZZ angles
+print(result.metadata["pairs"])          # [(0,1), (0,2), (1,2), ...]
+```
+
+**Normalization:** `minmax_pi` ($[0, \pi]$). Applied automatically.
+
+!!! note "Qiskit compatibility"
+    Produces the same circuit structure as Qiskit's `ZZFeatureMap`. Output circuits can be directly exported to Qiskit, QASM, Braket, Q#, or IQM.
+
+---
+
+### Pauli feature map
+
+Generalized feature map using configurable Pauli string interactions. Extends ZZ feature map to arbitrary single-qubit and pairwise Pauli operators.
+
+| Property | Value |
+|---|---|
+| Qubits | n = d |
+| Depth | $O(d^2 \cdot \text{reps})$ with pair terms, $O(d \cdot \text{reps})$ without |
+| NISQ-safe | ⚠️ Medium — depends on Pauli strings chosen |
+| Best for | Expressive kernel circuits, custom feature maps |
+
+```python
+from quprep.encode.pauli_feature_map import PauliFeatureMapEncoder
+
+# Z single-qubit + ZZ pairwise (equivalent to ZZFeatureMap)
+enc = PauliFeatureMapEncoder(paulis=["Z", "ZZ"], reps=2)
+
+# Higher expressivity with mixed Paulis
+enc = PauliFeatureMapEncoder(paulis=["Z", "X", "ZZ", "XZ"], reps=1)
+
+result = enc.encode(x)
+print(result.metadata["single_terms"])  # {"Z": [...], "X": [...]}
+print(result.metadata["pair_terms"])    # {"ZZ": [(i,j,angle), ...]}
+```
+
+**Valid single Paulis:** `X`, `Y`, `Z`  
+**Valid pair Paulis:** `XX`, `YY`, `ZZ`, `XZ`, `ZX`, `XY`, `YX`, `YZ`, `ZY`
+
+---
+
+### Random Fourier features
+
+Approximates the RBF (Gaussian) kernel using Bochner's theorem. Samples random Fourier frequencies from $\mathcal{N}(0, 2\gamma)$ and encodes the cosine projection as rotation angles.
+
+$$\phi(x) = \sqrt{\frac{2}{D}} \cos(Wx + b), \quad W \sim \mathcal{N}(0, 2\gamma), \quad b \sim \mathcal{U}(0, 2\pi)$$
+
+| Property | Value |
+|---|---|
+| Qubits | n = `n_components` (fixed, regardless of input dim) |
+| Depth | O(1) — single Ry layer |
+| NISQ-safe | ✅ Excellent |
+| Best for | Kernel approximation, dimensionality expansion |
+
+```python
+import numpy as np
+from quprep.encode.random_fourier import RandomFourierEncoder
+
+enc = RandomFourierEncoder(n_components=8, gamma=1.0, random_state=42)
+
+# Must call fit() first — samples the random projection matrix
+enc.fit(X_train)
+
+result = enc.encode(x)   # always n_components qubits
+```
+
+!!! warning "Requires fit()"
+    `RandomFourierEncoder` must be fitted on training data before encoding. Calling `encode()` without `fit()` raises `RuntimeError`.
+
+---
+
+### Tensor product encoding
+
+Encodes two features per qubit using a full Bloch sphere rotation (Ry + Rz). Requires $\lceil d/2 \rceil$ qubits. No entanglement — purely single-qubit.
+
+$$|\psi_k\rangle = R_z(\theta_{2k+1}) R_y(\theta_{2k}) |0\rangle$$
+
+| Property | Value |
+|---|---|
+| Qubits | $n = \lceil d/2 \rceil$ |
+| Depth | O(1) |
+| NISQ-safe | ✅ Excellent |
+| Best for | Qubit-efficient encoding, full Bloch sphere expressivity |
+
+```python
+from quprep.encode.tensor_product import TensorProductEncoder
+
+enc = TensorProductEncoder()
+result = enc.encode(x)   # x in [0, π]; odd-length inputs zero-padded
+print(result.metadata["ry_angles"])  # [θ₀, θ₁, ...]
+print(result.metadata["rz_angles"])  # [φ₀, φ₁, ...]
+print(result.metadata["n_qubits"])   # ceil(d/2)
+```
+
+**Normalization:** `minmax_pi` ($[0, \pi]$). Applied automatically.
+
+---
+
 ## Choosing an encoding
 
 Not sure? Use `quprep.recommend()`:

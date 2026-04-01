@@ -44,9 +44,7 @@ class TensorProductEncoder(BaseEncoder):
     qubits with no entanglement.  Uses ``⌈d/2⌉`` qubits for
     ``d``-dimensional input.
 
-    Parameters
-    ----------
-    None
+    No parameters.
     """
 
     @property

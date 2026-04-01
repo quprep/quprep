@@ -76,3 +76,35 @@ All encoders:
 ::: quprep.encode.hamiltonian.HamiltonianEncoder
     options:
       show_source: true
+
+---
+
+## ZZFeatureMapEncoder
+
+::: quprep.encode.zz_feature_map.ZZFeatureMapEncoder
+    options:
+      show_source: true
+
+---
+
+## PauliFeatureMapEncoder
+
+::: quprep.encode.pauli_feature_map.PauliFeatureMapEncoder
+    options:
+      show_source: true
+
+---
+
+## RandomFourierEncoder
+
+::: quprep.encode.random_fourier.RandomFourierEncoder
+    options:
+      show_source: true
+
+---
+
+## TensorProductEncoder
+
+::: quprep.encode.tensor_product.TensorProductEncoder
+    options:
+      show_source: true
