@@ -2,13 +2,22 @@
 
 from __future__ import annotations
 
+import json
+
 import numpy as np
 import pytest
 
 from quprep.encode.amplitude import AmplitudeEncoder
 from quprep.encode.angle import AngleEncoder
+from quprep.encode.base import EncodedResult
 from quprep.encode.basis import BasisEncoder
+from quprep.encode.pauli_feature_map import PauliFeatureMapEncoder
+from quprep.encode.random_fourier import RandomFourierEncoder
+from quprep.encode.tensor_product import TensorProductEncoder
+from quprep.encode.zz_feature_map import ZZFeatureMapEncoder
+from quprep.export.iqm_export import IQMExporter
 from quprep.export.qasm_export import QASMExporter
+from quprep.export.qsharp_export import QSharpExporter
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -142,7 +151,6 @@ class TestQASMExporter:
     # --- unknown encoding ---
 
     def test_unknown_encoding_raises(self):
-        from quprep.encode.base import EncodedResult
         exp = QASMExporter()
         fake = EncodedResult(
             parameters=np.array([0.1, 0.2]),
@@ -225,7 +233,6 @@ class TestQiskitExporter:
 
     def test_unknown_encoding_raises(self):
         pytest.importorskip("qiskit")
-        from quprep.encode.base import EncodedResult
         from quprep.export.qiskit_export import QiskitExporter
         exp = QiskitExporter()
         fake = EncodedResult(
@@ -338,7 +345,6 @@ class TestPennyLaneExporter:
 
     def test_unknown_encoding_raises(self):
         pytest.importorskip("pennylane")
-        from quprep.encode.base import EncodedResult
         from quprep.export.pennylane_export import PennyLaneExporter
         fake = EncodedResult(
             parameters=np.array([0.1, 0.2]),
@@ -431,7 +437,6 @@ class TestCirqExporter:
 
     def test_unknown_encoding_raises(self):
         pytest.importorskip("cirq")
-        from quprep.encode.base import EncodedResult
         from quprep.export.cirq_export import CirqExporter
         fake = EncodedResult(
             parameters=np.array([0.1, 0.2]),
@@ -512,7 +517,6 @@ class TestTKETExporter:
 
     def test_unknown_encoding_raises(self):
         pytest.importorskip("pytket")
-        from quprep.encode.base import EncodedResult
         from quprep.export.tket_export import TKETExporter
         fake = EncodedResult(
             parameters=np.array([0.1, 0.2]),
@@ -583,3 +587,439 @@ class TestQASMSaveBatch:
         exporter = QASMExporter()
         paths = exporter.save_batch([_basis_result()], tmp_path / "out")
         assert paths[0].read_text().startswith("OPENQASM 3.0;")
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _angle_enc(n=4):
+    from quprep.encode.angle import AngleEncoder
+    x = np.linspace(0.1, 1.0, n)
+    return AngleEncoder().encode(x)
+
+
+def _basis_enc(n=4):
+    from quprep.encode.basis import BasisEncoder
+    x = np.array([0, 1, 0, 1], dtype=float)
+    return BasisEncoder().encode(x)
+
+
+def _zz_enc(n=3):
+    x = np.linspace(0.5, 2.0, n)
+    return ZZFeatureMapEncoder(reps=1).encode(x)
+
+
+def _tp_enc(n=4):
+    x = np.linspace(0.1, 1.0, n)
+    return TensorProductEncoder().encode(x)
+
+
+# ---------------------------------------------------------------------------
+# QSharpExporter
+# ---------------------------------------------------------------------------
+
+class TestQSharpExporter:
+    def test_returns_string(self):
+        exp = QSharpExporter()
+        qsharp = exp.export(_angle_enc())
+        assert isinstance(qsharp, str)
+
+    def test_contains_namespace(self):
+        exp = QSharpExporter(namespace="MyNS")
+        qsharp = exp.export(_angle_enc())
+        assert "MyNS" in qsharp
+
+    def test_contains_operation_name(self):
+        exp = QSharpExporter(operation_name="FeatureMap")
+        qsharp = exp.export(_angle_enc())
+        assert "FeatureMap" in qsharp
+
+    def test_angle_encoding_uses_ry(self):
+        exp = QSharpExporter()
+        qsharp = exp.export(_angle_enc(4))
+        assert "Ry(" in qsharp
+
+    def test_basis_encoding_uses_x(self):
+        exp = QSharpExporter()
+        qsharp = exp.export(_basis_enc())
+        assert "X(" in qsharp
+
+    def test_zz_feature_map_contains_rz_and_h(self):
+        exp = QSharpExporter()
+        qsharp = exp.export(_zz_enc())
+        assert "Rz(" in qsharp
+        assert "H(" in qsharp
+
+    def test_tensor_product_contains_ry_and_rz(self):
+        exp = QSharpExporter()
+        qsharp = exp.export(_tp_enc())
+        assert "Ry(" in qsharp
+        assert "Rz(" in qsharp
+
+    def test_amplitude_raises(self):
+        encoded = EncodedResult(
+            parameters=np.array([0.5, 0.5, 0.5, 0.5]),
+            metadata={"encoding": "amplitude", "n_qubits": 2},
+        )
+        exp = QSharpExporter()
+        with pytest.raises(NotImplementedError):
+            exp.export(encoded)
+
+    def test_unknown_encoding_raises(self):
+        encoded = EncodedResult(
+            parameters=np.array([1.0]),
+            metadata={"encoding": "unknown_enc", "n_qubits": 1},
+        )
+        exp = QSharpExporter()
+        with pytest.raises(ValueError, match="Unknown encoding"):
+            exp.export(encoded)
+
+    def test_export_batch_returns_list(self):
+        exp = QSharpExporter()
+        results = [_angle_enc(3), _angle_enc(3)]
+        batch = exp.export_batch(results)
+        assert isinstance(batch, list)
+        assert len(batch) == 2
+        assert all(isinstance(s, str) for s in batch)
+
+    def test_qubit_register_declared(self):
+        exp = QSharpExporter()
+        qsharp = exp.export(_angle_enc(5))
+        assert "Qubit[5]" in qsharp
+
+    def test_reset_all_present(self):
+        exp = QSharpExporter()
+        qsharp = exp.export(_angle_enc())
+        assert "ResetAll" in qsharp
+
+
+# ---------------------------------------------------------------------------
+# IQMExporter
+# ---------------------------------------------------------------------------
+
+class TestIQMExporter:
+    def test_returns_dict(self):
+        exp = IQMExporter()
+        result = exp.export(_angle_enc())
+        assert isinstance(result, dict)
+
+    def test_circuit_name_field(self):
+        exp = IQMExporter(circuit_name="test_circuit")
+        result = exp.export(_angle_enc())
+        assert result["name"] == "test_circuit"
+
+    def test_instructions_is_list(self):
+        exp = IQMExporter()
+        result = exp.export(_angle_enc())
+        assert isinstance(result["instructions"], list)
+        assert len(result["instructions"]) > 0
+
+    def test_angle_encoding_uses_prx(self):
+        exp = IQMExporter()
+        result = exp.export(_angle_enc(3))
+        names = {op["name"] for op in result["instructions"]}
+        assert "prx" in names
+
+    def test_qubit_labels(self):
+        exp = IQMExporter(qubit_prefix="QB")
+        result = exp.export(_angle_enc(3))
+        all_qubits = [q for op in result["instructions"] for q in op["qubits"]]
+        assert "QB1" in all_qubits
+        assert "QB2" in all_qubits
+        assert "QB3" in all_qubits
+
+    def test_custom_qubit_prefix(self):
+        exp = IQMExporter(qubit_prefix="Q")
+        result = exp.export(_angle_enc(2))
+        all_qubits = [q for op in result["instructions"] for q in op["qubits"]]
+        assert "Q1" in all_qubits
+
+    def test_basis_encoding_uses_prx(self):
+        exp = IQMExporter()
+        result = exp.export(_basis_enc())
+        prx_ops = [op for op in result["instructions"] if op["name"] == "prx"]
+        assert len(prx_ops) > 0
+
+    def test_iqp_uses_cz(self):
+        from quprep.encode.iqp import IQPEncoder
+        x = np.array([0.5, 1.0, 1.5])
+        encoded = IQPEncoder(reps=1).encode(x)
+        exp = IQMExporter()
+        result = exp.export(encoded)
+        names = {op["name"] for op in result["instructions"]}
+        assert "cz" in names
+
+    def test_zz_feature_map_uses_cz(self):
+        exp = IQMExporter()
+        result = exp.export(_zz_enc(3))
+        names = {op["name"] for op in result["instructions"]}
+        assert "cz" in names
+
+    def test_tensor_product_no_cz(self):
+        exp = IQMExporter()
+        result = exp.export(_tp_enc(4))
+        names = {op["name"] for op in result["instructions"]}
+        assert "cz" not in names
+
+    def test_json_serializable(self):
+        exp = IQMExporter()
+        result = exp.export(_angle_enc())
+        # should not raise
+        json.dumps(result)
+
+    def test_amplitude_raises(self):
+        encoded = EncodedResult(
+            parameters=np.array([0.5, 0.5]),
+            metadata={"encoding": "amplitude", "n_qubits": 1},
+        )
+        exp = IQMExporter()
+        with pytest.raises(NotImplementedError):
+            exp.export(encoded)
+
+    def test_unknown_encoding_raises(self):
+        encoded = EncodedResult(
+            parameters=np.array([1.0]),
+            metadata={"encoding": "unknown_enc", "n_qubits": 1},
+        )
+        exp = IQMExporter()
+        with pytest.raises(ValueError, match="Unknown encoding"):
+            exp.export(encoded)
+
+    def test_export_batch_returns_list(self):
+        exp = IQMExporter()
+        batch = exp.export_batch([_angle_enc(3), _angle_enc(3)])
+        assert isinstance(batch, list)
+        assert len(batch) == 2
+        assert all(isinstance(d, dict) for d in batch)
+
+
+# ---------------------------------------------------------------------------
+# QASMExporter — new encodings
+# ---------------------------------------------------------------------------
+
+class TestQASMExporterV060:
+    def test_zz_feature_map_qasm(self):
+        exp = QASMExporter()
+        qasm = exp.export(_zz_enc(3))
+        assert "OPENQASM 3.0" in qasm
+        assert "h " in qasm
+        assert "rz(" in qasm
+        assert "cx " in qasm
+
+    def test_tensor_product_qasm(self):
+        exp = QASMExporter()
+        qasm = exp.export(_tp_enc(4))
+        assert "OPENQASM 3.0" in qasm
+        assert "ry(" in qasm
+        assert "rz(" in qasm
+
+    def test_random_fourier_qasm(self):
+        enc = RandomFourierEncoder(n_components=4, random_state=0)
+        enc.fit(np.random.default_rng(0).random((10, 3)))
+        encoded = enc.encode(np.random.default_rng(0).random(3))
+        exp = QASMExporter()
+        qasm = exp.export(encoded)
+        assert "OPENQASM 3.0" in qasm
+        assert "ry(" in qasm  # angle encoding via _export_angle
+
+    def test_pauli_feature_map_qasm(self):
+        enc = PauliFeatureMapEncoder(paulis=["Z", "ZZ"], reps=1)
+        x = np.array([0.5, 1.0, 1.5])
+        encoded = enc.encode(x)
+        exp = QASMExporter()
+        qasm = exp.export(encoded)
+        assert "OPENQASM 3.0" in qasm
+        assert "h " in qasm
+        assert "rz(" in qasm
+
+
+# ---------------------------------------------------------------------------
+# BraketExporter
+# ---------------------------------------------------------------------------
+
+class TestBraketExporter:
+    def test_braket_not_installed_raises(self):
+        """Without amazon-braket-sdk the exporter raises ImportError."""
+        pytest.importorskip("braket.circuits", reason="braket not installed")
+        from quprep.export.braket_export import BraketExporter
+        exp = BraketExporter()
+        result = exp.export(_angle_enc(3))
+        assert result is not None
+
+    def test_braket_angle_encoding(self):
+        pytest.importorskip("braket.circuits")
+        from braket.circuits import Circuit
+
+        from quprep.export.braket_export import BraketExporter
+        exp = BraketExporter()
+        circuit = exp.export(_angle_enc(3))
+        assert isinstance(circuit, Circuit)
+
+    def test_braket_basis_encoding(self):
+        pytest.importorskip("braket.circuits")
+        from braket.circuits import Circuit
+
+        from quprep.export.braket_export import BraketExporter
+        exp = BraketExporter()
+        circuit = exp.export(_basis_enc())
+        assert isinstance(circuit, Circuit)
+
+    def test_braket_zz_feature_map(self):
+        pytest.importorskip("braket.circuits")
+        from braket.circuits import Circuit
+
+        from quprep.export.braket_export import BraketExporter
+        exp = BraketExporter()
+        circuit = exp.export(_zz_enc(3))
+        assert isinstance(circuit, Circuit)
+
+    def test_braket_tensor_product(self):
+        pytest.importorskip("braket.circuits")
+        from braket.circuits import Circuit
+
+        from quprep.export.braket_export import BraketExporter
+        exp = BraketExporter()
+        circuit = exp.export(_tp_enc(4))
+        assert isinstance(circuit, Circuit)
+
+    def test_braket_amplitude_raises(self):
+        pytest.importorskip("braket.circuits")
+        from quprep.export.braket_export import BraketExporter
+        exp = BraketExporter()
+        encoded = EncodedResult(
+            parameters=np.array([0.5, 0.5]),
+            metadata={"encoding": "amplitude", "n_qubits": 1},
+        )
+        with pytest.raises(NotImplementedError):
+            exp.export(encoded)
+
+    def test_braket_unknown_encoding_raises(self):
+        pytest.importorskip("braket.circuits")
+        from quprep.export.braket_export import BraketExporter
+        exp = BraketExporter()
+        encoded = EncodedResult(
+            parameters=np.array([1.0]),
+            metadata={"encoding": "unknown_enc", "n_qubits": 1},
+        )
+        with pytest.raises(ValueError, match="Unknown encoding"):
+            exp.export(encoded)
+
+    def test_braket_export_batch(self):
+        pytest.importorskip("braket.circuits")
+        from quprep.export.braket_export import BraketExporter
+        exp = BraketExporter()
+        batch = exp.export_batch([_angle_enc(3), _angle_enc(3)])
+        assert len(batch) == 2
+
+
+# ---------------------------------------------------------------------------
+# QSharpExporter — additional encoding coverage
+# ---------------------------------------------------------------------------
+
+class TestQSharpExporterExtraEncodings:
+    def test_iqp_encoding(self):
+        from quprep.encode.iqp import IQPEncoder
+        exp = QSharpExporter()
+        encoded = IQPEncoder(reps=1).encode(np.array([0.5, 1.0, 1.5]))
+        qsharp = exp.export(encoded)
+        assert "H(" in qsharp
+        assert "Rz(" in qsharp
+        assert "CNOT(" in qsharp
+
+    def test_reupload_encoding(self):
+        from quprep.encode.reupload import ReUploadEncoder
+        exp = QSharpExporter()
+        encoded = ReUploadEncoder(layers=2).encode(np.array([0.5, 1.0]))
+        qsharp = exp.export(encoded)
+        assert "Ry(" in qsharp
+
+    def test_hamiltonian_encoding(self):
+        from quprep.encode.hamiltonian import HamiltonianEncoder
+        exp = QSharpExporter()
+        encoded = HamiltonianEncoder(trotter_steps=2).encode(np.array([0.5, 1.0]))
+        qsharp = exp.export(encoded)
+        assert "Rz(" in qsharp
+
+    def test_entangled_angle_encoding(self):
+        from quprep.encode.entangled_angle import EntangledAngleEncoder
+        exp = QSharpExporter()
+        encoded = EntangledAngleEncoder(layers=1).encode(np.array([0.5, 1.0, 1.5]))
+        qsharp = exp.export(encoded)
+        assert "Ry(" in qsharp
+        assert "CNOT(" in qsharp
+
+    def test_pauli_feature_map_encoding(self):
+        exp = QSharpExporter()
+        encoded = PauliFeatureMapEncoder(paulis=["Z", "ZZ"], reps=1).encode(
+            np.array([0.5, 1.0])
+        )
+        qsharp = exp.export(encoded)
+        assert "Rz(" in qsharp
+
+    def test_rx_rotation(self):
+        from quprep.encode.angle import AngleEncoder
+        exp = QSharpExporter()
+        encoded = AngleEncoder(rotation="rx").encode(np.array([0.5, 1.0]))
+        qsharp = exp.export(encoded)
+        assert "Rx(" in qsharp
+
+    def test_rz_rotation(self):
+        from quprep.encode.angle import AngleEncoder
+        exp = QSharpExporter()
+        encoded = AngleEncoder(rotation="rz").encode(np.array([0.5, 1.0]))
+        qsharp = exp.export(encoded)
+        assert "Rz(" in qsharp
+
+
+# ---------------------------------------------------------------------------
+# IQMExporter — additional encoding coverage
+# ---------------------------------------------------------------------------
+
+class TestIQMExporterExtraEncodings:
+    def test_reupload_encoding(self):
+        from quprep.encode.reupload import ReUploadEncoder
+        exp = IQMExporter()
+        encoded = ReUploadEncoder(layers=2).encode(np.array([0.5, 1.0]))
+        result = exp.export(encoded)
+        names = {op["name"] for op in result["instructions"]}
+        assert "prx" in names
+
+    def test_hamiltonian_encoding(self):
+        from quprep.encode.hamiltonian import HamiltonianEncoder
+        exp = IQMExporter()
+        encoded = HamiltonianEncoder(trotter_steps=2).encode(np.array([0.5, 1.0]))
+        result = exp.export(encoded)
+        assert len(result["instructions"]) > 0
+
+    def test_entangled_angle_encoding(self):
+        from quprep.encode.entangled_angle import EntangledAngleEncoder
+        exp = IQMExporter()
+        encoded = EntangledAngleEncoder(layers=1).encode(np.array([0.5, 1.0, 1.5]))
+        result = exp.export(encoded)
+        names = {op["name"] for op in result["instructions"]}
+        assert "prx" in names
+
+    def test_rx_angle_encoding(self):
+        from quprep.encode.angle import AngleEncoder
+        exp = IQMExporter()
+        encoded = AngleEncoder(rotation="rx").encode(np.array([0.5, 1.0]))
+        result = exp.export(encoded)
+        names = {op["name"] for op in result["instructions"]}
+        assert "prx" in names
+
+    def test_rz_angle_encoding(self):
+        from quprep.encode.angle import AngleEncoder
+        exp = IQMExporter()
+        encoded = AngleEncoder(rotation="rz").encode(np.array([0.5, 1.0]))
+        result = exp.export(encoded)
+        # rz → virtual decomposition uses prx
+        names = {op["name"] for op in result["instructions"]}
+        assert "prx" in names
+
+    def test_pauli_feature_map_encoding(self):
+        exp = IQMExporter()
+        encoded = PauliFeatureMapEncoder(paulis=["Z", "ZZ"], reps=1).encode(
+            np.array([0.5, 1.0])
+        )
+        result = exp.export(encoded)
+        assert len(result["instructions"]) > 0

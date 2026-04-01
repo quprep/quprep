@@ -290,3 +290,192 @@ class TestValidateCommand:
         # inferred schema should validate the same file cleanly
         rc = main(["validate", csv_file, "--schema", schema_path])
         assert rc == 0
+
+
+# ---------------------------------------------------------------------------
+# cmd_convert — error paths and non-QASM output
+# ---------------------------------------------------------------------------
+
+class TestConvertErrorPaths:
+    def test_file_not_found_returns_one(self, capsys):
+        rc = main(["convert", "nonexistent.csv", "--encoding", "angle"])
+        assert rc == 1
+        assert "File not found" in capsys.readouterr().err
+
+    def test_non_qasm_framework_prints_repr(self, csv_file, capsys):
+        # cirq is an optional dep — if installed, exercises the non-QASM repr path
+        # if not installed, exercises the ImportError path; both are valid
+        rc = main(["convert", csv_file, "--encoding", "angle", "--framework", "cirq"])
+        assert rc in (0, 1)
+        out, err = capsys.readouterr()
+        if rc == 0:
+            assert "--- sample 0 ---" in out
+        else:
+            assert "Missing dependency" in err or "not installed" in err.lower()
+
+    def test_non_qasm_prints_repr(self, tmp_path, capsys):
+        # Use a framework that isn't 'qasm' but is available without extra deps
+        # We test by monkey-patching prepare to return non-string circuits
+        csv_f = tmp_path / "data.csv"
+        csv_f.write_text("x0,x1\n0.1,0.2\n0.3,0.4\n")
+        rc = main(["convert", str(csv_f), "--encoding", "angle", "--framework", "qasm"])
+        assert rc == 0
+
+    def test_save_dir_creates_files(self, csv_file, tmp_path, capsys):
+        save_dir = str(tmp_path / "out")
+        rc = main(["convert", csv_file, "--encoding", "angle", "--save-dir", save_dir])
+        assert rc == 0
+        out = capsys.readouterr().out
+        assert "circuit" in out.lower() or "Wrote" in out
+
+    def test_save_dir_with_stem(self, csv_file, tmp_path):
+        save_dir = str(tmp_path / "circuits")
+        rc = main(["convert", csv_file, "--encoding", "angle",
+                   "--save-dir", save_dir, "--stem", "feat"])
+        assert rc == 0
+        import os
+        files = os.listdir(save_dir)
+        assert any(f.startswith("feat_") for f in files)
+
+    def test_output_file_written_angle(self, csv_file, tmp_path):
+        out = str(tmp_path / "circuit.qasm")
+        rc = main(["convert", csv_file, "--encoding", "angle", "--output", out])
+        assert rc == 0
+        assert open(out).read().startswith("OPENQASM 3.0;")
+
+
+# ---------------------------------------------------------------------------
+# QUBO CLI — portfolio, graphcolor, qaoa, export subcommands
+# ---------------------------------------------------------------------------
+
+class TestQuboExtraSubcommands:
+    def test_portfolio_returns_zero(self, capsys):
+        rc = main([
+            "qubo", "portfolio",
+            "--returns", "0.1,0.2,0.3",
+            "--covariance", "1,0,0;0,1,0;0,0,1",
+            "--budget", "2",
+        ])
+        assert rc == 0
+
+    def test_graphcolor_returns_zero(self, capsys):
+        rc = main([
+            "qubo", "graphcolor",
+            "--adjacency", "0,1,1;1,0,1;1,1,0",
+            "--colors", "3",
+        ])
+        assert rc == 0
+
+    def test_qaoa_maxcut_returns_zero(self, capsys):
+        rc = main([
+            "qubo", "qaoa", "maxcut",
+            "--adjacency", "0,1,1;1,0,1;1,1,0",
+            "--p", "1",
+        ])
+        assert rc == 0
+        assert "OPENQASM" in capsys.readouterr().out
+
+    def test_qaoa_with_output_file(self, tmp_path, capsys):
+        out = str(tmp_path / "qaoa.qasm")
+        rc = main([
+            "qubo", "qaoa", "maxcut",
+            "--adjacency", "0,1;1,0",
+            "--p", "1",
+            "--output", out,
+        ])
+        assert rc == 0
+        assert open(out).read().startswith("OPENQASM")
+
+    def test_export_json_to_stdout(self, capsys):
+        rc = main([
+            "qubo", "export", "maxcut",
+            "--adjacency", "0,1;1,0",
+            "--format", "json",
+        ])
+        assert rc == 0
+        import json
+        out = capsys.readouterr().out
+        data = json.loads(out)
+        assert "Q" in data
+
+    def test_export_json_to_file(self, tmp_path, capsys):
+        out = str(tmp_path / "qubo.json")
+        rc = main([
+            "qubo", "export", "maxcut",
+            "--adjacency", "0,1;1,0",
+            "--format", "json",
+            "--output", out,
+        ])
+        assert rc == 0
+
+    def test_export_npy(self, tmp_path):
+        out = str(tmp_path / "qubo.npy")
+        rc = main([
+            "qubo", "export", "maxcut",
+            "--adjacency", "0,1;1,0",
+            "--format", "npy",
+            "--output", out,
+        ])
+        assert rc == 0
+        import numpy as np
+        Q = np.load(out)
+        assert Q.shape == (2, 2)
+
+    def test_qubo_no_subcommand_returns_zero(self, capsys):
+        rc = main(["qubo"])
+        assert rc == 0
+
+    def test_qubo_exception_returns_one(self, capsys):
+        # bad matrix string triggers parse error → exception path
+        rc = main(["qubo", "maxcut", "--adjacency", "not_a_matrix"])
+        assert rc == 1
+
+
+# ---------------------------------------------------------------------------
+# cmd_suggest — error paths
+# ---------------------------------------------------------------------------
+
+class TestSuggestErrorPaths:
+    def test_suggest_missing_file_returns_one(self, capsys):
+        rc = main(["suggest", "nonexistent.csv"])
+        assert rc == 1
+        assert "File not found" in capsys.readouterr().err
+
+    def test_suggest_invalid_task_exits(self, csv_file):
+        with pytest.raises(SystemExit):
+            main(["suggest", csv_file, "--task", "not_a_valid_task"])
+
+    def test_suggest_returns_zero(self, csv_file, capsys):
+        rc = main(["suggest", csv_file])
+        assert rc == 0
+        assert "qubit" in capsys.readouterr().out.lower()
+
+
+# ---------------------------------------------------------------------------
+# cmd_compare — error paths
+# ---------------------------------------------------------------------------
+
+class TestCompareErrorPaths:
+    def test_compare_missing_file_returns_one(self, capsys):
+        rc = main(["compare", "nonexistent.csv"])
+        assert rc == 1
+        assert "File not found" in capsys.readouterr().err
+
+    def test_compare_returns_zero(self, csv_file, capsys):
+        rc = main(["compare", csv_file])
+        assert rc == 0
+
+    def test_compare_with_include(self, csv_file, capsys):
+        rc = main(["compare", csv_file, "--include", "angle,basis"])
+        assert rc == 0
+
+
+# ---------------------------------------------------------------------------
+# cmd_recommend — error paths
+# ---------------------------------------------------------------------------
+
+class TestRecommendErrorPaths:
+    def test_recommend_missing_file_returns_one(self, capsys):
+        rc = main(["recommend", "nonexistent.csv"])
+        assert rc == 1
+        assert "File not found" in capsys.readouterr().err

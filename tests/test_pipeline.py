@@ -299,7 +299,7 @@ class TestPrepare:
     def test_prepare_unknown_framework_raises(self, simple_array):
         import quprep
         with pytest.raises(ValueError, match="Unknown framework"):
-            quprep.prepare(simple_array, framework="braket")
+            quprep.prepare(simple_array, framework="totally_unknown_backend")
 
     def test_prepare_rotation_kwarg(self, simple_array):
         import quprep
@@ -324,7 +324,7 @@ class TestPrepare:
 
     def test_version_accessible(self):
         import quprep
-        assert quprep.__version__ == "0.5.0"
+        assert quprep.__version__ == "0.6.0"
 
 
 # ---------------------------------------------------------------------------
@@ -704,3 +704,43 @@ class TestCLISaveDir:
         ])
         assert rc == 0
         assert (out_dir / "enc_0000.qasm").exists()
+
+
+# ---------------------------------------------------------------------------
+# prepare() — new framework lazy loaders (qsharp, iqm, new encodings)
+# ---------------------------------------------------------------------------
+
+class TestPrepareNewFrameworks:
+    def test_prepare_qsharp_returns_strings(self, simple_array):
+        import quprep
+        result = quprep.prepare(simple_array, framework="qsharp")
+        assert len(result.circuits) == len(simple_array)
+        assert all(isinstance(c, str) for c in result.circuits)
+
+    def test_prepare_iqm_returns_dicts(self, simple_array):
+        import quprep
+        result = quprep.prepare(simple_array, framework="iqm")
+        assert len(result.circuits) == len(simple_array)
+        assert all(isinstance(c, dict) for c in result.circuits)
+
+    def test_prepare_zz_feature_map(self, simple_array):
+        import quprep
+        result = quprep.prepare(simple_array, encoding="zz_feature_map", framework="qasm")
+        assert len(result.circuits) == len(simple_array)
+
+    def test_prepare_pauli_feature_map(self, simple_array):
+        import quprep
+        result = quprep.prepare(simple_array, encoding="pauli_feature_map", framework="qasm")
+        assert len(result.circuits) == len(simple_array)
+
+    def test_prepare_tensor_product(self, simple_array):
+        import quprep
+        result = quprep.prepare(simple_array, encoding="tensor_product", framework="qasm")
+        assert len(result.circuits) == len(simple_array)
+
+    def test_prepare_random_fourier_raises_before_fit(self, simple_array):
+        import quprep
+        # RandomFourierEncoder needs fit() first — pipeline calls encode_batch which
+        # calls encode() on each row, hitting the RuntimeError
+        with pytest.raises(RuntimeError, match="fitted"):
+            quprep.prepare(simple_array, encoding="random_fourier", framework="qasm")

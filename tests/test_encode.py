@@ -7,6 +7,8 @@ Key invariants:
   - All encoders must be deterministic (same input → same output).
 """
 
+import math
+
 import hypothesis.extra.numpy as npst
 import numpy as np
 import pytest
@@ -17,6 +19,10 @@ from quprep.encode.amplitude import AmplitudeEncoder
 from quprep.encode.angle import AngleEncoder
 from quprep.encode.base import EncodedResult
 from quprep.encode.basis import BasisEncoder
+from quprep.encode.pauli_feature_map import PauliFeatureMapEncoder
+from quprep.encode.random_fourier import RandomFourierEncoder
+from quprep.encode.tensor_product import TensorProductEncoder
+from quprep.encode.zz_feature_map import ZZFeatureMapEncoder
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -509,3 +515,340 @@ class TestEntangledAngleEncoder:
         data = np.random.default_rng(0).standard_normal((5, 3))
         result = quprep.prepare(data, encoding="entangled_angle")
         assert len(result.circuits) == 5
+
+# ---------------------------------------------------------------------------
+# ZZFeatureMapEncoder
+# ---------------------------------------------------------------------------
+
+class TestZZFeatureMapEncoder:
+    def test_invalid_reps_raises(self):
+        with pytest.raises(ValueError, match="reps"):
+            ZZFeatureMapEncoder(reps=0)
+
+    def test_output_shape(self):
+        enc = ZZFeatureMapEncoder(reps=1)
+        x = np.linspace(0, 2 * math.pi, 4)
+        result = enc.encode(x)
+        assert result.parameters.shape == (4,)
+
+    def test_metadata_fields(self):
+        enc = ZZFeatureMapEncoder(reps=2)
+        x = np.array([0.5, 1.0, 1.5])
+        result = enc.encode(x)
+        assert result.metadata["encoding"] == "zz_feature_map"
+        assert result.metadata["n_qubits"] == 3
+        assert result.metadata["reps"] == 2
+        assert len(result.metadata["single_angles"]) == 3
+        assert len(result.metadata["pair_angles"]) == 3   # C(3,2) = 3
+        assert len(result.metadata["pairs"]) == 3
+
+    def test_single_angles_formula(self):
+        enc = ZZFeatureMapEncoder(reps=1)
+        x = np.array([0.0, math.pi])
+        result = enc.encode(x)
+        expected = [2.0 * (math.pi - 0.0), 2.0 * (math.pi - math.pi)]
+        np.testing.assert_allclose(result.metadata["single_angles"], expected)
+
+    def test_pair_angles_formula(self):
+        enc = ZZFeatureMapEncoder(reps=1)
+        x = np.array([1.0, 2.0])
+        result = enc.encode(x)
+        expected_pair = 2.0 * (math.pi - 1.0) * (math.pi - 2.0)
+        np.testing.assert_allclose(result.metadata["pair_angles"][0], expected_pair)
+
+    def test_empty_input_raises(self):
+        enc = ZZFeatureMapEncoder()
+        with pytest.raises(ValueError):
+            enc.encode(np.array([]))
+
+    def test_2d_input_raises(self):
+        enc = ZZFeatureMapEncoder()
+        with pytest.raises(ValueError):
+            enc.encode(np.ones((2, 3)))
+
+    def test_deterministic(self):
+        enc = ZZFeatureMapEncoder(reps=3)
+        x = np.random.default_rng(0).random(5)
+        r1 = enc.encode(x)
+        r2 = enc.encode(x)
+        np.testing.assert_array_equal(r1.parameters, r2.parameters)
+
+    def test_depth_scales_with_reps(self):
+        x = np.ones(4)
+        d1 = ZZFeatureMapEncoder(reps=1).encode(x).metadata["depth"]
+        d2 = ZZFeatureMapEncoder(reps=2).encode(x).metadata["depth"]
+        assert d2 == 2 * d1
+
+
+# ---------------------------------------------------------------------------
+# PauliFeatureMapEncoder
+# ---------------------------------------------------------------------------
+
+class TestPauliFeatureMapEncoder:
+    def test_default_paulis(self):
+        enc = PauliFeatureMapEncoder()
+        assert enc.paulis == ["Z", "ZZ"]
+
+    def test_invalid_pauli_raises(self):
+        with pytest.raises(ValueError, match="Unknown Pauli"):
+            PauliFeatureMapEncoder(paulis=["Z", "ZZZZ"])
+
+    def test_invalid_reps_raises(self):
+        with pytest.raises(ValueError, match="reps"):
+            PauliFeatureMapEncoder(reps=0)
+
+    def test_metadata_zz(self):
+        enc = PauliFeatureMapEncoder(paulis=["Z", "ZZ"], reps=2)
+        x = np.array([0.5, 1.0, 1.5])
+        result = enc.encode(x)
+        assert result.metadata["encoding"] == "pauli_feature_map"
+        assert result.metadata["n_qubits"] == 3
+        assert "Z" in result.metadata["single_terms"]
+        assert "ZZ" in result.metadata["pair_terms"]
+
+    def test_single_only_paulis(self):
+        enc = PauliFeatureMapEncoder(paulis=["X", "Y"], reps=1)
+        x = np.array([0.3, 0.7])
+        result = enc.encode(x)
+        assert "X" in result.metadata["single_terms"]
+        assert "Y" in result.metadata["single_terms"]
+        assert result.metadata["pair_terms"] == {}
+
+    def test_pair_angles_formula(self):
+        enc = PauliFeatureMapEncoder(paulis=["ZZ"], reps=1)
+        x = np.array([1.0, 2.0])
+        result = enc.encode(x)
+        entries = result.metadata["pair_terms"]["ZZ"]
+        i, j, angle = entries[0]
+        np.testing.assert_allclose(angle, 2.0 * 1.0 * 2.0)
+
+    def test_depth_quadratic_with_pairs(self):
+        enc_pair = PauliFeatureMapEncoder(paulis=["ZZ"], reps=1)
+        enc_single = PauliFeatureMapEncoder(paulis=["Z"], reps=1)
+        assert "d²" in enc_pair.depth
+        assert "d²" not in enc_single.depth
+
+    def test_deterministic(self):
+        enc = PauliFeatureMapEncoder()
+        x = np.random.default_rng(7).random(4)
+        r1 = enc.encode(x)
+        r2 = enc.encode(x)
+        np.testing.assert_array_equal(r1.parameters, r2.parameters)
+
+
+# ---------------------------------------------------------------------------
+# RandomFourierEncoder
+# ---------------------------------------------------------------------------
+
+class TestRandomFourierEncoder:
+    def test_invalid_n_components_raises(self):
+        with pytest.raises(ValueError, match="n_components"):
+            RandomFourierEncoder(n_components=0)
+
+    def test_invalid_gamma_raises(self):
+        with pytest.raises(ValueError, match="gamma"):
+            RandomFourierEncoder(gamma=-1.0)
+
+    def test_encode_before_fit_raises(self):
+        enc = RandomFourierEncoder()
+        with pytest.raises(RuntimeError, match="fitted"):
+            enc.encode(np.array([1.0, 2.0]))
+
+    def test_output_shape_equals_n_components(self):
+        enc = RandomFourierEncoder(n_components=12, random_state=0)
+        X = np.random.default_rng(0).random((20, 5))
+        enc.fit(X)
+        result = enc.encode(X[0])
+        assert result.parameters.shape == (12,)
+
+    def test_n_qubits_property(self):
+        enc = RandomFourierEncoder(n_components=6)
+        assert enc.n_qubits == 6
+
+    def test_depth_property(self):
+        enc = RandomFourierEncoder()
+        assert enc.depth == 1
+
+    def test_output_range(self):
+        enc = RandomFourierEncoder(n_components=16, random_state=42)
+        X = np.random.default_rng(0).random((50, 4))
+        enc.fit(X)
+        for row in X[:10]:
+            result = enc.encode(row)
+            assert np.all(result.parameters >= -1e-9)
+            assert np.all(result.parameters <= math.pi + 1e-9)
+
+    def test_reproducible_with_random_state(self):
+        X = np.random.default_rng(0).random((20, 4))
+        enc1 = RandomFourierEncoder(n_components=8, random_state=99)
+        enc2 = RandomFourierEncoder(n_components=8, random_state=99)
+        enc1.fit(X)
+        enc2.fit(X)
+        r1 = enc1.encode(X[0])
+        r2 = enc2.encode(X[0])
+        np.testing.assert_array_equal(r1.parameters, r2.parameters)
+
+    def test_different_seeds_different_output(self):
+        X = np.random.default_rng(0).random((20, 4))
+        enc1 = RandomFourierEncoder(n_components=8, random_state=1)
+        enc2 = RandomFourierEncoder(n_components=8, random_state=2)
+        enc1.fit(X)
+        enc2.fit(X)
+        r1 = enc1.encode(X[0])
+        r2 = enc2.encode(X[0])
+        assert not np.allclose(r1.parameters, r2.parameters)
+
+    def test_metadata_fields(self):
+        enc = RandomFourierEncoder(n_components=4, gamma=0.5, random_state=0)
+        enc.fit(np.ones((5, 3)))
+        result = enc.encode(np.ones(3))
+        assert result.metadata["encoding"] == "random_fourier"
+        assert result.metadata["n_qubits"] == 4
+        assert result.metadata["gamma"] == 0.5
+
+    def test_fit_with_1d_input(self):
+        enc = RandomFourierEncoder(n_components=4, random_state=0)
+        enc.fit(np.ones(3))  # should not raise
+        result = enc.encode(np.ones(3))
+        assert result.parameters.shape == (4,)
+
+
+# ---------------------------------------------------------------------------
+# TensorProductEncoder
+# ---------------------------------------------------------------------------
+
+class TestTensorProductEncoder:
+    def test_even_input(self):
+        enc = TensorProductEncoder()
+        x = np.array([0.5, 1.0, 1.5, 2.0])
+        result = enc.encode(x)
+        assert result.metadata["n_qubits"] == 2
+        assert len(result.parameters) == 4
+
+    def test_odd_input_padded(self):
+        enc = TensorProductEncoder()
+        x = np.array([0.5, 1.0, 1.5])  # d=3 → n_qubits=2, pad rz of last qubit=0
+        result = enc.encode(x)
+        assert result.metadata["n_qubits"] == 2
+        assert len(result.parameters) == 4
+
+    def test_single_feature_one_qubit(self):
+        enc = TensorProductEncoder()
+        x = np.array([0.7])
+        result = enc.encode(x)
+        assert result.metadata["n_qubits"] == 1
+
+    def test_ry_rz_separation(self):
+        enc = TensorProductEncoder()
+        x = np.array([0.1, 0.2, 0.3, 0.4])
+        result = enc.encode(x)
+        ry = result.metadata["ry_angles"]
+        rz = result.metadata["rz_angles"]
+        np.testing.assert_allclose(ry, [0.1, 0.3])
+        np.testing.assert_allclose(rz, [0.2, 0.4])
+
+    def test_parameters_interleaved(self):
+        enc = TensorProductEncoder()
+        x = np.array([0.1, 0.2, 0.3, 0.4])
+        result = enc.encode(x)
+        # [ry_0, rz_0, ry_1, rz_1]
+        np.testing.assert_allclose(result.parameters, [0.1, 0.2, 0.3, 0.4])
+
+    def test_depth_is_2(self):
+        enc = TensorProductEncoder()
+        assert enc.depth == 2
+
+    def test_metadata_encoding_name(self):
+        enc = TensorProductEncoder()
+        result = enc.encode(np.array([1.0, 2.0]))
+        assert result.metadata["encoding"] == "tensor_product"
+
+    def test_empty_input_raises(self):
+        enc = TensorProductEncoder()
+        with pytest.raises(ValueError):
+            enc.encode(np.array([]))
+
+    def test_2d_input_raises(self):
+        enc = TensorProductEncoder()
+        with pytest.raises(ValueError):
+            enc.encode(np.ones((2, 3)))
+
+    def test_deterministic(self):
+        enc = TensorProductEncoder()
+        x = np.random.default_rng(0).random(6)
+        r1 = enc.encode(x)
+        r2 = enc.encode(x)
+        np.testing.assert_array_equal(r1.parameters, r2.parameters)
+
+    def test_odd_last_rz_is_zero(self):
+        enc = TensorProductEncoder()
+        x = np.array([0.5, 1.0, 1.5])  # d=3 → last rz should be 0
+        result = enc.encode(x)
+        np.testing.assert_allclose(result.metadata["rz_angles"][1], 0.0)
+
+
+# ---------------------------------------------------------------------------
+# Encoder properties — n_qubits and depth (coverage)
+# ---------------------------------------------------------------------------
+
+class TestEncoderProperties:
+    """Ensure n_qubits and depth properties are exercised for every encoder."""
+
+    def test_angle_properties(self):
+        enc = AngleEncoder()
+        assert enc.n_qubits is None
+        assert enc.depth == 1
+
+    def test_basis_properties(self):
+        enc = BasisEncoder()
+        assert enc.n_qubits is None
+        assert enc.depth == 1
+
+    def test_amplitude_properties(self):
+        from quprep.encode.amplitude import AmplitudeEncoder
+        enc = AmplitudeEncoder()
+        assert enc.n_qubits is None
+
+    def test_iqp_properties(self):
+        from quprep.encode.iqp import IQPEncoder
+        enc = IQPEncoder(reps=2)
+        assert enc.n_qubits is None
+        assert enc.depth == "O(d² · reps)"
+
+    def test_reupload_properties(self):
+        from quprep.encode.reupload import ReUploadEncoder
+        enc = ReUploadEncoder()
+        assert enc.n_qubits is None
+
+    def test_hamiltonian_properties(self):
+        from quprep.encode.hamiltonian import HamiltonianEncoder
+        enc = HamiltonianEncoder()
+        assert enc.n_qubits is None
+
+    def test_entangled_angle_properties(self):
+        from quprep.encode.entangled_angle import EntangledAngleEncoder
+        enc = EntangledAngleEncoder()
+        assert enc.n_qubits is None
+
+    def test_zz_feature_map_properties(self):
+        enc = ZZFeatureMapEncoder()
+        assert enc.n_qubits is None
+        assert enc.depth == "O(d² · reps)"
+
+    def test_pauli_feature_map_properties(self):
+        enc = PauliFeatureMapEncoder(paulis=["Z", "ZZ"])
+        assert enc.n_qubits is None
+
+    def test_pauli_single_only_depth(self):
+        enc = PauliFeatureMapEncoder(paulis=["Z"])
+        assert "d²" not in enc.depth
+
+    def test_random_fourier_properties(self):
+        enc = RandomFourierEncoder(n_components=8)
+        assert enc.n_qubits == 8
+        assert enc.depth == 1
+
+    def test_tensor_product_properties(self):
+        enc = TensorProductEncoder()
+        assert enc.n_qubits is None
+        assert enc.depth == 2
