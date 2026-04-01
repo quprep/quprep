@@ -62,6 +62,7 @@ from quprep.encode.entangled_angle import EntangledAngleEncoder
 from quprep.encode.hamiltonian import HamiltonianEncoder
 from quprep.encode.iqp import IQPEncoder
 from quprep.encode.pauli_feature_map import PauliFeatureMapEncoder
+from quprep.encode.qaoa_problem import QAOAProblemEncoder
 from quprep.encode.random_fourier import RandomFourierEncoder
 from quprep.encode.reupload import ReUploadEncoder
 from quprep.encode.tensor_product import TensorProductEncoder
@@ -119,6 +120,7 @@ __all__ = [
     "PauliFeatureMapEncoder",
     "RandomFourierEncoder",
     "TensorProductEncoder",
+    "QAOAProblemEncoder",
     # Cleaners
     "Imputer",
     "OutlierHandler",
@@ -195,6 +197,7 @@ def prepare(source, *, encoding: str = "angle", framework: str = "qasm", **kwarg
     from quprep.encode.hamiltonian import HamiltonianEncoder
     from quprep.encode.iqp import IQPEncoder
     from quprep.encode.pauli_feature_map import PauliFeatureMapEncoder
+    from quprep.encode.qaoa_problem import QAOAProblemEncoder
     from quprep.encode.random_fourier import RandomFourierEncoder
     from quprep.encode.reupload import ReUploadEncoder
     from quprep.encode.tensor_product import TensorProductEncoder
@@ -231,6 +234,12 @@ def prepare(source, *, encoding: str = "angle", framework: str = "qasm", **kwarg
             random_state=kwargs.get("random_state", None),
         ),
         "tensor_product": lambda: TensorProductEncoder(),
+        "qaoa_problem": lambda: QAOAProblemEncoder(
+            p=kwargs.get("p", 1),
+            gamma=kwargs.get("gamma", 0.7853981633974483),   # π/4
+            beta=kwargs.get("beta", 0.39269908169872414),    # π/8
+            connectivity=kwargs.get("connectivity", "linear"),
+        ),
     }
 
     # Check plugin registry if not in built-ins

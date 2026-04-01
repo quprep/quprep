@@ -202,6 +202,33 @@ def estimate_cost(encoder, n_features: int) -> CostEstimate:
             warning=warning,
         )
 
+    from quprep.encode.qaoa_problem import QAOAProblemEncoder
+    if isinstance(encoder, QAOAProblemEncoder):
+        p = encoder.p
+        if encoder.connectivity == "linear":
+            n_pairs = max(d - 1, 0)
+        else:
+            n_pairs = d * (d - 1) // 2
+        # H(d) + per layer: RZ(d) + CNOT-RZ-CNOT(3*pairs) + RX(d)
+        cnots = 2 * n_pairs * p
+        gates = d + p * (d + 3 * n_pairs + d)
+        depth = 1 + 5 * p if encoder.connectivity == "linear" else 1 + (2 + 3 * n_pairs) * p
+        nisq_safe = depth < _NISQ_DEPTH_LIMIT and cnots < _NISQ_CNOT_LIMIT
+        warning = (
+            f"QAOAProblemEncoder (full connectivity) depth ~{depth} may be high. "
+            "Switch to connectivity='linear' or reduce features."
+        ) if not nisq_safe else None
+        return CostEstimate(
+            encoding="qaoa_problem",
+            n_features=d,
+            n_qubits=d,
+            gate_count=gates,
+            circuit_depth=depth,
+            two_qubit_gates=cnots,
+            nisq_safe=nisq_safe,
+            warning=warning,
+        )
+
     # Fallback for custom/unknown encoders
     return CostEstimate(
         encoding=type(encoder).__name__,

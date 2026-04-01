@@ -20,6 +20,7 @@ from quprep.encode.angle import AngleEncoder
 from quprep.encode.base import EncodedResult
 from quprep.encode.basis import BasisEncoder
 from quprep.encode.pauli_feature_map import PauliFeatureMapEncoder
+from quprep.encode.qaoa_problem import QAOAProblemEncoder
 from quprep.encode.random_fourier import RandomFourierEncoder
 from quprep.encode.tensor_product import TensorProductEncoder
 from quprep.encode.zz_feature_map import ZZFeatureMapEncoder
@@ -852,3 +853,142 @@ class TestEncoderProperties:
         enc = TensorProductEncoder()
         assert enc.n_qubits is None
         assert enc.depth == 2
+
+    def test_qaoa_problem_properties(self):
+        enc = QAOAProblemEncoder()
+        assert enc.n_qubits is None
+        assert enc.depth == "O(p)"
+
+    def test_qaoa_problem_full_connectivity_depth(self):
+        enc = QAOAProblemEncoder(connectivity="full")
+        assert "d" in enc.depth
+
+
+# ---------------------------------------------------------------------------
+# QAOAProblemEncoder
+# ---------------------------------------------------------------------------
+
+class TestQAOAProblemEncoder:
+    def test_output_shape_linear(self):
+        enc = QAOAProblemEncoder(connectivity="linear")
+        x = np.array([0.1, 0.2, 0.3, 0.4])
+        result = enc.encode(x)
+        # parameters = local(d) + pairs(d-1) = 4 + 3 = 7
+        assert len(result.parameters) == 7
+
+    def test_output_shape_full(self):
+        enc = QAOAProblemEncoder(connectivity="full")
+        x = np.array([0.1, 0.2, 0.3, 0.4])
+        result = enc.encode(x)
+        # parameters = local(4) + pairs(6) = 10
+        assert len(result.parameters) == 10
+
+    def test_local_angles_scale_with_gamma(self):
+        x = np.array([1.0, 2.0, 3.0])
+        gamma = 0.5
+        enc = QAOAProblemEncoder(gamma=gamma)
+        result = enc.encode(x)
+        expected_local = gamma * x
+        np.testing.assert_allclose(result.parameters[:3], expected_local)
+
+    def test_coupling_angles_are_products(self):
+        x = np.array([1.0, 2.0, 3.0])
+        gamma = 1.0
+        enc = QAOAProblemEncoder(gamma=gamma, connectivity="linear")
+        result = enc.encode(x)
+        # coupling angles: γ*x[0]*x[1], γ*x[1]*x[2]
+        np.testing.assert_allclose(result.parameters[3], 1.0 * 1.0 * 2.0)
+        np.testing.assert_allclose(result.parameters[4], 1.0 * 2.0 * 3.0)
+
+    def test_metadata_keys(self):
+        enc = QAOAProblemEncoder()
+        result = enc.encode(np.array([0.5, 1.0]))
+        for key in ("encoding", "n_qubits", "p", "gamma", "beta", "connectivity", "depth"):
+            assert key in result.metadata
+
+    def test_metadata_encoding_name(self):
+        enc = QAOAProblemEncoder()
+        result = enc.encode(np.array([0.5, 1.0]))
+        assert result.metadata["encoding"] == "qaoa_problem"
+
+    def test_metadata_n_qubits(self):
+        enc = QAOAProblemEncoder()
+        x = np.linspace(0, 1, 6)
+        result = enc.encode(x)
+        assert result.metadata["n_qubits"] == 6
+
+    def test_single_feature(self):
+        enc = QAOAProblemEncoder()
+        result = enc.encode(np.array([0.7]))
+        assert result.metadata["n_qubits"] == 1
+        # linear: no pairs for d=1
+        assert result.metadata["n_pairs"] == 0
+        assert len(result.parameters) == 1
+
+    def test_invalid_connectivity_raises(self):
+        with pytest.raises(ValueError, match="connectivity"):
+            QAOAProblemEncoder(connectivity="ring")
+
+    def test_invalid_p_raises(self):
+        with pytest.raises(ValueError, match="p"):
+            QAOAProblemEncoder(p=0)
+
+    def test_empty_input_raises(self):
+        enc = QAOAProblemEncoder()
+        with pytest.raises(ValueError):
+            enc.encode(np.array([]))
+
+    def test_2d_input_raises(self):
+        enc = QAOAProblemEncoder()
+        with pytest.raises(ValueError):
+            enc.encode(np.ones((2, 3)))
+
+    def test_deterministic(self):
+        enc = QAOAProblemEncoder(p=2)
+        x = np.random.default_rng(7).uniform(-np.pi, np.pi, 5)
+        r1 = enc.encode(x)
+        r2 = enc.encode(x)
+        np.testing.assert_array_equal(r1.parameters, r2.parameters)
+
+    def test_multi_layer(self):
+        enc = QAOAProblemEncoder(p=3)
+        x = np.array([0.1, 0.2, 0.3])
+        result = enc.encode(x)
+        assert result.metadata["p"] == 3
+        # depth = 1 + 5*p = 16
+        assert result.metadata["depth"] == 1 + 5 * 3
+
+    def test_result_is_encoded_result(self):
+        enc = QAOAProblemEncoder()
+        result = enc.encode(np.array([0.5, 1.0, 1.5]))
+        assert isinstance(result, EncodedResult)
+
+    @given(
+        npst.arrays(
+            dtype=np.float64,
+            shape=st.integers(min_value=1, max_value=10),
+            elements=st.floats(-np.pi, np.pi, allow_nan=False, allow_infinity=False),
+        )
+    )
+    @settings(max_examples=50)
+    def test_property_output_shape_linear(self, x):
+        enc = QAOAProblemEncoder(connectivity="linear")
+        result = enc.encode(x)
+        d = len(x)
+        n_pairs = max(d - 1, 0)
+        assert len(result.parameters) == d + n_pairs
+
+    @given(
+        npst.arrays(
+            dtype=np.float64,
+            shape=st.integers(min_value=1, max_value=8),
+            elements=st.floats(-np.pi, np.pi, allow_nan=False, allow_infinity=False),
+        )
+    )
+    @settings(max_examples=50)
+    def test_property_output_shape_full(self, x):
+        enc = QAOAProblemEncoder(connectivity="full")
+        result = enc.encode(x)
+        d = len(x)
+        n_pairs = d * (d - 1) // 2
+        assert len(result.parameters) == d + n_pairs

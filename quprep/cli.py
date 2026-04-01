@@ -26,9 +26,10 @@ from quprep import __version__
 
 _ALL_ENCODINGS = [
     "angle", "entangled_angle", "amplitude", "basis", "iqp", "reupload", "hamiltonian",
+    "zz_feature_map", "pauli_feature_map", "random_fourier", "tensor_product", "qaoa_problem",
 ]
 
-_ALL_FRAMEWORKS = ["qasm", "qiskit", "pennylane", "cirq", "tket"]
+_ALL_FRAMEWORKS = ["qasm", "qiskit", "pennylane", "cirq", "tket", "braket", "qsharp", "iqm"]
 
 
 def build_parser() -> argparse.ArgumentParser:

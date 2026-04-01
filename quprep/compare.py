@@ -14,6 +14,7 @@ _ALL_ENCODINGS = [
     "reupload",
     "entangled_angle",
     "hamiltonian",
+    "qaoa_problem",
 ]
 
 
@@ -25,6 +26,7 @@ def _default_encoders() -> dict[str, object]:
     from quprep.encode.entangled_angle import EntangledAngleEncoder
     from quprep.encode.hamiltonian import HamiltonianEncoder
     from quprep.encode.iqp import IQPEncoder
+    from quprep.encode.qaoa_problem import QAOAProblemEncoder
     from quprep.encode.reupload import ReUploadEncoder
 
     return {
@@ -35,6 +37,7 @@ def _default_encoders() -> dict[str, object]:
         "reupload": ReUploadEncoder(),
         "entangled_angle": EntangledAngleEncoder(),
         "hamiltonian": HamiltonianEncoder(),
+        "qaoa_problem": QAOAProblemEncoder(),
     }
 
 
