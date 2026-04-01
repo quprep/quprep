@@ -2,8 +2,8 @@ cff-version: 1.2.0
 message: "If you use QuPrep in your research, please cite it using this metadata."
 type: software
 title: "QuPrep: Quantum Data Preparation"
-version: 0.4.0
-date-released: "2026-03-28"
+version: 0.5.0
+date-released: "2026-04-01"
 license: Apache-2.0
 doi: 10.5281/zenodo.19286258
 url: "https://quprep.org"

@@ -76,6 +76,7 @@ QuPrep converts classical datasets into quantum-circuit-ready format. It is not 
 | **Recommend** | v0.2.0 | Automatic encoding selection for your dataset and task |
 | **QUBO** | v0.3.0 | QUBO/Ising, 7 problem formulations, solvers, QAOA, D-Wave export |
 | **Validate** | v0.4.0 | Input validation, schema enforcement, cost estimation, sklearn fit/transform, `import quprep as qd` |
+| **Intelligence** | v0.5.0 | Qubit suggestion, encoding comparison, data drift detection, pipeline save/load, batch QASM export |
 
 ---
 

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "quprep"
-version = "0.4.0"
+version = "0.5.0"
 description = "Quantum data preparation — the missing preprocessing layer between classical datasets and quantum computing frameworks"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -65,7 +65,7 @@ dev = [
 
 [project.urls]
 Homepage = "https://quprep.org"
-Documentation = "https://quprep.readthedocs.io"
+Documentation = "https://docs.quprep.org"
 Repository = "https://github.com/quprep/quprep"
 "Bug Tracker" = "https://github.com/quprep/quprep/issues"
 Changelog = "https://github.com/quprep/quprep/blob/main/CHANGELOG.md"

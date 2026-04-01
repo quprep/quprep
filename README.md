@@ -31,8 +31,13 @@ CSV / DataFrame / NumPy  →  QuPrep  →  circuit-ready output for your framewo
 - Normalize data correctly per encoding method — automatically
 - Encode data using 7 encoding methods: Angle, Amplitude, Basis, IQP, Entangled Angle, Re-uploading, Hamiltonian
 - Recommend the best encoding for your dataset and task
+- Suggest a qubit budget based on dataset size and target task
+- Compare encoders side-by-side on cost, depth, and NISQ safety
 - Export circuits to OpenQASM 3.0, Qiskit, PennyLane, Cirq, and TKET
+- Save entire batches of circuits as individual QASM files
 - Visualize circuits as ASCII diagrams or matplotlib figures
+- Save and reload fitted pipelines without re-fitting
+- Detect data drift between training and new data automatically
 - Formulate combinatorial optimization problems as QUBO / Ising models (Max-Cut, TSP, Knapsack, Portfolio, Graph Colouring, Scheduling, Number Partitioning)
 - Solve with exact brute-force (n ≤ 20) or simulated annealing (any n)
 - Generate QAOA circuits and export to D-Wave Ocean SDK format
@@ -133,6 +138,44 @@ qasm = qaoa_circuit(q, p=2)
 bqm_dict = q.to_dwave()   # {(i, j): coeff}
 ```
 
+### Qubit suggestion
+
+```python
+import quprep as qd
+
+s = qd.suggest_qubits("data.csv", task="classification")
+print(s.n_qubits)        # recommended qubit count
+print(s.encoding_hint)   # e.g. "angle"
+print(s.warning)         # set if dataset exceeds NISQ ceiling
+```
+
+### Data drift detection
+
+```python
+import quprep as qd
+
+det = qd.DriftDetector()
+pipeline = qd.Pipeline(encoder=qd.AngleEncoder(), drift_detector=det)
+pipeline.fit(X_train)
+
+result = pipeline.transform(X_new)
+print(result.drift_report.overall_drift)      # True / False
+print(result.drift_report.drifted_features)   # list of feature names
+```
+
+### Pipeline save / load
+
+```python
+import quprep as qd
+
+pipeline = qd.Pipeline(reducer=qd.PCAReducer(n_components=8), encoder=qd.AngleEncoder())
+pipeline.fit(X_train)
+pipeline.save("pipeline.pkl")
+
+loaded = qd.Pipeline.load("pipeline.pkl")
+result = loaded.transform(X_new)   # no re-fitting needed
+```
+
 ### Validation & cost estimation
 
 ```python
@@ -157,7 +200,11 @@ result.summary()                # audit table + cost breakdown
 ```bash
 quprep convert data.csv --encoding angle --framework qasm
 quprep convert data.csv --encoding iqp --framework pennylane
+quprep convert data.csv --encoding angle --save-dir circuits/  # save each sample as a file
+
 quprep recommend data.csv --task classification --qubits 8
+quprep suggest data.csv --task classification       # qubit budget recommendation
+quprep compare data.csv --task classification       # side-by-side encoder comparison
 
 quprep validate data.csv                              # shape, columns, NaN report
 quprep validate data.csv --infer-schema schema.json  # infer schema and save
@@ -249,7 +296,7 @@ If you use QuPrep in your research, please cite:
   title     = {QuPrep: Quantum Data Preparation},
   year      = {2026},
   publisher = {Zenodo},
-  version   = {0.4.0},
+  version   = {0.5.0},
   doi       = {10.5281/zenodo.19286258},
   url       = {https://doi.org/10.5281/zenodo.19286258},
   license   = {Apache-2.0},

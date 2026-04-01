@@ -66,7 +66,8 @@ print("=" * 55)
 print("3 — Per-feature stats")
 print("=" * 55)
 
-stats = result2.drift_report.feature_stats["feature[0]"]
+first = result2.drift_report.drifted_features[0]
+stats = result2.drift_report.feature_stats[first]
 print(f"  train_mean         : {stats['train_mean']:.4f}")
 print(f"  new_mean           : {stats['new_mean']:.4f}")
 print(f"  mean_shift_sigmas  : {stats['mean_shift_sigmas']:.2f}σ")
