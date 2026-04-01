@@ -36,7 +36,7 @@ Recommendation::
     rec = qd.recommend(df, task="classification", qubits=8)
 """
 
-__version__ = "0.5.0"
+__version__ = "0.6.0"
 __author__ = "Hasarindu Perera"
 __license__ = "Apache-2.0"
 
@@ -61,7 +61,11 @@ from quprep.encode.basis import BasisEncoder
 from quprep.encode.entangled_angle import EntangledAngleEncoder
 from quprep.encode.hamiltonian import HamiltonianEncoder
 from quprep.encode.iqp import IQPEncoder
+from quprep.encode.pauli_feature_map import PauliFeatureMapEncoder
+from quprep.encode.random_fourier import RandomFourierEncoder
 from quprep.encode.reupload import ReUploadEncoder
+from quprep.encode.tensor_product import TensorProductEncoder
+from quprep.encode.zz_feature_map import ZZFeatureMapEncoder
 
 # Exporters
 from quprep.export.qasm_export import QASMExporter
@@ -69,6 +73,16 @@ from quprep.export.visualize import draw_ascii, draw_matplotlib
 
 # Normalizer
 from quprep.normalize.scalers import Scaler
+
+# Plugins
+from quprep.plugins import (
+    list_encoders,
+    list_exporters,
+    register_encoder,
+    register_exporter,
+    unregister_encoder,
+    unregister_exporter,
+)
 
 # Reducers
 from quprep.reduce.hardware_aware import HardwareAwareReducer
@@ -101,6 +115,10 @@ __all__ = [
     "IQPEncoder",
     "ReUploadEncoder",
     "HamiltonianEncoder",
+    "ZZFeatureMapEncoder",
+    "PauliFeatureMapEncoder",
+    "RandomFourierEncoder",
+    "TensorProductEncoder",
     # Cleaners
     "Imputer",
     "OutlierHandler",
@@ -130,6 +148,13 @@ __all__ = [
     "DriftReport",
     # Batch export
     "batch_export",
+    # Plugins
+    "register_encoder",
+    "register_exporter",
+    "unregister_encoder",
+    "unregister_exporter",
+    "list_encoders",
+    "list_exporters",
     # Validation
     "DataSchema",
     "FeatureSpec",
@@ -169,8 +194,13 @@ def prepare(source, *, encoding: str = "angle", framework: str = "qasm", **kwarg
     from quprep.encode.entangled_angle import EntangledAngleEncoder
     from quprep.encode.hamiltonian import HamiltonianEncoder
     from quprep.encode.iqp import IQPEncoder
+    from quprep.encode.pauli_feature_map import PauliFeatureMapEncoder
+    from quprep.encode.random_fourier import RandomFourierEncoder
     from quprep.encode.reupload import ReUploadEncoder
+    from quprep.encode.tensor_product import TensorProductEncoder
+    from quprep.encode.zz_feature_map import ZZFeatureMapEncoder
     from quprep.export.qasm_export import QASMExporter
+    from quprep.plugins import get_encoder_class, get_exporter_class
 
     _encoders = {
         "angle": lambda: AngleEncoder(rotation=kwargs.get("rotation", "ry")),
@@ -190,11 +220,29 @@ def prepare(source, *, encoding: str = "angle", framework: str = "qasm", **kwarg
             evolution_time=kwargs.get("evolution_time", 1.0),
             trotter_steps=kwargs.get("trotter_steps", 4),
         ),
+        "zz_feature_map": lambda: ZZFeatureMapEncoder(reps=kwargs.get("reps", 2)),
+        "pauli_feature_map": lambda: PauliFeatureMapEncoder(
+            paulis=kwargs.get("paulis", None),
+            reps=kwargs.get("reps", 2),
+        ),
+        "random_fourier": lambda: RandomFourierEncoder(
+            n_components=kwargs.get("n_components", 8),
+            gamma=kwargs.get("gamma", 1.0),
+            random_state=kwargs.get("random_state", None),
+        ),
+        "tensor_product": lambda: TensorProductEncoder(),
     }
+
+    # Check plugin registry if not in built-ins
     if encoding not in _encoders:
-        raise ValueError(
-            f"Unknown encoding '{encoding}'. Choose from: {sorted(_encoders)}"
-        )
+        plugin_cls = get_encoder_class(encoding)
+        if plugin_cls is None:
+            raise ValueError(
+                f"Unknown encoding '{encoding}'. "
+                f"Built-ins: {sorted(_encoders)}. "
+                "Plugin encoders: use register_encoder() to add custom ones."
+            )
+        _encoders[encoding] = lambda: plugin_cls()  # type: ignore[misc]
 
     _exporters = {
         "qasm": lambda: QASMExporter(),
@@ -202,11 +250,21 @@ def prepare(source, *, encoding: str = "angle", framework: str = "qasm", **kwarg
         "pennylane": _lazy_pennylane_exporter,
         "cirq": _lazy_cirq_exporter,
         "tket": _lazy_tket_exporter,
+        "braket": _lazy_braket_exporter,
+        "qsharp": _lazy_qsharp_exporter,
+        "iqm": _lazy_iqm_exporter,
     }
+
+    # Check plugin registry if not in built-ins
     if framework not in _exporters:
-        raise ValueError(
-            f"Unknown framework '{framework}'. Choose from: {sorted(_exporters)}"
-        )
+        plugin_cls = get_exporter_class(framework)
+        if plugin_cls is None:
+            raise ValueError(
+                f"Unknown framework '{framework}'. "
+                f"Built-ins: {sorted(_exporters)}. "
+                "Plugin exporters: use register_exporter() to add custom ones."
+            )
+        _exporters[framework] = lambda: plugin_cls()  # type: ignore[misc]
 
     encoder = _encoders[encoding]()
     exporter = _exporters[framework]()
@@ -273,3 +331,18 @@ def _lazy_cirq_exporter():
 def _lazy_tket_exporter():
     from quprep.export.tket_export import TKETExporter
     return TKETExporter()
+
+
+def _lazy_braket_exporter():
+    from quprep.export.braket_export import BraketExporter
+    return BraketExporter()
+
+
+def _lazy_qsharp_exporter():
+    from quprep.export.qsharp_export import QSharpExporter
+    return QSharpExporter()
+
+
+def _lazy_iqm_exporter():
+    from quprep.export.iqm_export import IQMExporter
+    return IQMExporter()

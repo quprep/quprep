@@ -10,6 +10,17 @@ QuPrep uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- `ZZFeatureMapEncoder` — Havlíček-style ZZ feature map (Qiskit-compatible convention)
+- `PauliFeatureMapEncoder` — generalized Pauli feature map with configurable Pauli strings
+- `RandomFourierEncoder` — quantum-inspired RBF kernel approximation via random Fourier features
+- `TensorProductEncoder` — full Bloch sphere encoding (Ry + Rz per qubit, 2 features per qubit)
+- `BraketExporter` — Amazon Braket SDK circuit output (`quprep[braket]`)
+- `QSharpExporter` — Microsoft Q# program output (`quprep[qsharp]`)
+- `IQMExporter` — IQM native circuit JSON output (`quprep[iqm]`)
+- Plugin system — `register_encoder` / `register_exporter` decorators + name registry
+
 ---
 
 ## [0.5.0] — 2026-04-01

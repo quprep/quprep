@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "quprep"
-version = "0.5.0"
+version = "0.6.0"
 description = "Quantum data preparation — the missing preprocessing layer between classical datasets and quantum computing frameworks"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -45,12 +45,18 @@ qiskit = ["qiskit>=1.0"]
 pennylane = ["pennylane>=0.35"]
 cirq = ["cirq>=1.3"]
 tket = ["pytket>=1.25"]
+braket = ["amazon-braket-sdk>=1.75"]
+qsharp = ["qsharp>=1.0"]
+iqm = ["iqm-client>=20.0"]
 viz = ["matplotlib>=3.7"]
 all = [
   "qiskit>=1.0",
   "pennylane>=0.35",
   "cirq>=1.3",
   "pytket>=1.25",
+  "amazon-braket-sdk>=1.75",
+  "qsharp>=1.0",
+  "iqm-client>=20.0",
   "matplotlib>=3.7",
 ]
 dev = [
@@ -79,6 +85,17 @@ packages = ["quprep"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "--cov=quprep --cov-report=term-missing"
+filterwarnings = [
+    # QuPrepWarning is intentional — suppress in tests that don't check for it
+    "ignore::quprep.validation.QuPrepWarning",
+    # NumPy divide-by-zero in recommender correlation computation (constant feature column)
+    "ignore:invalid value encountered in divide:RuntimeWarning",
+    # NumPy empty-slice mean in recommender (all-NaN column edge case)
+    "ignore:Mean of empty slice:RuntimeWarning",
+    # UMAP + numba threading layer warning — third-party, not actionable
+    "ignore:n_jobs value.*overridden:UserWarning",
+    "ignore:The TBB threading layer requires:Warning",
+]
 
 [tool.ruff]
 line-length = 100

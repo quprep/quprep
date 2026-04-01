@@ -66,6 +66,14 @@ class QASMExporter:
             return self._export_reupload(encoded)
         if encoding == "hamiltonian":
             return self._export_hamiltonian(encoded)
+        if encoding == "zz_feature_map":
+            return self._export_zz_feature_map(encoded)
+        if encoding == "pauli_feature_map":
+            return self._export_pauli_feature_map(encoded)
+        if encoding == "random_fourier":
+            return self._export_angle(encoded)  # angles are already in [0,π]
+        if encoding == "tensor_product":
+            return self._export_tensor_product(encoded)
         if encoding == "amplitude":
             raise NotImplementedError(
                 "Amplitude encoding requires exponential-depth state preparation "
@@ -74,7 +82,8 @@ class QASMExporter:
             )
         raise ValueError(
             f"Unknown encoding '{encoding}'. "
-            "Supported: angle, entangled_angle, basis, iqp, reupload, hamiltonian."
+            "Supported: angle, entangled_angle, basis, iqp, zz_feature_map, "
+            "pauli_feature_map, random_fourier, tensor_product, reupload, hamiltonian."
         )
 
     def _export_angle(self, encoded) -> str:
@@ -162,6 +171,65 @@ class QASMExporter:
         for _ in range(trotter_steps):
             for i in range(d):
                 lines.append(f"rz({float(angles[i])}) q[{i}];")
+        return "\n".join(lines) + "\n"
+
+    def _export_zz_feature_map(self, encoded) -> str:
+        d = encoded.metadata["n_qubits"]
+        reps = encoded.metadata.get("reps", 2)
+        single_angles = encoded.metadata["single_angles"]
+        pair_angles = encoded.metadata["pair_angles"]
+        pairs = encoded.metadata["pairs"]
+        lines = ["OPENQASM 3.0;", 'include "stdgates.inc";', f"qubit[{d}] q;"]
+        for _ in range(reps):
+            for i in range(d):
+                lines.append(f"h q[{i}];")
+            for i, angle in enumerate(single_angles):
+                lines.append(f"rz({float(angle)}) q[{i}];")
+            for (i, j), angle in zip(pairs, pair_angles):
+                lines.append(f"cx q[{i}], q[{j}];")
+                lines.append(f"rz({float(angle)}) q[{j}];")
+                lines.append(f"cx q[{i}], q[{j}];")
+        return "\n".join(lines) + "\n"
+
+    def _export_pauli_feature_map(self, encoded) -> str:
+        d = encoded.metadata["n_qubits"]
+        reps = encoded.metadata.get("reps", 2)
+        single_terms = encoded.metadata.get("single_terms", {})
+        pair_terms = encoded.metadata.get("pair_terms", {})
+        lines = ["OPENQASM 3.0;", 'include "stdgates.inc";', f"qubit[{d}] q;"]
+        _gate = {"X": "rx", "Y": "ry", "Z": "rz"}
+        _conj_pre = {"XX": "h", "YY": "rx(1.5707963267948966)", "ZZ": None}
+        _conj_post = {"XX": "h", "YY": "rx(-1.5707963267948966)", "ZZ": None}
+        for _ in range(reps):
+            for i in range(d):
+                lines.append(f"h q[{i}];")
+            for pauli, angles in single_terms.items():
+                gate = _gate[pauli]
+                for i, angle in enumerate(angles):
+                    lines.append(f"{gate}({float(angle)}) q[{i}];")
+            for pauli, entries in pair_terms.items():
+                pre = _conj_pre.get(pauli)
+                post = _conj_post.get(pauli)
+                for i, j, angle in entries:
+                    if pre:
+                        lines.append(f"{pre} q[{i}];")
+                        lines.append(f"{pre} q[{j}];")
+                    lines.append(f"cx q[{i}], q[{j}];")
+                    lines.append(f"rz({float(angle)}) q[{j}];")
+                    lines.append(f"cx q[{i}], q[{j}];")
+                    if post:
+                        lines.append(f"{post} q[{i}];")
+                        lines.append(f"{post} q[{j}];")
+        return "\n".join(lines) + "\n"
+
+    def _export_tensor_product(self, encoded) -> str:
+        n = encoded.metadata["n_qubits"]
+        ry_angles = encoded.metadata["ry_angles"]
+        rz_angles = encoded.metadata["rz_angles"]
+        lines = ["OPENQASM 3.0;", 'include "stdgates.inc";', f"qubit[{n}] q;"]
+        for k in range(n):
+            lines.append(f"ry({float(ry_angles[k])}) q[{k}];")
+            lines.append(f"rz({float(rz_angles[k])}) q[{k}];")
         return "\n".join(lines) + "\n"
 
     def export_batch(self, encoded_list: list) -> list[str]:
