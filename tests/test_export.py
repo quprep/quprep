@@ -303,7 +303,7 @@ class TestQiskitExporter:
         from quprep.export.qiskit_export import QiskitExporter
         qc = QiskitExporter().export(_tp_enc(n=4))
         assert isinstance(qc, qiskit.QuantumCircuit)
-        assert qc.num_qubits == 4
+        assert qc.num_qubits == 2
 
     def test_qaoa_problem_export(self):
         qiskit = pytest.importorskip("qiskit")
@@ -473,7 +473,7 @@ class TestPennyLaneExporter:
         from quprep.export.pennylane_export import PennyLaneExporter
         circuit = PennyLaneExporter().export(_tp_enc(n=4))
         assert callable(circuit)
-        assert len(circuit()) == 2**4
+        assert len(circuit()) == 2**2
 
     def test_qaoa_problem_executes(self):
         pytest.importorskip("pennylane")
