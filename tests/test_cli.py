@@ -64,7 +64,7 @@ class TestParser:
 
     def test_invalid_framework_rejected(self):
         with pytest.raises(SystemExit):
-            build_parser().parse_args(["convert", "data.csv", "--framework", "braket"])
+            build_parser().parse_args(["convert", "data.csv", "--framework", "not_a_framework"])
 
 
 # ---------------------------------------------------------------------------

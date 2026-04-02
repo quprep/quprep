@@ -10,6 +10,10 @@ QuPrep uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+---
+
+## [0.6.0] — 2026-04-03
+
 ### Added
 
 - `ZZFeatureMapEncoder` — Havlíček-style ZZ feature map (Qiskit-compatible convention)
@@ -19,7 +23,16 @@ QuPrep uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `BraketExporter` — Amazon Braket SDK circuit output (`quprep[braket]`)
 - `QSharpExporter` — Microsoft Q# program output (`quprep[qsharp]`)
 - `IQMExporter` — IQM native circuit JSON output (`quprep[iqm]`)
-- Plugin system — `register_encoder` / `register_exporter` decorators + name registry
+- Plugin system — `register_encoder` / `register_exporter` decorators + `unregister_*`, `list_*`, `get_encoder_class`, `get_exporter_class`; all wired into `prepare()` and exported from top-level `qd.*`
+- `quprep convert --framework braket|qsharp|iqm` — new framework choices in CLI `convert` subcommand
+- `QAOAProblemEncoder` — QAOA-inspired feature map; features as cost Hamiltonian parameters; `p` layers, `linear`/`full` connectivity, configurable `gamma`/`beta`
+- `quprep convert --encoding zz_feature_map|pauli_feature_map|random_fourier|tensor_product|qaoa_problem` — new encoding choices in CLI
+- Binder + Colab launch badges on all 11 example notebooks and README
+- HuggingFace Spaces demo badge in README
+
+### Fixed
+
+- `prepare()` — closure variable capture bug: when both `encoding` and `framework` are custom plugins, the second `plugin_cls` assignment overwrote the first lambda's captured variable, causing the encoder lambda to instantiate the exporter class. Fixed with default-argument binding (`lambda cls=plugin_cls: cls()`)
 
 ---
 
@@ -258,7 +271,8 @@ First public release. Covers the full ingest → clean → normalize → encode 
 
 ---
 
-[Unreleased]: https://github.com/quprep/quprep/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/quprep/quprep/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/quprep/quprep/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/quprep/quprep/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/quprep/quprep/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/quprep/quprep/compare/v0.2.0...v0.3.0

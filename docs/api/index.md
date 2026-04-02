@@ -18,7 +18,7 @@ Everything else is accessed via submodules.
 ```python
 import quprep as qd
 
-qd.__version__         # "0.4.0"
+qd.__version__         # "0.6.0"
 qd.prepare(...)
 qd.Pipeline(...)
 qd.recommend(...)

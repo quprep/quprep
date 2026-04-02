@@ -77,6 +77,8 @@ from quprep.normalize.scalers import Scaler
 
 # Plugins
 from quprep.plugins import (
+    get_encoder_class,
+    get_exporter_class,
     list_encoders,
     list_exporters,
     register_encoder,
@@ -157,6 +159,8 @@ __all__ = [
     "unregister_exporter",
     "list_encoders",
     "list_exporters",
+    "get_encoder_class",
+    "get_exporter_class",
     # Validation
     "DataSchema",
     "FeatureSpec",
@@ -203,7 +207,6 @@ def prepare(source, *, encoding: str = "angle", framework: str = "qasm", **kwarg
     from quprep.encode.tensor_product import TensorProductEncoder
     from quprep.encode.zz_feature_map import ZZFeatureMapEncoder
     from quprep.export.qasm_export import QASMExporter
-    from quprep.plugins import get_encoder_class, get_exporter_class
 
     _encoders = {
         "angle": lambda: AngleEncoder(rotation=kwargs.get("rotation", "ry")),
@@ -251,7 +254,7 @@ def prepare(source, *, encoding: str = "angle", framework: str = "qasm", **kwarg
                 f"Built-ins: {sorted(_encoders)}. "
                 "Plugin encoders: use register_encoder() to add custom ones."
             )
-        _encoders[encoding] = lambda: plugin_cls()  # type: ignore[misc]
+        _encoders[encoding] = lambda cls=plugin_cls: cls()  # type: ignore[misc]
 
     _exporters = {
         "qasm": lambda: QASMExporter(),
@@ -273,7 +276,7 @@ def prepare(source, *, encoding: str = "angle", framework: str = "qasm", **kwarg
                 f"Built-ins: {sorted(_exporters)}. "
                 "Plugin exporters: use register_exporter() to add custom ones."
             )
-        _exporters[framework] = lambda: plugin_cls()  # type: ignore[misc]
+        _exporters[framework] = lambda cls=plugin_cls: cls()  # type: ignore[misc]
 
     encoder = _encoders[encoding]()
     exporter = _exporters[framework]()

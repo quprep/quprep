@@ -108,3 +108,11 @@ All encoders:
 ::: quprep.encode.tensor_product.TensorProductEncoder
     options:
       show_source: true
+
+---
+
+## QAOAProblemEncoder
+
+::: quprep.encode.qaoa_problem.QAOAProblemEncoder
+    options:
+      show_source: true

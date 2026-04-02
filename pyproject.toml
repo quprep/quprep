@@ -111,5 +111,6 @@ ignore_missing_imports = true
 
 [dependency-groups]
 dev = [
+    "ipykernel>=7.2.0",
     "umap-learn>=0.5.11",
 ]

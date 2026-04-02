@@ -208,10 +208,31 @@ class QSharpExporter:
                     lines.append(f"{_INDENT}Rz({float(angle)}, q[{i}]);")
             return lines
 
+        if encoding == "qaoa_problem":
+            p = meta.get("p", 1)
+            beta = meta.get("beta", 0.39269908169872414)
+            local_angles = meta["local_angles"]
+            coupling_angles = meta["coupling_angles"]
+            pairs = meta.get("pairs", [])
+            for i in range(n):
+                lines.append(f"{_INDENT}H(q[{i}]);")
+            for _ in range(p):
+                for i in range(n):
+                    lines.append(f"{_INDENT}Rz({2.0 * float(local_angles[i]):.6f}, q[{i}]);")
+                for k, (i, j) in enumerate(pairs):
+                    angle = 2.0 * float(coupling_angles[k])
+                    lines.append(f"{_INDENT}CNOT(q[{i}], q[{j}]);")
+                    lines.append(f"{_INDENT}Rz({angle:.6f}, q[{j}]);")
+                    lines.append(f"{_INDENT}CNOT(q[{i}], q[{j}]);")
+                for i in range(n):
+                    lines.append(f"{_INDENT}Rx({2.0 * float(beta):.6f}, q[{i}]);")
+            return lines
+
         raise ValueError(
             f"Unknown encoding '{encoding}'. "
             "Supported: angle, entangled_angle, basis, iqp, zz_feature_map, "
-            "pauli_feature_map, random_fourier, tensor_product, reupload, hamiltonian."
+            "pauli_feature_map, random_fourier, tensor_product, qaoa_problem, "
+            "reupload, hamiltonian."
         )
 
     def export_batch(self, encoded_list: list) -> list[str]:

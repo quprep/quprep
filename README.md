@@ -12,6 +12,7 @@
 [![CodeQL](https://github.com/quprep/quprep/actions/workflows/codeql.yml/badge.svg)](https://github.com/quprep/quprep/actions/workflows/codeql.yml)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/quprep/quprep/badge)](https://scorecard.dev/viewer/?uri=github.com/quprep/quprep)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/12341/badge)](https://www.bestpractices.dev/projects/12341)
+[![Hugging Face Demo](https://img.shields.io/badge/🤗%20Spaces-Demo-blue)](https://huggingface.co/spaces/quprep/demo)
 
 ---
 
@@ -29,11 +30,11 @@ CSV / DataFrame / NumPy  →  QuPrep  →  circuit-ready output for your framewo
 - Clean missing values, outliers, and categorical features
 - Reduce dimensionality to fit your hardware qubit budget (PCA, LDA, DFT, UMAP, hardware-aware)
 - Normalize data correctly per encoding method — automatically
-- Encode data using 7 encoding methods: Angle, Amplitude, Basis, IQP, Entangled Angle, Re-uploading, Hamiltonian
+- Encode data using 12 encoding methods: Angle, Amplitude, Basis, IQP, Entangled Angle, Re-uploading, Hamiltonian, ZZFeatureMap, PauliFeatureMap, RandomFourier, TensorProduct, QAOAProblem
 - Recommend the best encoding for your dataset and task
 - Suggest a qubit budget based on dataset size and target task
 - Compare encoders side-by-side on cost, depth, and NISQ safety
-- Export circuits to OpenQASM 3.0, Qiskit, PennyLane, Cirq, and TKET
+- Export circuits to OpenQASM 3.0, Qiskit, PennyLane, Cirq, TKET, Amazon Braket, Q#, IQM
 - Save entire batches of circuits as individual QASM files
 - Visualize circuits as ASCII diagrams or matplotlib figures
 - Save and reload fitted pipelines without re-fitting
@@ -228,6 +229,11 @@ quprep qubo qaoa maxcut --adjacency "0,1,1;1,0,1;1,1,0" --p 2 --output circuit.q
 | IQP | n = d | O(d² · reps) | ⚠️ Medium | Kernel methods |
 | Re-uploading | n = d | O(d · layers) | ✅ Good | High-expressivity QNNs |
 | Hamiltonian | n = d | O(d · steps) | ⚠️ Medium | Physics simulation / VQE |
+| ZZ Feature Map | n = d | O(d² · reps) | ⚠️ Medium | Quantum kernel methods |
+| Pauli Feature Map | n = d | O(d² · reps) | ⚠️ Medium | Configurable kernel methods |
+| Random Fourier | n_components | O(1) | ✅ Excellent | RBF kernel approximation |
+| Tensor Product | ⌈d/2⌉ | O(1) | ✅ Excellent | Qubit-efficient encoding |
+| QAOA Problem | n = d | O(p) | ✅ Good | QAOA warm-start, problem-inspired maps |
 
 ## Supported export frameworks
 
@@ -238,6 +244,9 @@ quprep qubo qaoa maxcut --adjacency "0,1,1;1,0,1;1,1,0" --p 2 --output circuit.q
 | PennyLane | `pip install quprep[pennylane]` | `qml.QNode` |
 | Cirq | `pip install quprep[cirq]` | `cirq.Circuit` |
 | TKET | `pip install quprep[tket]` | `pytket.Circuit` |
+| Amazon Braket | `pip install quprep[braket]` | `braket.Circuit` |
+| Q# | `pip install quprep[qsharp]` | Q# operation string |
+| IQM | `pip install quprep[iqm]` | IQM circuit JSON |
 
 ---
 
@@ -261,15 +270,14 @@ See the [`examples/`](examples/) directory. Launch any notebook directly:
 | 01 | Quickstart — `prepare()` one-liner | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/quprep/quprep/blob/main/examples/01_quickstart.ipynb) [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/quprep/quprep/v0.6.0?labpath=examples%2F01_quickstart.ipynb) |
 | 02 | Full pipeline — clean → encode → export → save/load | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/quprep/quprep/blob/main/examples/02_pipeline.ipynb) [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/quprep/quprep/v0.6.0?labpath=examples%2F02_pipeline.ipynb) |
 | 03 | All encoders compared | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/quprep/quprep/blob/main/examples/03_encoders.ipynb) [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/quprep/quprep/v0.6.0?labpath=examples%2F03_encoders.ipynb) |
-| 04 | Framework export — QASM, Qiskit, PennyLane, Cirq, TKET | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/quprep/quprep/blob/main/examples/04_export.ipynb) [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/quprep/quprep/v0.6.0?labpath=examples%2F04_export.ipynb) |
+| 04 | Framework export — QASM, Qiskit, PennyLane, Cirq, TKET, Braket, Q#, IQM | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/quprep/quprep/blob/main/examples/04_export.ipynb) [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/quprep/quprep/v0.6.0?labpath=examples%2F04_export.ipynb) |
 | 05 | Encoding recommendation | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/quprep/quprep/blob/main/examples/05_recommend.ipynb) [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/quprep/quprep/v0.6.0?labpath=examples%2F05_recommend.ipynb) |
 | 06 | Circuit visualization — ASCII + matplotlib | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/quprep/quprep/blob/main/examples/06_visualization.ipynb) [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/quprep/quprep/v0.6.0?labpath=examples%2F06_visualization.ipynb) |
 | 07 | QUBO / Ising — Max-Cut, Knapsack, solvers, D-Wave export, QAOA | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/quprep/quprep/blob/main/examples/07_qubo.ipynb) [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/quprep/quprep/v0.6.0?labpath=examples%2F07_qubo.ipynb) |
 | 08 | Validation, schema & cost | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/quprep/quprep/blob/main/examples/08_validation.ipynb) [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/quprep/quprep/v0.6.0?labpath=examples%2F08_validation.ipynb) |
 | 09 | Data drift detection | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/quprep/quprep/blob/main/examples/09_drift.ipynb) [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/quprep/quprep/v0.6.0?labpath=examples%2F09_drift.ipynb) |
 | 10 | Qubit suggestion — `suggest_qubits`, task hints, NISQ ceiling | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/quprep/quprep/blob/main/examples/10_suggest.ipynb) [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/quprep/quprep/v0.6.0?labpath=examples%2F10_suggest.ipynb) |
-| 11 | New encoders v0.6.0 — ZZFeatureMap, PauliFeatureMap, RandomFourier, TensorProduct | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/quprep/quprep/blob/main/examples/11_new_encoders.ipynb) [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/quprep/quprep/v0.6.0?labpath=examples%2F11_new_encoders.ipynb) |
-| 12 | New exporters v0.6.0 — Amazon Braket, Q#, IQM | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/quprep/quprep/blob/main/examples/12_exporters.ipynb) [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/quprep/quprep/v0.6.0?labpath=examples%2F12_exporters.ipynb) |
+| 11 | Plugin system — register custom encoders and exporters | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/quprep/quprep/blob/main/examples/11_plugins.ipynb) [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/quprep/quprep/v0.6.0?labpath=examples%2F11_plugins.ipynb) |
 
 ---
 

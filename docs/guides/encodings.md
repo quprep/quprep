@@ -307,6 +307,31 @@ print(result.metadata["n_qubits"])   # ceil(d/2)
 
 ---
 
+### QAOA problem encoding *(v0.6.0)*
+
+Encodes a feature vector as a QAOA-inspired circuit where features become the cost Hamiltonian parameters. Each feature $x_i$ sets a local field $h_i = \gamma x_i$, and adjacent-pair products $x_i x_{i+1}$ set coupling angles. One layer applies $H^{\otimes d}$, cost unitaries (RZ + CNOT-RZ-CNOT), and a mixer (RX).
+
+| Property | Value |
+|---|---|
+| Qubits | $n = d$ |
+| Depth | O(p) linear; O(d·p) full |
+| NISQ-safe | ✅ Yes (linear, p=1) |
+| Best for | QAOA warm-starting, problem-inspired feature maps, NISQ kernel methods |
+
+```python
+from quprep.encode.qaoa_problem import QAOAProblemEncoder
+
+enc = QAOAProblemEncoder(p=1, connectivity="linear")
+result = enc.encode(x)   # x in [-π, π]
+print(result.metadata["local_angles"])    # γ·xᵢ per qubit
+print(result.metadata["coupling_angles"]) # γ·xᵢxⱼ per pair
+print(result.metadata["depth"])           # 1 + 5·p
+```
+
+**Normalization:** `minmax_pm_pi` ($[-\pi, \pi]$). Applied automatically.
+
+---
+
 ## Choosing an encoding
 
 Not sure? Use `quprep.recommend()`:
@@ -330,6 +355,7 @@ Is your data binary?
                          high-expressivity QNN      → Data re-uploading
                          physics simulation/VQE     → Hamiltonian
                          feature correlations       → Entangled Angle
+                         QAOA warm-start / problem  → QAOA problem
 ```
 
 ---

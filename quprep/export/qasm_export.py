@@ -74,6 +74,8 @@ class QASMExporter:
             return self._export_angle(encoded)  # angles are already in [0,π]
         if encoding == "tensor_product":
             return self._export_tensor_product(encoded)
+        if encoding == "qaoa_problem":
+            return self._export_qaoa_problem(encoded)
         if encoding == "amplitude":
             raise NotImplementedError(
                 "Amplitude encoding requires exponential-depth state preparation "
@@ -83,7 +85,8 @@ class QASMExporter:
         raise ValueError(
             f"Unknown encoding '{encoding}'. "
             "Supported: angle, entangled_angle, basis, iqp, zz_feature_map, "
-            "pauli_feature_map, random_fourier, tensor_product, reupload, hamiltonian."
+            "pauli_feature_map, random_fourier, tensor_product, qaoa_problem, "
+            "reupload, hamiltonian."
         )
 
     def _export_angle(self, encoded) -> str:
@@ -220,6 +223,28 @@ class QASMExporter:
                     if post:
                         lines.append(f"{post} q[{i}];")
                         lines.append(f"{post} q[{j}];")
+        return "\n".join(lines) + "\n"
+
+    def _export_qaoa_problem(self, encoded) -> str:
+        d = encoded.metadata["n_qubits"]
+        p = encoded.metadata.get("p", 1)
+        beta = encoded.metadata.get("beta", 0.39269908169872414)
+        local_angles = encoded.metadata["local_angles"]
+        coupling_angles = encoded.metadata["coupling_angles"]
+        pairs = encoded.metadata.get("pairs", [])
+        lines = ["OPENQASM 3.0;", 'include "stdgates.inc";', f"qubit[{d}] q;"]
+        for i in range(d):
+            lines.append(f"h q[{i}];")
+        for _ in range(p):
+            for i in range(d):
+                lines.append(f"rz({2.0 * float(local_angles[i]):.6f}) q[{i}];")
+            for k, (i, j) in enumerate(pairs):
+                angle = 2.0 * float(coupling_angles[k])
+                lines.append(f"cx q[{i}], q[{j}];")
+                lines.append(f"rz({angle:.6f}) q[{j}];")
+                lines.append(f"cx q[{i}], q[{j}];")
+            for i in range(d):
+                lines.append(f"rx({2.0 * float(beta):.6f}) q[{i}];")
         return "\n".join(lines) + "\n"
 
     def _export_tensor_product(self, encoded) -> str:

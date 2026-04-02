@@ -165,6 +165,28 @@ class BraketExporter:
                     circ.add_instruction(Instruction(gates.Rz(float(angle)), i))
             return circ
 
+        if encoding == "qaoa_problem":
+            d = encoded.metadata["n_qubits"]
+            p = encoded.metadata.get("p", 1)
+            beta = encoded.metadata.get("beta", 0.39269908169872414)
+            local_angles = encoded.metadata["local_angles"]
+            coupling_angles = encoded.metadata["coupling_angles"]
+            pairs = encoded.metadata.get("pairs", [])
+            circ = Circuit()
+            for i in range(d):
+                circ.h(i)
+            for _ in range(p):
+                for i in range(d):
+                    circ.add_instruction(Instruction(gates.Rz(2.0 * float(local_angles[i])), i))
+                for k, (i, j) in enumerate(pairs):
+                    angle = 2.0 * float(coupling_angles[k])
+                    circ.cnot(i, j)
+                    circ.add_instruction(Instruction(gates.Rz(angle), j))
+                    circ.cnot(i, j)
+                for i in range(d):
+                    circ.add_instruction(Instruction(gates.Rx(2.0 * float(beta)), i))
+            return circ
+
         if encoding == "amplitude":
             raise NotImplementedError(
                 "Amplitude encoding requires exponential-depth state preparation. "
@@ -174,7 +196,7 @@ class BraketExporter:
         raise ValueError(
             f"Unknown encoding '{encoding}'. "
             "Supported: angle, entangled_angle, basis, iqp, zz_feature_map, "
-            "tensor_product, reupload, hamiltonian."
+            "tensor_product, qaoa_problem, reupload, hamiltonian."
         )
 
     def export_batch(self, encoded_list: list) -> list:

@@ -1,8 +1,9 @@
 """
 03 — Encoders Compared
 ======================
-All 7 encoders side by side: Angle, Amplitude, Basis,
-EntangledAngle, IQP, ReUpload, Hamiltonian.
+All 12 encoders side by side: Angle, Amplitude, Basis,
+EntangledAngle, IQP, ReUpload, Hamiltonian, ZZFeatureMap,
+PauliFeatureMap, RandomFourier, TensorProduct, QAOAProblem.
 
     uv run python examples/03_encoders.py
 """
@@ -10,6 +11,11 @@ EntangledAngle, IQP, ReUpload, Hamiltonian.
 import numpy as np
 
 import quprep as qd
+from quprep.encode.pauli_feature_map import PauliFeatureMapEncoder
+from quprep.encode.qaoa_problem import QAOAProblemEncoder
+from quprep.encode.random_fourier import RandomFourierEncoder
+from quprep.encode.tensor_product import TensorProductEncoder
+from quprep.encode.zz_feature_map import ZZFeatureMapEncoder
 
 exporter = qd.QASMExporter()
 
@@ -121,14 +127,87 @@ print(f"trotter_steps  : {enc_ham.metadata['trotter_steps']}")
 print(f"depth          : {enc_ham.metadata['depth']}")
 print(exporter.export(enc_ham))
 
-# ── 8. prepare() one-liner ────────────────────────────────────────────────────
+# ── 8. ZZ Feature Map ────────────────────────────────────────────────────────
+#
+#   Havlíček 2019 Qiskit convention. H + Rz(2(π−xᵢ)) + pairwise ZZ.
 
 print("=" * 55)
-print("prepare() one-liner")
+print("ZZFeatureMapEncoder  (reps=1)")
+print("=" * 55)
+
+enc_zz = ZZFeatureMapEncoder(reps=1).encode(x3 * np.pi)
+print(f"n_qubits   : {enc_zz.metadata['n_qubits']}")
+print(f"depth      : {enc_zz.metadata['depth']}")
+print(exporter.export(enc_zz))
+
+# ── 9. Pauli Feature Map ──────────────────────────────────────────────────────
+#
+#   Generalised Pauli strings. ["Z", "ZZ"] is equivalent to ZZFeatureMap.
+
+print("=" * 55)
+print("PauliFeatureMapEncoder  (paulis=['Z','ZZ'], reps=1)")
+print("=" * 55)
+
+enc_pf = PauliFeatureMapEncoder(paulis=["Z", "ZZ"], reps=1).encode(x3 * np.pi)
+print(f"n_qubits   : {enc_pf.metadata['n_qubits']}")
+print(f"depth      : {enc_pf.metadata['depth']}")
+print(exporter.export(enc_pf))
+
+# ── 10. Random Fourier ────────────────────────────────────────────────────────
+#
+#   RBF kernel approximation. Requires fit() before encode().
+
+print("=" * 55)
+print("RandomFourierEncoder  (n_components=6)")
+print("=" * 55)
+
+data_batch = np.random.default_rng(0).uniform(0, 1, size=(20, 3))
+enc_rf_obj = RandomFourierEncoder(n_components=6, random_state=0)
+enc_rf_obj.fit(data_batch)
+enc_rf = enc_rf_obj.encode(x3)
+print(f"n_qubits   : {enc_rf.metadata['n_qubits']}  (= n_components)")
+print(f"depth      : {enc_rf.metadata['depth']}")
+print(exporter.export(enc_rf))
+
+# ── 11. Tensor Product ────────────────────────────────────────────────────────
+#
+#   Ry + Rz per qubit — full Bloch sphere, 2 features per qubit.
+
+print("=" * 55)
+print("TensorProductEncoder")
+print("=" * 55)
+
+enc_tp = TensorProductEncoder().encode(x3 * np.pi)
+print(f"n_qubits   : {enc_tp.metadata['n_qubits']}  (ceil(3/2) = 2)")
+print(f"depth      : {enc_tp.metadata['depth']}")
+print(exporter.export(enc_tp))
+
+# ── 12. QAOA Problem ──────────────────────────────────────────────────────────
+#
+#   QAOA-inspired feature map. Features as cost Hamiltonian parameters.
+#   H + RZ(2γxᵢ) + CNOT-RZ(2γxᵢxⱼ)-CNOT + RX(2β). Linear connectivity.
+
+print("=" * 55)
+print("QAOAProblemEncoder  (p=1, linear)")
+print("=" * 55)
+
+enc_qaoa = QAOAProblemEncoder(p=1, connectivity="linear").encode(x3 * np.pi - np.pi / 2)
+print(f"n_qubits       : {enc_qaoa.metadata['n_qubits']}")
+print(f"n_pairs        : {enc_qaoa.metadata['n_pairs']}")
+print(f"depth          : {enc_qaoa.metadata['depth']}")
+print(exporter.export(enc_qaoa))
+
+# ── 13. prepare() one-liner — all encoders ────────────────────────────────────
+
+print("=" * 55)
+print("prepare() one-liner — all encoders")
 print("=" * 55)
 
 data = np.random.default_rng(0).uniform(0, 1, size=(10, 3))
-for enc_name in ("angle", "basis", "iqp", "reupload", "hamiltonian"):
+for enc_name in (
+    "angle", "basis", "iqp", "reupload", "hamiltonian",
+    "zz_feature_map", "tensor_product", "qaoa_problem",
+):
     result = qd.prepare(data, encoding=enc_name, framework="qasm")
     meta = result.encoded[0].metadata
     print(f"  {enc_name:20s}  qubits={meta['n_qubits']}  depth={meta['depth']}")

@@ -283,10 +283,34 @@ class IQMExporter:
                     ops.extend(_virtual_rz(qubits[i], float(angle)))
             return ops
 
+        if encoding == "qaoa_problem":
+            p = meta.get("p", 1)
+            beta = meta.get("beta", 0.39269908169872414)
+            local_angles = meta["local_angles"]
+            coupling_angles = meta["coupling_angles"]
+            pairs = meta.get("pairs", [])
+            for i in range(n):
+                ops.append(_h(qubits[i]))
+            for _ in range(p):
+                for i in range(n):
+                    ops.extend(_virtual_rz(qubits[i], 2.0 * float(local_angles[i])))
+                for k, (i, j) in enumerate(pairs):
+                    angle = 2.0 * float(coupling_angles[k])
+                    # IQM uses CZ: CNOT = H(j) CZ H(j)
+                    ops.append(_h(qubits[j]))
+                    ops.append(_cz(qubits[i], qubits[j]))
+                    ops.extend(_virtual_rz(qubits[j], angle))
+                    ops.append(_cz(qubits[i], qubits[j]))
+                    ops.append(_h(qubits[j]))
+                for i in range(n):
+                    ops.append(_rx(qubits[i], 2.0 * float(beta)))
+            return ops
+
         raise ValueError(
             f"Unknown encoding '{encoding}'. "
             "Supported: angle, entangled_angle, basis, iqp, zz_feature_map, "
-            "pauli_feature_map, random_fourier, tensor_product, reupload, hamiltonian."
+            "pauli_feature_map, random_fourier, tensor_product, qaoa_problem, "
+            "reupload, hamiltonian."
         )
 
     def export_batch(self, encoded_list: list) -> list[dict]:
