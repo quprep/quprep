@@ -2,12 +2,18 @@
 
 Supported encodings
 -------------------
-- angle       : Ry/Rx/Rz gate per qubit.
-- basis       : X gates on qubits where the bit is 1.
-- iqp         : H + Rz(x_i) + CX+Rz(x_i·x_j)+CX interactions, repeated reps times.
-- reupload    : rotation gate repeated ``layers`` times per qubit.
-- hamiltonian : Rz(2·x_i·T/S) per qubit, repeated trotter_steps times.
-- amplitude   : not supported — use QiskitExporter instead.
+- angle           : Ry/Rx/Rz gate per qubit.
+- entangled_angle : rotation layer + CNOT entangling layer, repeated layers times.
+- basis           : X gates on qubits where the bit is 1.
+- iqp             : H + Rz(x_i) + CX+Rz(x_i·x_j)+CX interactions, repeated reps times.
+- reupload        : rotation gate repeated ``layers`` times per qubit.
+- hamiltonian     : Rz(2·x_i·T/S) per qubit, repeated trotter_steps times.
+- zz_feature_map  : H + Rz single-qubit + CNOT-Rz-CNOT pairwise, repeated reps times.
+- pauli_feature_map: Generalised Pauli feature map (X/Y/Z, XX/YY/ZZ strings).
+- random_fourier  : angle-encoded Fourier features (treated as angle encoding).
+- tensor_product  : Ry + Rz per qubit from alternating parameter pairs.
+- qaoa_problem    : QAOA-inspired feature map with cost + mixer unitaries.
+- amplitude       : not supported — use QiskitExporter instead.
 
 Requires: pip install quprep[cirq]
 """
@@ -125,10 +131,86 @@ class CirqExporter:
                 for i, angle in enumerate(params):
                     ops.append(cirq.Rz(rads=float(angle))(qubits[i]))
 
+        elif encoding == "zz_feature_map":
+            reps = encoded.metadata.get("reps", 2)
+            single_angles = encoded.metadata["single_angles"]
+            pair_angles = encoded.metadata["pair_angles"]
+            pairs = encoded.metadata["pairs"]
+            for _ in range(reps):
+                ops.extend(cirq.H(qubits[i]) for i in range(n))
+                for i, angle in enumerate(single_angles):
+                    ops.append(cirq.Rz(rads=float(angle))(qubits[i]))
+                for (i, j), angle in zip(pairs, pair_angles):
+                    ops.append(cirq.CNOT(qubits[i], qubits[j]))
+                    ops.append(cirq.Rz(rads=float(angle))(qubits[j]))
+                    ops.append(cirq.CNOT(qubits[i], qubits[j]))
+
+        elif encoding == "pauli_feature_map":
+            reps = encoded.metadata.get("reps", 2)
+            single_terms = encoded.metadata.get("single_terms", {})
+            pair_terms = encoded.metadata.get("pair_terms", {})
+            _cirq_gate = {"X": cirq.Rx, "Y": cirq.Ry, "Z": cirq.Rz}
+            for _ in range(reps):
+                ops.extend(cirq.H(qubits[i]) for i in range(n))
+                for pauli, angles in single_terms.items():
+                    gate_cls = _cirq_gate[pauli]
+                    for i, angle in enumerate(angles):
+                        ops.append(gate_cls(rads=float(angle))(qubits[i]))
+                for pauli, entries in pair_terms.items():
+                    for i, j, angle in entries:
+                        if pauli == "XX":
+                            ops.append(cirq.H(qubits[i]))
+                            ops.append(cirq.H(qubits[j]))
+                        elif pauli == "YY":
+                            ops.append((cirq.S**-1)(qubits[i]))
+                            ops.append((cirq.S**-1)(qubits[j]))
+                        ops.append(cirq.CNOT(qubits[i], qubits[j]))
+                        ops.append(cirq.Rz(rads=float(angle))(qubits[j]))
+                        ops.append(cirq.CNOT(qubits[i], qubits[j]))
+                        if pauli == "XX":
+                            ops.append(cirq.H(qubits[i]))
+                            ops.append(cirq.H(qubits[j]))
+                        elif pauli == "YY":
+                            ops.append(cirq.S(qubits[i]))
+                            ops.append(cirq.S(qubits[j]))
+
+        elif encoding == "random_fourier":
+            rotation = encoded.metadata.get("rotation", "ry")
+            gate_cls = {"ry": cirq.Ry, "rx": cirq.Rx, "rz": cirq.Rz}.get(rotation)
+            if gate_cls is None:
+                raise ValueError(f"Unknown rotation '{rotation}'.")
+            for i, angle in enumerate(params):
+                ops.append(gate_cls(rads=float(angle))(qubits[i]))
+
+        elif encoding == "tensor_product":
+            ry_angles = encoded.metadata["ry_angles"]
+            rz_angles = encoded.metadata["rz_angles"]
+            for k in range(n):
+                ops.append(cirq.Ry(rads=float(ry_angles[k]))(qubits[k]))
+                ops.append(cirq.Rz(rads=float(rz_angles[k]))(qubits[k]))
+
+        elif encoding == "qaoa_problem":
+            p = encoded.metadata.get("p", 1)
+            beta = encoded.metadata.get("beta", 0.39269908169872414)
+            local_angles = encoded.metadata["local_angles"]
+            coupling_angles = encoded.metadata["coupling_angles"]
+            pairs = encoded.metadata.get("pairs", [])
+            ops.extend(cirq.H(qubits[i]) for i in range(n))
+            for _ in range(p):
+                for i in range(n):
+                    ops.append(cirq.Rz(rads=2.0 * float(local_angles[i]))(qubits[i]))
+                for k, (i, j) in enumerate(pairs):
+                    ops.append(cirq.CNOT(qubits[i], qubits[j]))
+                    ops.append(cirq.Rz(rads=2.0 * float(coupling_angles[k]))(qubits[j]))
+                    ops.append(cirq.CNOT(qubits[i], qubits[j]))
+                for i in range(n):
+                    ops.append(cirq.Rx(rads=2.0 * float(beta))(qubits[i]))
+
         else:
             raise ValueError(
                 f"Unknown encoding '{encoding}'. "
-                "Supported: angle, entangled_angle, basis, iqp, reupload, hamiltonian."
+                "Supported: angle, entangled_angle, basis, iqp, reupload, hamiltonian, "
+                "zz_feature_map, pauli_feature_map, random_fourier, tensor_product, qaoa_problem."
             )
 
         return cirq.Circuit(ops)

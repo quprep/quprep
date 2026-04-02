@@ -237,7 +237,7 @@ class TestQiskitExporter:
         exp = QiskitExporter()
         fake = EncodedResult(
             parameters=np.array([0.1, 0.2]),
-            metadata={"encoding": "iqp", "n_qubits": 2},
+            metadata={"encoding": "totally_unknown", "n_qubits": 2},
         )
         with pytest.raises(ValueError, match="Unknown encoding"):
             exp.export(fake)
@@ -249,6 +249,78 @@ class TestQiskitExporter:
         results = [_angle_result(n=3) for _ in range(4)]
         circuits = exp.export_batch(results)
         assert len(circuits) == 4
+
+    def test_entangled_angle_export(self):
+        qiskit = pytest.importorskip("qiskit")
+        from quprep.encode.entangled_angle import EntangledAngleEncoder
+        from quprep.export.qiskit_export import QiskitExporter
+        x = np.linspace(0.1, 1.0, 3)
+        encoded = EntangledAngleEncoder(layers=2).encode(x)
+        qc = QiskitExporter().export(encoded)
+        assert isinstance(qc, qiskit.QuantumCircuit)
+        assert qc.num_qubits == 3
+
+    def test_iqp_export(self):
+        qiskit = pytest.importorskip("qiskit")
+        from quprep.export.qiskit_export import QiskitExporter
+        qc = QiskitExporter().export(_iqp_result(d=3))
+        assert isinstance(qc, qiskit.QuantumCircuit)
+        assert qc.num_qubits == 3
+
+    def test_reupload_export(self):
+        qiskit = pytest.importorskip("qiskit")
+        from quprep.export.qiskit_export import QiskitExporter
+        qc = QiskitExporter().export(_reupload_result(d=3))
+        assert isinstance(qc, qiskit.QuantumCircuit)
+        assert qc.num_qubits == 3
+
+    def test_hamiltonian_export(self):
+        qiskit = pytest.importorskip("qiskit")
+        from quprep.export.qiskit_export import QiskitExporter
+        qc = QiskitExporter().export(_hamiltonian_result(d=3))
+        assert isinstance(qc, qiskit.QuantumCircuit)
+        assert qc.num_qubits == 3
+
+    def test_zz_feature_map_export(self):
+        qiskit = pytest.importorskip("qiskit")
+        from quprep.export.qiskit_export import QiskitExporter
+        qc = QiskitExporter().export(_zz_enc(n=3))
+        assert isinstance(qc, qiskit.QuantumCircuit)
+        assert qc.num_qubits == 3
+
+    def test_pauli_feature_map_export(self):
+        qiskit = pytest.importorskip("qiskit")
+        from quprep.export.qiskit_export import QiskitExporter
+        enc = PauliFeatureMapEncoder(paulis=["Z", "ZZ"], reps=1)
+        x = np.array([0.5, 1.0, 1.5])
+        encoded = enc.encode(x)
+        qc = QiskitExporter().export(encoded)
+        assert isinstance(qc, qiskit.QuantumCircuit)
+        assert qc.num_qubits == 3
+
+    def test_tensor_product_export(self):
+        qiskit = pytest.importorskip("qiskit")
+        from quprep.export.qiskit_export import QiskitExporter
+        qc = QiskitExporter().export(_tp_enc(n=4))
+        assert isinstance(qc, qiskit.QuantumCircuit)
+        assert qc.num_qubits == 4
+
+    def test_qaoa_problem_export(self):
+        qiskit = pytest.importorskip("qiskit")
+        from quprep.export.qiskit_export import QiskitExporter
+        qc = QiskitExporter().export(_qaoa_enc(n=3))
+        assert isinstance(qc, qiskit.QuantumCircuit)
+        assert qc.num_qubits == 3
+
+    def test_random_fourier_export(self):
+        qiskit = pytest.importorskip("qiskit")
+        from quprep.export.qiskit_export import QiskitExporter
+        enc = RandomFourierEncoder(n_components=3, random_state=0)
+        enc.fit(np.random.default_rng(0).random((10, 3)))
+        encoded = enc.encode(np.random.default_rng(0).random(3))
+        qc = QiskitExporter().export(encoded)
+        assert isinstance(qc, qiskit.QuantumCircuit)
+        assert qc.num_qubits == 3
 
 
 # ---------------------------------------------------------------------------
@@ -370,6 +442,46 @@ class TestPennyLaneExporter:
         state = circuit()
         assert len(state) == 2**3
 
+    def test_zz_feature_map_executes(self):
+        pytest.importorskip("pennylane")
+        from quprep.export.pennylane_export import PennyLaneExporter
+        circuit = PennyLaneExporter().export(_zz_enc(n=3))
+        assert callable(circuit)
+        assert len(circuit()) == 2**3
+
+    def test_pauli_feature_map_executes(self):
+        pytest.importorskip("pennylane")
+        from quprep.export.pennylane_export import PennyLaneExporter
+        enc = PauliFeatureMapEncoder(paulis=["Z", "ZZ"], reps=1)
+        encoded = enc.encode(np.array([0.5, 1.0, 1.5]))
+        circuit = PennyLaneExporter().export(encoded)
+        assert callable(circuit)
+        assert len(circuit()) == 2**3
+
+    def test_random_fourier_executes(self):
+        pytest.importorskip("pennylane")
+        from quprep.export.pennylane_export import PennyLaneExporter
+        enc = RandomFourierEncoder(n_components=3, random_state=0)
+        enc.fit(np.random.default_rng(0).random((10, 3)))
+        encoded = enc.encode(np.random.default_rng(0).random(3))
+        circuit = PennyLaneExporter().export(encoded)
+        assert callable(circuit)
+        assert len(circuit()) == 2**3
+
+    def test_tensor_product_executes(self):
+        pytest.importorskip("pennylane")
+        from quprep.export.pennylane_export import PennyLaneExporter
+        circuit = PennyLaneExporter().export(_tp_enc(n=4))
+        assert callable(circuit)
+        assert len(circuit()) == 2**4
+
+    def test_qaoa_problem_executes(self):
+        pytest.importorskip("pennylane")
+        from quprep.export.pennylane_export import PennyLaneExporter
+        circuit = PennyLaneExporter().export(_qaoa_enc(n=3))
+        assert callable(circuit)
+        assert len(circuit()) == 2**3
+
 
 # ---------------------------------------------------------------------------
 # CirqExporter
@@ -470,6 +582,41 @@ class TestCirqExporter:
         circuit = CirqExporter().export(enc)
         assert isinstance(circuit, cirq.Circuit)
 
+    def test_zz_feature_map_export(self):
+        cirq = pytest.importorskip("cirq")
+        from quprep.export.cirq_export import CirqExporter
+        circuit = CirqExporter().export(_zz_enc(n=3))
+        assert isinstance(circuit, cirq.Circuit)
+
+    def test_pauli_feature_map_export(self):
+        cirq = pytest.importorskip("cirq")
+        from quprep.export.cirq_export import CirqExporter
+        enc = PauliFeatureMapEncoder(paulis=["Z", "ZZ"], reps=1)
+        encoded = enc.encode(np.array([0.5, 1.0, 1.5]))
+        circuit = CirqExporter().export(encoded)
+        assert isinstance(circuit, cirq.Circuit)
+
+    def test_random_fourier_export(self):
+        cirq = pytest.importorskip("cirq")
+        from quprep.export.cirq_export import CirqExporter
+        enc = RandomFourierEncoder(n_components=3, random_state=0)
+        enc.fit(np.random.default_rng(0).random((10, 3)))
+        encoded = enc.encode(np.random.default_rng(0).random(3))
+        circuit = CirqExporter().export(encoded)
+        assert isinstance(circuit, cirq.Circuit)
+
+    def test_tensor_product_export(self):
+        cirq = pytest.importorskip("cirq")
+        from quprep.export.cirq_export import CirqExporter
+        circuit = CirqExporter().export(_tp_enc(n=4))
+        assert isinstance(circuit, cirq.Circuit)
+
+    def test_qaoa_problem_export(self):
+        cirq = pytest.importorskip("cirq")
+        from quprep.export.cirq_export import CirqExporter
+        circuit = CirqExporter().export(_qaoa_enc(n=3))
+        assert isinstance(circuit, cirq.Circuit)
+
 
 # ---------------------------------------------------------------------------
 # TKETExporter
@@ -556,6 +703,41 @@ class TestTKETExporter:
         from quprep.export.tket_export import TKETExporter
         enc = EntangledAngleEncoder(layers=1).encode(np.array([0.5, 1.0, 1.5]))
         circuit = TKETExporter().export(enc)
+        assert isinstance(circuit, pytket.Circuit)
+
+    def test_zz_feature_map_export(self):
+        pytket = pytest.importorskip("pytket")
+        from quprep.export.tket_export import TKETExporter
+        circuit = TKETExporter().export(_zz_enc(n=3))
+        assert isinstance(circuit, pytket.Circuit)
+
+    def test_pauli_feature_map_export(self):
+        pytket = pytest.importorskip("pytket")
+        from quprep.export.tket_export import TKETExporter
+        enc = PauliFeatureMapEncoder(paulis=["Z", "ZZ"], reps=1)
+        encoded = enc.encode(np.array([0.5, 1.0, 1.5]))
+        circuit = TKETExporter().export(encoded)
+        assert isinstance(circuit, pytket.Circuit)
+
+    def test_random_fourier_export(self):
+        pytket = pytest.importorskip("pytket")
+        from quprep.export.tket_export import TKETExporter
+        enc = RandomFourierEncoder(n_components=3, random_state=0)
+        enc.fit(np.random.default_rng(0).random((10, 3)))
+        encoded = enc.encode(np.random.default_rng(0).random(3))
+        circuit = TKETExporter().export(encoded)
+        assert isinstance(circuit, pytket.Circuit)
+
+    def test_tensor_product_export(self):
+        pytket = pytest.importorskip("pytket")
+        from quprep.export.tket_export import TKETExporter
+        circuit = TKETExporter().export(_tp_enc(n=4))
+        assert isinstance(circuit, pytket.Circuit)
+
+    def test_qaoa_problem_export(self):
+        pytket = pytest.importorskip("pytket")
+        from quprep.export.tket_export import TKETExporter
+        circuit = TKETExporter().export(_qaoa_enc(n=3))
         assert isinstance(circuit, pytket.Circuit)
 
 
@@ -1024,6 +1206,27 @@ class TestBraketExporterExtraEncodings:
 
         from quprep.export.braket_export import BraketExporter
         circuit = BraketExporter().export(_qaoa_enc(3))
+        assert isinstance(circuit, Circuit)
+
+    def test_pauli_feature_map(self):
+        pytest.importorskip("braket.circuits")
+        from braket.circuits import Circuit
+
+        from quprep.export.braket_export import BraketExporter
+        enc = PauliFeatureMapEncoder(paulis=["Z", "ZZ"], reps=1)
+        encoded = enc.encode(np.array([0.5, 1.0, 1.5]))
+        circuit = BraketExporter().export(encoded)
+        assert isinstance(circuit, Circuit)
+
+    def test_random_fourier(self):
+        pytest.importorskip("braket.circuits")
+        from braket.circuits import Circuit
+
+        from quprep.export.braket_export import BraketExporter
+        enc = RandomFourierEncoder(n_components=3, random_state=0)
+        enc.fit(np.random.default_rng(0).random((10, 3)))
+        encoded = enc.encode(np.random.default_rng(0).random(3))
+        circuit = BraketExporter().export(encoded)
         assert isinstance(circuit, Circuit)
 
 

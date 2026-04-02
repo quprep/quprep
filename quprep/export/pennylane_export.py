@@ -9,6 +9,11 @@ Supported encodings
 - iqp             : Hadamards + RZ(x_i) + IsingZZ(x_i·x_j) interactions, repeated reps times.
 - reupload        : rotation gate repeated ``layers`` times per qubit.
 - hamiltonian     : RZ(2·x_i·T/S) per qubit, repeated trotter_steps times.
+- zz_feature_map  : H + Rz single-qubit + CNOT-Rz-CNOT pairwise, repeated reps times.
+- pauli_feature_map: Generalised Pauli feature map (X/Y/Z, XX/YY/ZZ strings).
+- random_fourier  : angle-encoded Fourier features (treated as angle encoding).
+- tensor_product  : Ry + Rz per qubit from alternating parameter pairs.
+- qaoa_problem    : QAOA-inspired feature map with cost + mixer unitaries.
 
 Requires: pip install quprep[pennylane]
 """
@@ -62,9 +67,11 @@ class PennyLaneExporter:
         Parameters
         ----------
         encoded : EncodedResult
-            Output from any QuPrep encoder. Supports all 7 encodings:
+            Output from any QuPrep encoder. Supports all 12 encodings:
             ``angle``, ``entangled_angle``, ``basis``, ``amplitude``,
-            ``iqp``, ``reupload``, ``hamiltonian``.
+            ``iqp``, ``reupload``, ``hamiltonian``, ``zz_feature_map``,
+            ``pauli_feature_map``, ``random_fourier``, ``tensor_product``,
+            ``qaoa_problem``.
 
         Returns
         -------
@@ -166,10 +173,110 @@ class PennyLaneExporter:
                         qml.RZ(float(angle), wires=i)
                 return qml.state()
 
+        elif encoding == "zz_feature_map":
+            reps = encoded.metadata.get("reps", 2)
+            single_angles = encoded.metadata["single_angles"]
+            pair_angles = encoded.metadata["pair_angles"]
+            pairs = encoded.metadata["pairs"]
+
+            @qml.qnode(dev, interface=self.interface)
+            def circuit():
+                for _ in range(reps):
+                    for i in range(n):
+                        qml.Hadamard(wires=i)
+                    for i, angle in enumerate(single_angles):
+                        qml.RZ(float(angle), wires=i)
+                    for (i, j), angle in zip(pairs, pair_angles):
+                        qml.CNOT(wires=[i, j])
+                        qml.RZ(float(angle), wires=j)
+                        qml.CNOT(wires=[i, j])
+                return qml.state()
+
+        elif encoding == "pauli_feature_map":
+            reps = encoded.metadata.get("reps", 2)
+            single_terms = encoded.metadata.get("single_terms", {})
+            pair_terms = encoded.metadata.get("pair_terms", {})
+
+            @qml.qnode(dev, interface=self.interface)
+            def circuit():
+                _pl_gate = {"X": qml.RX, "Y": qml.RY, "Z": qml.RZ}
+                for _ in range(reps):
+                    for i in range(n):
+                        qml.Hadamard(wires=i)
+                    for pauli, angles in single_terms.items():
+                        gate = _pl_gate[pauli]
+                        for i, angle in enumerate(angles):
+                            gate(float(angle), wires=i)
+                    for pauli, entries in pair_terms.items():
+                        for i, j, angle in entries:
+                            if pauli == "XX":
+                                qml.Hadamard(wires=i)
+                                qml.Hadamard(wires=j)
+                            elif pauli == "YY":
+                                qml.adjoint(qml.S)(wires=i)
+                                qml.adjoint(qml.S)(wires=j)
+                            qml.CNOT(wires=[i, j])
+                            qml.RZ(float(angle), wires=j)
+                            qml.CNOT(wires=[i, j])
+                            if pauli == "XX":
+                                qml.Hadamard(wires=i)
+                                qml.Hadamard(wires=j)
+                            elif pauli == "YY":
+                                qml.S(wires=i)
+                                qml.S(wires=j)
+                return qml.state()
+
+        elif encoding == "random_fourier":
+            rotation = encoded.metadata.get("rotation", "ry")
+            gate = {"ry": qml.RY, "rx": qml.RX, "rz": qml.RZ}.get(rotation)
+            if gate is None:
+                raise ValueError(f"Unknown rotation '{rotation}'.")
+
+            @qml.qnode(dev, interface=self.interface)
+            def circuit():
+                for i, angle in enumerate(params):
+                    gate(float(angle), wires=i)
+                return qml.state()
+
+        elif encoding == "tensor_product":
+            ry_angles = encoded.metadata["ry_angles"]
+            rz_angles = encoded.metadata["rz_angles"]
+
+            @qml.qnode(dev, interface=self.interface)
+            def circuit():
+                for k in range(n):
+                    qml.RY(float(ry_angles[k]), wires=k)
+                    qml.RZ(float(rz_angles[k]), wires=k)
+                return qml.state()
+
+        elif encoding == "qaoa_problem":
+            p = encoded.metadata.get("p", 1)
+            beta = encoded.metadata.get("beta", 0.39269908169872414)
+            local_angles = encoded.metadata["local_angles"]
+            coupling_angles = encoded.metadata["coupling_angles"]
+            pairs = encoded.metadata.get("pairs", [])
+
+            @qml.qnode(dev, interface=self.interface)
+            def circuit():
+                for i in range(n):
+                    qml.Hadamard(wires=i)
+                for _ in range(p):
+                    for i in range(n):
+                        qml.RZ(2.0 * float(local_angles[i]), wires=i)
+                    for k, (i, j) in enumerate(pairs):
+                        qml.CNOT(wires=[i, j])
+                        qml.RZ(2.0 * float(coupling_angles[k]), wires=j)
+                        qml.CNOT(wires=[i, j])
+                    for i in range(n):
+                        qml.RX(2.0 * float(beta), wires=i)
+                return qml.state()
+
         else:
             raise ValueError(
                 f"Unknown encoding '{encoding}'. "
-                "Supported: angle, entangled_angle, basis, amplitude, iqp, reupload, hamiltonian."
+                "Supported: angle, entangled_angle, basis, amplitude, iqp, reupload, "
+                "hamiltonian, zz_feature_map, pauli_feature_map, random_fourier, "
+                "tensor_product, qaoa_problem."
             )
 
         return circuit

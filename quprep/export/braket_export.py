@@ -7,9 +7,12 @@ Supported encodings
 - basis           : X gates on qubits where the bit is 1.
 - iqp             : H + Rz(x_i) + ZZ(x_i·x_j) interactions, repeated reps times.
 - zz_feature_map  : H + Rz single-qubit + CNOT-Rz-CNOT pairwise, repeated reps times.
+- pauli_feature_map: Generalised Pauli feature map (X/Y/Z, XX/YY/ZZ strings).
+- random_fourier  : angle-encoded Fourier features (treated as angle encoding).
 - reupload        : rotation gate repeated `layers` times per qubit.
 - hamiltonian     : Rz(2·x_i·T/S) per qubit, repeated trotter_steps times.
 - tensor_product  : Ry + Rz per qubit from alternating parameter pairs.
+- qaoa_problem    : QAOA-inspired feature map with cost + mixer unitaries.
 - amplitude       : not supported — use QiskitExporter instead.
 
 Requires: pip install quprep[braket]
@@ -187,6 +190,50 @@ class BraketExporter:
                     circ.add_instruction(Instruction(gates.Rx(2.0 * float(beta)), i))
             return circ
 
+        if encoding == "pauli_feature_map":
+            d = encoded.metadata["n_qubits"]
+            reps = encoded.metadata.get("reps", 2)
+            single_terms = encoded.metadata.get("single_terms", {})
+            pair_terms = encoded.metadata.get("pair_terms", {})
+            circ = Circuit()
+            _gate = {"X": gates.Rx, "Y": gates.Ry, "Z": gates.Rz}
+            for _ in range(reps):
+                for i in range(d):
+                    circ.h(i)
+                for pauli, angles in single_terms.items():
+                    gate_fn = _gate[pauli]
+                    for i, angle in enumerate(angles):
+                        circ.add_instruction(Instruction(gate_fn(float(angle)), i))
+                for pauli, entries in pair_terms.items():
+                    for i, j, angle in entries:
+                        if pauli == "XX":
+                            circ.h(i)
+                            circ.h(j)
+                        elif pauli == "YY":
+                            circ.add_instruction(Instruction(gates.Si(), i))
+                            circ.add_instruction(Instruction(gates.Si(), j))
+                        circ.cnot(i, j)
+                        circ.add_instruction(Instruction(gates.Rz(float(angle)), j))
+                        circ.cnot(i, j)
+                        if pauli == "XX":
+                            circ.h(i)
+                            circ.h(j)
+                        elif pauli == "YY":
+                            circ.add_instruction(Instruction(gates.S(), i))
+                            circ.add_instruction(Instruction(gates.S(), j))
+            return circ
+
+        if encoding == "random_fourier":
+            n = encoded.metadata["n_qubits"]
+            circ = Circuit()
+            rotation = encoded.metadata.get("rotation", "ry")
+            gate_fn = {"ry": gates.Ry, "rx": gates.Rx, "rz": gates.Rz}.get(rotation)
+            if gate_fn is None:
+                raise ValueError(f"Unknown rotation '{rotation}'.")
+            for i, angle in enumerate(params):
+                circ.add_instruction(Instruction(gate_fn(float(angle)), i))
+            return circ
+
         if encoding == "amplitude":
             raise NotImplementedError(
                 "Amplitude encoding requires exponential-depth state preparation. "
@@ -196,7 +243,8 @@ class BraketExporter:
         raise ValueError(
             f"Unknown encoding '{encoding}'. "
             "Supported: angle, entangled_angle, basis, iqp, zz_feature_map, "
-            "tensor_product, qaoa_problem, reupload, hamiltonian."
+            "pauli_feature_map, random_fourier, tensor_product, qaoa_problem, "
+            "reupload, hamiltonian."
         )
 
     def export_batch(self, encoded_list: list) -> list:
