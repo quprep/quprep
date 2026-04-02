@@ -360,6 +360,16 @@ class TestPennyLaneExporter:
         assert len(circuits) == 3
         assert all(callable(c) for c in circuits)
 
+    def test_entangled_angle_circuit_executes(self):
+        pytest.importorskip("pennylane")
+        from quprep.encode.entangled_angle import EntangledAngleEncoder
+        from quprep.export.pennylane_export import PennyLaneExporter
+        enc = EntangledAngleEncoder(layers=1).encode(np.array([0.5, 1.0, 1.5]))
+        circuit = PennyLaneExporter().export(enc)
+        assert callable(circuit)
+        state = circuit()
+        assert len(state) == 2**3
+
 
 # ---------------------------------------------------------------------------
 # CirqExporter
@@ -452,6 +462,14 @@ class TestCirqExporter:
         assert len(circuits) == 3
         assert all(isinstance(c, cirq.Circuit) for c in circuits)
 
+    def test_entangled_angle_export(self):
+        cirq = pytest.importorskip("cirq")
+        from quprep.encode.entangled_angle import EntangledAngleEncoder
+        from quprep.export.cirq_export import CirqExporter
+        enc = EntangledAngleEncoder(layers=1).encode(np.array([0.5, 1.0, 1.5]))
+        circuit = CirqExporter().export(enc)
+        assert isinstance(circuit, cirq.Circuit)
+
 
 # ---------------------------------------------------------------------------
 # TKETExporter
@@ -531,6 +549,14 @@ class TestTKETExporter:
         circuits = TKETExporter().export_batch([_angle_result(n=2) for _ in range(3)])
         assert len(circuits) == 3
         assert all(isinstance(c, pytket.Circuit) for c in circuits)
+
+    def test_entangled_angle_export(self):
+        pytket = pytest.importorskip("pytket")
+        from quprep.encode.entangled_angle import EntangledAngleEncoder
+        from quprep.export.tket_export import TKETExporter
+        enc = EntangledAngleEncoder(layers=1).encode(np.array([0.5, 1.0, 1.5]))
+        circuit = TKETExporter().export(enc)
+        assert isinstance(circuit, pytket.Circuit)
 
 
 # ---------------------------------------------------------------------------
@@ -612,6 +638,24 @@ def _zz_enc(n=3):
 def _tp_enc(n=4):
     x = np.linspace(0.1, 1.0, n)
     return TensorProductEncoder().encode(x)
+
+
+def _reupload_enc(n=3):
+    from quprep.encode.reupload import ReUploadEncoder
+    x = np.linspace(0.1, 1.0, n)
+    return ReUploadEncoder(layers=2).encode(x)
+
+
+def _hamiltonian_enc(n=3):
+    from quprep.encode.hamiltonian import HamiltonianEncoder
+    x = np.linspace(0.1, 1.0, n)
+    return HamiltonianEncoder(evolution_time=1.0, trotter_steps=2).encode(x)
+
+
+def _qaoa_enc(n=3):
+    from quprep.encode.qaoa_problem import QAOAProblemEncoder
+    x = np.linspace(0.1, 1.0, n) * np.pi - np.pi / 2
+    return QAOAProblemEncoder(p=1, connectivity="linear").encode(x)
 
 
 # ---------------------------------------------------------------------------
@@ -832,6 +876,27 @@ class TestQASMExporterV060:
         assert "h " in qasm
         assert "rz(" in qasm
 
+    def test_reupload_qasm(self):
+        exp = QASMExporter()
+        qasm = exp.export(_reupload_enc(3))
+        assert "OPENQASM 3.0" in qasm
+        assert "ry(" in qasm
+
+    def test_hamiltonian_qasm(self):
+        exp = QASMExporter()
+        qasm = exp.export(_hamiltonian_enc(3))
+        assert "OPENQASM 3.0" in qasm
+        assert "rz(" in qasm
+
+    def test_qaoa_problem_qasm(self):
+        exp = QASMExporter()
+        qasm = exp.export(_qaoa_enc(3))
+        assert "OPENQASM 3.0" in qasm
+        assert "h " in qasm
+        assert "rz(" in qasm
+        assert "rx(" in qasm
+        assert "cx " in qasm
+
 
 # ---------------------------------------------------------------------------
 # BraketExporter
@@ -913,6 +978,56 @@ class TestBraketExporter:
 
 
 # ---------------------------------------------------------------------------
+# BraketExporter — additional encoding coverage
+# ---------------------------------------------------------------------------
+
+class TestBraketExporterExtraEncodings:
+    def test_entangled_angle(self):
+        pytest.importorskip("braket.circuits")
+        from braket.circuits import Circuit
+
+        from quprep.encode.entangled_angle import EntangledAngleEncoder
+        from quprep.export.braket_export import BraketExporter
+        enc = EntangledAngleEncoder(layers=1).encode(np.array([0.5, 1.0, 1.5]))
+        circuit = BraketExporter().export(enc)
+        assert isinstance(circuit, Circuit)
+
+    def test_iqp(self):
+        pytest.importorskip("braket.circuits")
+        from braket.circuits import Circuit
+
+        from quprep.encode.iqp import IQPEncoder
+        from quprep.export.braket_export import BraketExporter
+        enc = IQPEncoder(reps=1).encode(np.array([0.5, 1.0, 1.5]))
+        circuit = BraketExporter().export(enc)
+        assert isinstance(circuit, Circuit)
+
+    def test_reupload(self):
+        pytest.importorskip("braket.circuits")
+        from braket.circuits import Circuit
+
+        from quprep.export.braket_export import BraketExporter
+        circuit = BraketExporter().export(_reupload_enc(3))
+        assert isinstance(circuit, Circuit)
+
+    def test_hamiltonian(self):
+        pytest.importorskip("braket.circuits")
+        from braket.circuits import Circuit
+
+        from quprep.export.braket_export import BraketExporter
+        circuit = BraketExporter().export(_hamiltonian_enc(3))
+        assert isinstance(circuit, Circuit)
+
+    def test_qaoa_problem(self):
+        pytest.importorskip("braket.circuits")
+        from braket.circuits import Circuit
+
+        from quprep.export.braket_export import BraketExporter
+        circuit = BraketExporter().export(_qaoa_enc(3))
+        assert isinstance(circuit, Circuit)
+
+
+# ---------------------------------------------------------------------------
 # QSharpExporter — additional encoding coverage
 # ---------------------------------------------------------------------------
 
@@ -970,6 +1085,14 @@ class TestQSharpExporterExtraEncodings:
         qsharp = exp.export(encoded)
         assert "Rz(" in qsharp
 
+    def test_qaoa_problem_encoding(self):
+        exp = QSharpExporter()
+        qsharp = exp.export(_qaoa_enc(3))
+        assert "H(" in qsharp
+        assert "Rz(" in qsharp
+        assert "Rx(" in qsharp
+        assert "CNOT(" in qsharp
+
 
 # ---------------------------------------------------------------------------
 # IQMExporter — additional encoding coverage
@@ -1023,3 +1146,9 @@ class TestIQMExporterExtraEncodings:
         )
         result = exp.export(encoded)
         assert len(result["instructions"]) > 0
+
+    def test_qaoa_problem_encoding(self):
+        exp = IQMExporter()
+        result = exp.export(_qaoa_enc(3))
+        names = {op["name"] for op in result["instructions"]}
+        assert "prx" in names or "cz" in names

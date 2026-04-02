@@ -479,3 +479,165 @@ class TestRecommendErrorPaths:
         rc = main(["recommend", "nonexistent.csv"])
         assert rc == 1
         assert "File not found" in capsys.readouterr().err
+
+
+# ---------------------------------------------------------------------------
+# cmd_convert — ImportError and generic Exception paths
+# ---------------------------------------------------------------------------
+
+class TestConvertExceptionPaths:
+    def test_import_error_returns_one(self, csv_file, capsys):
+        from unittest.mock import patch
+        with patch("quprep.prepare", side_effect=ImportError("Mock missing dep")):
+            rc = main(["convert", csv_file])
+        assert rc == 1
+        assert "dependency" in capsys.readouterr().err.lower()
+
+    def test_generic_exception_returns_one(self, csv_file, capsys):
+        from unittest.mock import patch
+        with patch("quprep.prepare", side_effect=RuntimeError("boom")):
+            rc = main(["convert", csv_file])
+        assert rc == 1
+        assert "boom" in capsys.readouterr().err
+
+    def test_save_dir_with_samples(self, csv_file, tmp_path, capsys):
+        rc = main([
+            "convert", csv_file,
+            "--save-dir", str(tmp_path / "out"),
+            "--samples", "2",
+        ])
+        assert rc == 0
+        files = list((tmp_path / "out").iterdir())
+        assert len(files) == 2
+
+
+# ---------------------------------------------------------------------------
+# qubo subcommands — direct (maxcut, knapsack, tsp, schedule, partition)
+# ---------------------------------------------------------------------------
+
+class TestQuboDirectSubcommands:
+    _ADJ = "0,1,1;1,0,1;1,1,0"
+    _DIST = "0,2,9;2,0,6;9,6,0"
+
+    def test_maxcut_returns_zero(self, capsys):
+        rc = main(["qubo", "maxcut", "--adjacency", self._ADJ])
+        assert rc == 0
+        assert "Variables" in capsys.readouterr().out
+
+    def test_maxcut_with_solve(self, capsys):
+        rc = main(["qubo", "maxcut", "--adjacency", self._ADJ, "--solve"])
+        assert rc == 0
+        out = capsys.readouterr().out
+        assert "Best x" in out
+
+    def test_knapsack_returns_zero(self, capsys):
+        rc = main(["qubo", "knapsack",
+                   "--weights", "1,2,3",
+                   "--values", "4,5,6",
+                   "--capacity", "4"])
+        assert rc == 0
+
+    def test_tsp_returns_zero(self, capsys):
+        rc = main(["qubo", "tsp", "--distances", self._DIST])
+        assert rc == 0
+
+    def test_schedule_returns_zero(self, capsys):
+        rc = main(["qubo", "schedule", "--times", "2,3,5", "--machines", "2"])
+        assert rc == 0
+
+    def test_partition_returns_zero(self, capsys):
+        rc = main(["qubo", "partition", "--values", "3,1,2,4"])
+        assert rc == 0
+
+
+# ---------------------------------------------------------------------------
+# qubo qaoa — all problem types via _build_qubo_from_args
+# ---------------------------------------------------------------------------
+
+class TestQuboBuildFromArgs:
+    def test_qaoa_knapsack(self, capsys):
+        rc = main(["qubo", "qaoa", "knapsack",
+                   "--weights", "1,2", "--values", "3,4", "--capacity", "2"])
+        assert rc == 0
+
+    def test_qaoa_tsp(self, capsys):
+        rc = main(["qubo", "qaoa", "tsp", "--distances", "0,1;1,0"])
+        assert rc == 0
+
+    def test_qaoa_schedule(self, capsys):
+        rc = main(["qubo", "qaoa", "schedule", "--times", "2,3", "--machines", "1"])
+        assert rc == 0
+
+    def test_qaoa_partition(self, capsys):
+        rc = main(["qubo", "qaoa", "partition", "--values", "1,2,3"])
+        assert rc == 0
+
+
+# ---------------------------------------------------------------------------
+# cmd_validate — additional paths
+# ---------------------------------------------------------------------------
+
+class TestValidateExtraPaths:
+    def test_validate_all_nan_column(self, tmp_path, capsys):
+        f = tmp_path / "nan.csv"
+        f.write_text("a,b\n1.0,\n2.0,\n")
+        rc = main(["validate", str(f)])
+        assert rc == 0
+
+    def test_validate_bad_schema_json(self, tmp_path, capsys):
+        data = tmp_path / "data.csv"
+        data.write_text("x,y\n1.0,2.0\n")
+        schema = tmp_path / "bad.json"
+        schema.write_text("NOT_VALID_JSON")
+        rc = main(["validate", str(data), "--schema", str(schema)])
+        assert rc == 1
+        assert "schema" in capsys.readouterr().err.lower()
+
+    def test_validate_generic_exception(self, capsys):
+        from unittest.mock import patch
+        with patch("quprep.ingest.csv_ingester.CSVIngester") as mock_cls:
+            mock_cls.return_value.load.side_effect = ValueError("bad data")
+            rc = main(["validate", "data.csv"])
+        assert rc == 1
+
+
+# ---------------------------------------------------------------------------
+# cmd_suggest, cmd_recommend, cmd_compare — ValueError paths
+# ---------------------------------------------------------------------------
+
+class TestCommandValueErrorPaths:
+    def test_suggest_value_error_returns_one(self, csv_file, capsys):
+        from unittest.mock import patch
+        with patch("quprep.core.qubit_suggestion.suggest_qubits", side_effect=ValueError("bad")):
+            rc = main(["suggest", csv_file])
+        assert rc == 1
+
+    def test_suggest_generic_exception_returns_one(self, csv_file, capsys):
+        from unittest.mock import patch
+        with patch("quprep.core.qubit_suggestion.suggest_qubits", side_effect=RuntimeError("boom")):
+            rc = main(["suggest", csv_file])
+        assert rc == 1
+
+    def test_recommend_value_error_returns_one(self, csv_file, capsys):
+        from unittest.mock import patch
+        with patch("quprep.core.recommender.recommend", side_effect=ValueError("bad")):
+            rc = main(["recommend", csv_file])
+        assert rc == 1
+
+    def test_recommend_generic_exception_returns_one(self, csv_file, capsys):
+        from unittest.mock import patch
+        with patch("quprep.core.recommender.recommend", side_effect=RuntimeError("boom")):
+            rc = main(["recommend", csv_file])
+        assert rc == 1
+
+    def test_compare_value_error_returns_one(self, csv_file, capsys):
+        from unittest.mock import patch
+        with patch("quprep.compare.compare_encodings", side_effect=ValueError("bad")):
+            rc = main(["compare", csv_file])
+        assert rc == 1
+
+    def test_compare_generic_exception_returns_one(self, csv_file, capsys):
+        from unittest.mock import patch
+        with patch("quprep.compare.compare_encodings", side_effect=RuntimeError("boom")):
+            rc = main(["compare", csv_file])
+        assert rc == 1

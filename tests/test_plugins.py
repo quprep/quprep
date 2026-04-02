@@ -177,6 +177,40 @@ class TestPluginIntegrationWithPrepare:
         with pytest.raises(ValueError, match="Unknown framework"):
             quprep.prepare(X, framework="completely_unknown_xyz")
 
+    def test_plugin_encoder_and_exporter_combo(self):
+        """Both encoding and framework are plugins — exercises closure-fix code path."""
+        import quprep
+        from quprep.encode.angle import AngleEncoder
+
+        @register_encoder("_test_enc2")
+        class AngleWrap2(BaseEncoder):
+            @property
+            def n_qubits(self):
+                return None
+
+            @property
+            def depth(self):
+                return 1
+
+            def encode(self, x):
+                return AngleEncoder().encode(x)
+
+        @register_exporter("_test_exp2")
+        class DummyExp2:
+            def export(self, encoded):
+                return f"COMBO:{len(encoded.parameters)}"
+
+            def export_batch(self, encoded_list):
+                return [self.export(e) for e in encoded_list]
+
+        X = np.random.default_rng(42).random((4, 3))
+        result = quprep.prepare(X, encoding="_test_enc2", framework="_test_exp2")
+        assert result is not None
+        # Verify the encoder produced angle-encoded results (not exporter class)
+        assert result.encoded[0].metadata["encoding"] == "angle"
+        unregister_encoder("_test_enc2")
+        unregister_exporter("_test_exp2")
+
 
 # ---------------------------------------------------------------------------
 # list_encoders / list_exporters

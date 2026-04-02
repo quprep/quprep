@@ -744,3 +744,32 @@ class TestPrepareNewFrameworks:
         # calls encode() on each row, hitting the RuntimeError
         with pytest.raises(RuntimeError, match="fitted"):
             quprep.prepare(simple_array, encoding="random_fourier", framework="qasm")
+
+    def test_prepare_qiskit_lazy_loader(self, simple_array):
+        """Lazy loader is exercised when qiskit is installed, skipped otherwise."""
+        import quprep
+        pytest.importorskip("qiskit")
+        result = quprep.prepare(simple_array, framework="qiskit")
+        assert len(result.circuits) == len(simple_array)
+
+    def test_prepare_pennylane_lazy_loader(self, simple_array):
+        import quprep
+        pytest.importorskip("pennylane")
+        result = quprep.prepare(simple_array, framework="pennylane")
+        assert len(result.circuits) == len(simple_array)
+
+    def test_prepare_tket_lazy_loader(self, simple_array):
+        import quprep
+        pytest.importorskip("pytket")
+        result = quprep.prepare(simple_array, framework="tket")
+        assert len(result.circuits) == len(simple_array)
+
+    def test_prepare_braket_missing_raises(self, simple_array):
+        """Lazy loader raises ImportError with install hint when braket absent."""
+        try:
+            import braket.circuits  # noqa: F401
+            pytest.skip("braket installed")
+        except ImportError:
+            import quprep
+            with pytest.raises(ImportError):
+                quprep.prepare(simple_array, framework="braket")

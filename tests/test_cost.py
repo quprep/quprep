@@ -7,6 +7,7 @@ from quprep.encode.basis import BasisEncoder
 from quprep.encode.entangled_angle import EntangledAngleEncoder
 from quprep.encode.hamiltonian import HamiltonianEncoder
 from quprep.encode.iqp import IQPEncoder
+from quprep.encode.qaoa_problem import QAOAProblemEncoder
 from quprep.encode.reupload import ReUploadEncoder
 from quprep.validation import CostEstimate, estimate_cost
 
@@ -115,6 +116,33 @@ def test_hamiltonian_cost():
     c = _cost(HamiltonianEncoder(trotter_steps=4), 4)
     assert c.n_qubits == 4
     assert c.circuit_depth == 16  # d * steps
+
+
+# ---------------------------------------------------------------------------
+# QAOAProblemEncoder
+# ---------------------------------------------------------------------------
+
+def test_qaoa_linear_cost():
+    c = _cost(QAOAProblemEncoder(p=1, connectivity="linear"), 4)
+    assert c.encoding == "qaoa_problem"
+    assert c.n_qubits == 4
+    assert c.two_qubit_gates == 2 * 3 * 1  # 2 * n_pairs * p = 2*3*1
+    assert c.nisq_safe is True
+
+
+def test_qaoa_full_connectivity_cost():
+    # Full connectivity — all d*(d-1)/2 pairs
+    c = _cost(QAOAProblemEncoder(p=1, connectivity="full"), 4)
+    assert c.encoding == "qaoa_problem"
+    n_pairs = 4 * 3 // 2  # 6
+    assert c.two_qubit_gates == 2 * n_pairs * 1
+
+
+def test_qaoa_multi_layer_cost():
+    c = _cost(QAOAProblemEncoder(p=3, connectivity="linear"), 5)
+    assert c.n_qubits == 5
+    n_pairs = 4  # d-1
+    assert c.two_qubit_gates == 2 * n_pairs * 3
 
 
 # ---------------------------------------------------------------------------

@@ -85,6 +85,17 @@ packages = ["quprep"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "--cov=quprep --cov-report=term-missing"
+
+[tool.coverage.run]
+source = ["quprep"]
+branch = false
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "\\.\\.\\.",
+]
 filterwarnings = [
     # QuPrepWarning is intentional — suppress in tests that don't check for it
     "ignore::quprep.validation.QuPrepWarning",

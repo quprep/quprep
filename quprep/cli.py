@@ -688,8 +688,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "compare":
         return cmd_compare(args)
 
-    return 1
+    return 1  # pragma: no cover
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     sys.exit(main())
