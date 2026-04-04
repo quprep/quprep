@@ -67,6 +67,7 @@ class SpectralReducer:
                 "n_components": k,
             },
             categorical_data=dataset.categorical_data,
+            labels=dataset.labels,
         )
 
     def fit_transform(self, dataset):
@@ -167,6 +168,7 @@ class TSNEReducer:
                 "n_components": k,
             },
             categorical_data=dataset.categorical_data,
+            labels=dataset.labels,
         )
 
     def fit_transform(self, dataset):
@@ -285,6 +287,7 @@ class UMAPReducer:
                 "n_components": k,
             },
             categorical_data=dataset.categorical_data,
+            labels=dataset.labels,
         )
 
     def fit_transform(self, dataset):

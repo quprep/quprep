@@ -9,17 +9,20 @@ from quprep.ingest.csv_ingester import _detect_feature_types
 
 
 class NumpyIngester:
-    """Wrap a NumPy array or Pandas DataFrame as a Dataset."""
+    """Wrap a NumPy array, Pandas DataFrame, or SciPy sparse matrix as a Dataset."""
 
-    def load(self, data) -> Dataset:
+    def load(self, data, y=None) -> Dataset:
         """
         Convert array-like data to a Dataset.
 
         Parameters
         ----------
-        data : np.ndarray or pd.DataFrame
+        data : np.ndarray, pd.DataFrame, or scipy.sparse matrix
             2-D numeric array or DataFrame. 1-D arrays are treated as a
-            single-feature column.
+            single-feature column. Sparse matrices are converted to dense.
+        y : np.ndarray or array-like, optional
+            Target labels. Shape (n_samples,) for single-target or
+            (n_samples, n_labels) for multi-label. Stored in ``Dataset.labels``.
 
         Returns
         -------
@@ -28,10 +31,20 @@ class NumpyIngester:
         Raises
         ------
         TypeError
-            If data is not a NumPy array or Pandas DataFrame.
+            If data is not a recognisable array-like type.
         ValueError
             If data has more than 2 dimensions.
         """
+        # --- sparse matrix support ---
+        try:
+            import scipy.sparse as _sp
+            if _sp.issparse(data):
+                data = data.toarray()
+        except ImportError:
+            pass
+
+        labels = np.asarray(y) if y is not None else None
+
         try:
             import pandas as pd
             is_dataframe = isinstance(data, pd.DataFrame)
@@ -49,6 +62,7 @@ class NumpyIngester:
                 data=arr,
                 feature_names=feature_names,
                 feature_types=feature_types,
+                labels=labels,
             )
 
         if not isinstance(data, np.ndarray):
@@ -56,7 +70,8 @@ class NumpyIngester:
                 data = np.asarray(data, dtype=float)
             except (TypeError, ValueError) as e:
                 raise TypeError(
-                    f"Expected np.ndarray or pd.DataFrame, got {type(data).__name__}"
+                    f"Expected np.ndarray, pd.DataFrame, or scipy.sparse matrix, "
+                    f"got {type(data).__name__}"
                 ) from e
 
         if data.ndim == 1:
@@ -74,4 +89,5 @@ class NumpyIngester:
             data=data,
             feature_names=feature_names,
             feature_types=feature_types,
+            labels=labels,
         )

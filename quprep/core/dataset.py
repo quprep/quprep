@@ -27,6 +27,11 @@ class Dataset:
         into `data` once they are encoded.
     metadata : dict, optional
         Arbitrary metadata (source path, provenance, etc.).
+    labels : np.ndarray, optional
+        Target labels. Shape (n_samples,) for single-target or
+        (n_samples, n_labels) for multi-label problems. Not used by encoders
+        but preserved through the pipeline and passed to FeatureSelector when
+        using the ``'mutual_info'`` method.
     """
 
     def __init__(
@@ -36,12 +41,14 @@ class Dataset:
         feature_types: list[str] | None = None,
         categorical_data: dict[str, list] | None = None,
         metadata: dict | None = None,
+        labels: np.ndarray | None = None,
     ):
         self.data = data
         self.feature_names = feature_names or []
         self.feature_types = feature_types or []
         self.categorical_data = categorical_data or {}
         self.metadata = metadata or {}
+        self.labels = labels
 
     @property
     def n_samples(self) -> int:
@@ -70,6 +77,7 @@ class Dataset:
             feature_types=list(self.feature_types),
             categorical_data={k: list(v) for k, v in self.categorical_data.items()},
             metadata=dict(self.metadata),
+            labels=self.labels.copy() if self.labels is not None else None,
         )
 
     def __repr__(self) -> str:

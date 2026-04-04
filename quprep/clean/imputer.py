@@ -125,7 +125,14 @@ class Imputer:
         feature_names = [n for n, k in zip(feature_names, self._keep_cols) if k]
         feature_types = [t for t, k in zip(feature_types, self._keep_cols) if k]
 
-        data = self._apply_imputation(data)
+        labels = dataset.labels
+        if self.strategy == "drop":
+            keep_rows = ~np.isnan(data).any(axis=1)
+            data = data[keep_rows]
+            if labels is not None:
+                labels = labels[keep_rows]
+        else:
+            data = self._apply_imputation(data)
 
         return Dataset(
             data=data,
@@ -133,6 +140,7 @@ class Imputer:
             feature_types=feature_types,
             categorical_data=dict(dataset.categorical_data),
             metadata=dict(dataset.metadata),
+            labels=labels,
         )
 
     def fit_transform(self, dataset: Dataset) -> Dataset:

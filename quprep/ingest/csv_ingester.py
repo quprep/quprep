@@ -45,11 +45,21 @@ class CSVIngester:
         '.tsv' → tab, everything else → comma.
     encoding : str
         File encoding. Defaults to 'utf-8'.
+    target_columns : str or list of str, optional
+        Column name(s) to treat as labels rather than features. These columns
+        are extracted and stored in ``Dataset.labels`` instead of ``Dataset.data``.
+        Supports single-target (str) and multi-label (list of str) use cases.
     """
 
-    def __init__(self, delimiter: str | None = None, encoding: str = "utf-8"):
+    def __init__(
+        self,
+        delimiter: str | None = None,
+        encoding: str = "utf-8",
+        target_columns: str | list[str] | None = None,
+    ):
         self.delimiter = delimiter
         self.encoding = encoding
+        self.target_columns = target_columns
 
     def load(self, path: str | Path) -> Dataset:
         """
@@ -58,6 +68,7 @@ class CSVIngester:
         Numeric columns go into `data`. Non-numeric (categorical) columns
         are stored in `categorical_data` for CategoricalEncoder to process.
         NaN values are preserved as-is for the Imputer to handle.
+        Columns listed in ``target_columns`` are extracted as ``Dataset.labels``.
 
         Parameters
         ----------
@@ -80,6 +91,19 @@ class CSVIngester:
             delimiter = "\t" if path.suffix.lower() == ".tsv" else ","
 
         df = pd.read_csv(path, delimiter=delimiter, encoding=self.encoding)
+
+        # --- extract label columns before feature processing ---
+        labels = None
+        if self.target_columns is not None:
+            cols = (
+                [self.target_columns]
+                if isinstance(self.target_columns, str)
+                else list(self.target_columns)
+            )
+            labels = df[cols].to_numpy()
+            if labels.shape[1] == 1:
+                labels = labels.ravel()
+            df = df.drop(columns=cols)
 
         all_feature_names = list(df.columns)
         all_feature_types = _detect_feature_types(df)
@@ -112,4 +136,5 @@ class CSVIngester:
                 "original_columns": all_feature_names,
                 "original_types": all_feature_types,
             },
+            labels=labels,
         )

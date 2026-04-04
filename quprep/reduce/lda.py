@@ -114,6 +114,7 @@ class LDAReducer:
                 "classes": np.unique(self._fitted_labels).tolist(),
             },
             categorical_data=dataset.categorical_data,
+            labels=dataset.labels,
         )
 
     def fit_transform(self, dataset, labels=None):

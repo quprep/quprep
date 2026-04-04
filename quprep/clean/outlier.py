@@ -130,12 +130,16 @@ class OutlierHandler:
             col: [v for v, k in zip(vals, keep_rows) if k]
             for col, vals in dataset.categorical_data.items()
         }
+        labels = dataset.labels
+        if labels is not None and not keep_rows.all():
+            labels = labels[keep_rows]
         return Dataset(
             data=data,
             feature_names=list(dataset.feature_names),
             feature_types=list(dataset.feature_types),
             categorical_data=cat_data,
             metadata=dict(dataset.metadata),
+            labels=labels,
         )
 
     def fit_transform(self, dataset: Dataset) -> Dataset:

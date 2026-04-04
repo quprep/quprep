@@ -109,6 +109,7 @@ class FeatureSelector:
             feature_types=feature_types,
             categorical_data=dict(dataset.categorical_data),
             metadata=dict(dataset.metadata),
+            labels=dataset.labels,
         )
 
     def fit_transform(self, dataset: Dataset, labels: np.ndarray | None = None) -> Dataset:
@@ -147,7 +148,16 @@ class FeatureSelector:
         if labels is None:
             raise ValueError("'mutual_info' method requires labels.")
         from sklearn.feature_selection import mutual_info_classif
-        mi = mutual_info_classif(data, labels, random_state=0)
+        labels = np.asarray(labels)
+        if labels.ndim == 2:
+            # Multi-label: average MI scores across all label columns
+            mi = np.mean(
+                [mutual_info_classif(data, labels[:, k], random_state=0)
+                 for k in range(labels.shape[1])],
+                axis=0,
+            )
+        else:
+            mi = mutual_info_classif(data, labels, random_state=0)
         keep = mi >= self.threshold
         if not keep.any():
             # fallback: keep at least top-1

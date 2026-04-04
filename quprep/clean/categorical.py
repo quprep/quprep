@@ -110,6 +110,7 @@ class CategoricalEncoder:
             feature_types=feature_types,
             categorical_data={},
             metadata=dict(dataset.metadata),
+            labels=dataset.labels,
         )
 
     def fit_transform(self, dataset: Dataset) -> Dataset:

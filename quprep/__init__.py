@@ -72,6 +72,9 @@ from quprep.encode.zz_feature_map import ZZFeatureMapEncoder
 from quprep.export.qasm_export import QASMExporter
 from quprep.export.visualize import draw_ascii, draw_matplotlib
 
+# Ingesters
+from quprep.ingest.timeseries_ingester import TimeSeriesIngester
+
 # Normalizer
 from quprep.normalize.scalers import Scaler
 
@@ -86,6 +89,9 @@ from quprep.plugins import (
     unregister_encoder,
     unregister_exporter,
 )
+
+# Preprocessors
+from quprep.preprocess.window import WindowTransformer
 
 # Reducers
 from quprep.reduce.hardware_aware import HardwareAwareReducer
@@ -152,6 +158,10 @@ __all__ = [
     "DriftReport",
     # Batch export
     "batch_export",
+    # Ingesters
+    "TimeSeriesIngester",
+    # Preprocessors
+    "WindowTransformer",
     # Plugins
     "register_encoder",
     "register_exporter",
@@ -180,14 +190,18 @@ def prepare(source, *, encoding: str = "angle", framework: str = "qasm", **kwarg
     source : str, Path, np.ndarray, or pd.DataFrame
         Input data — file path or in-memory array/frame.
     encoding : str
-        Encoding method: 'angle' (default), 'amplitude', 'basis'.
+        Encoding method. One of: 'angle' (default), 'entangled_angle', 'amplitude',
+        'basis', 'iqp', 'reupload', 'hamiltonian', 'zz_feature_map',
+        'pauli_feature_map', 'random_fourier', 'tensor_product', 'qaoa_problem'.
+        Plugin encoders registered via :func:`register_encoder` are also accepted.
     framework : str
-        Export target: 'qasm' (default, no deps), 'qiskit', 'pennylane', 'cirq', 'tket'.
+        Export target. One of: 'qasm' (default, no deps), 'qiskit', 'pennylane',
+        'cirq', 'tket', 'braket', 'qsharp', 'iqm'.
+        Plugin exporters registered via :func:`register_exporter` are also accepted.
     **kwargs
-        Extra keyword arguments:
-        - rotation : str — 'ry' (default), 'rx', 'rz'. Only for 'angle' encoding.
-        - pad : bool — zero-pad to power of two. Only for 'amplitude' encoding.
-        - threshold : float — binarization cutoff. Only for 'basis' encoding.
+        Extra keyword arguments forwarded to the encoder/exporter constructor.
+        Common options: ``rotation`` ('ry'/'rx'/'rz'), ``pad`` (amplitude),
+        ``threshold`` (basis), ``reps``, ``layers``, ``p``, ``connectivity``.
 
     Returns
     -------

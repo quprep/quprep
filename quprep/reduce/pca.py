@@ -97,6 +97,7 @@ class PCAReducer:
                 "explained_variance_ratio": self._pca.explained_variance_ratio_.tolist(),
             },
             categorical_data=dataset.categorical_data,
+            labels=dataset.labels,
         )
 
     def fit_transform(self, dataset):

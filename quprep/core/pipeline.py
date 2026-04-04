@@ -160,6 +160,7 @@ class Pipeline:
     def __init__(
         self,
         ingester=None,
+        preprocessor=None,
         cleaner=None,
         reducer=None,
         normalizer=None,
@@ -169,6 +170,7 @@ class Pipeline:
         drift_detector=None,
     ):
         self.ingester = ingester
+        self.preprocessor = preprocessor
         self.cleaner = cleaner
         self.reducer = reducer
         self.normalizer = normalizer
@@ -194,15 +196,21 @@ class Pipeline:
         ----------
         source : str, Path, np.ndarray, pd.DataFrame, or Dataset
             Training data.
-        y : ignored
-            Accepted for sklearn API compatibility.
+        y : np.ndarray or array-like, optional
+            Target labels. Stored in ``Dataset.labels`` and passed to
+            ``FeatureSelector`` when using the ``'mutual_info'`` method.
+            Ignored if labels are already embedded in the Dataset (e.g. via
+            ``CSVIngester(target_columns=...)``).
 
         Returns
         -------
         Pipeline
             Returns ``self`` for chaining (sklearn convention).
         """
+        import numpy as np
         dataset = self._ingest(source)
+        if y is not None and dataset.labels is None:
+            dataset.labels = np.asarray(y)
         self._validate_entry(dataset)
         self._fit_stages(dataset)
         self._fitted = True
@@ -241,8 +249,10 @@ class Pipeline:
         ----------
         source : str, Path, np.ndarray, pd.DataFrame, or Dataset
             Input data.
-        y : ignored
-            Accepted for sklearn API compatibility.
+        y : np.ndarray or array-like, optional
+            Target labels. Stored in ``Dataset.labels`` and passed to
+            ``FeatureSelector`` when using the ``'mutual_info'`` method.
+            Ignored if labels are already embedded in the Dataset.
 
         Returns
         -------
@@ -250,7 +260,10 @@ class Pipeline:
             Contains ``dataset`` (processed), ``encoded`` (list of EncodedResult
             or None), and ``circuits`` (framework-specific circuit objects or None).
         """
+        import numpy as np
         dataset = self._ingest(source)
+        if y is not None and dataset.labels is None:
+            dataset.labels = np.asarray(y)
         self._validate_entry(dataset)
         dataset = self._fit_stages(dataset)
         self._fitted = True
@@ -276,12 +289,13 @@ class Pipeline:
         lines.append(f"  fitted       : {'yes' if self._fitted else 'no'}")
 
         stage_names = [
-            ("ingester",   self.ingester),
-            ("cleaner",    self.cleaner),
-            ("reducer",    self.reducer),
-            ("normalizer", self._resolved_normalizer or self.normalizer),
-            ("encoder",    self.encoder),
-            ("exporter",   self.exporter),
+            ("ingester",     self.ingester),
+            ("preprocessor", self.preprocessor),
+            ("cleaner",      self.cleaner),
+            ("reducer",      self.reducer),
+            ("normalizer",   self._resolved_normalizer or self.normalizer),
+            ("encoder",      self.encoder),
+            ("exporter",     self.exporter),
         ]
         for name, stage in stage_names:
             if stage is not None:
@@ -320,6 +334,7 @@ class Pipeline:
         """
         return {
             "ingester": self.ingester,
+            "preprocessor": self.preprocessor,
             "cleaner": self.cleaner,
             "reducer": self.reducer,
             "normalizer": self.normalizer,
@@ -429,9 +444,22 @@ class Pipeline:
         """
         audit: list[dict] = []
 
-        if self.cleaner is not None:
+        if self.preprocessor is not None:
             n_s_in, n_f_in = dataset.n_samples, dataset.n_features
-            self.cleaner.fit(dataset)
+            dataset = self.preprocessor.fit_transform(dataset)
+            audit.append({
+                "stage": "preprocessor",
+                "n_samples_in": n_s_in, "n_features_in": n_f_in,
+                "n_samples_out": dataset.n_samples, "n_features_out": dataset.n_features,
+            })
+
+        if self.cleaner is not None:
+            from quprep.clean.selector import FeatureSelector
+            n_s_in, n_f_in = dataset.n_samples, dataset.n_features
+            if isinstance(self.cleaner, FeatureSelector):
+                self.cleaner.fit(dataset, labels=dataset.labels)
+            else:
+                self.cleaner.fit(dataset)
             dataset = self.cleaner.transform(dataset)
             audit.append({
                 "stage": "cleaner",
@@ -489,6 +517,15 @@ class Pipeline:
     def _apply_stages(self, dataset) -> PipelineResult:
         """Apply fitted stages to dataset and return PipelineResult."""
         audit: list[dict] = []
+
+        if self.preprocessor is not None:
+            n_s_in, n_f_in = dataset.n_samples, dataset.n_features
+            dataset = self.preprocessor.transform(dataset)
+            audit.append({
+                "stage": "preprocessor",
+                "n_samples_in": n_s_in, "n_features_in": n_f_in,
+                "n_samples_out": dataset.n_samples, "n_features_out": dataset.n_features,
+            })
 
         if self.cleaner is not None:
             n_s_in, n_f_in = dataset.n_samples, dataset.n_features
@@ -571,6 +608,14 @@ class Pipeline:
         if isinstance(source, (np.ndarray, list)):
             from quprep.ingest.numpy_ingester import NumpyIngester
             return NumpyIngester().load(source)
+
+        try:
+            import scipy.sparse as _sp
+            if _sp.issparse(source):
+                from quprep.ingest.numpy_ingester import NumpyIngester
+                return NumpyIngester().load(source)
+        except ImportError:
+            pass
 
         try:
             import pandas as pd

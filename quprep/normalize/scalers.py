@@ -169,6 +169,7 @@ class Scaler:
             feature_types=list(dataset.feature_types),
             categorical_data=dict(dataset.categorical_data),
             metadata=dict(dataset.metadata),
+            labels=dataset.labels,
         )
 
     def fit_transform(self, dataset: Dataset) -> Dataset:
