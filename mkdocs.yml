@@ -107,6 +107,7 @@ nav:
     - Qubit Suggestion: guides/suggest.md
     - Data Drift Detection: guides/drift.md
     - Plugin System: guides/plugins.md
+    - Data Modalities: guides/modalities.md
   - API Reference:
     - Overview: api/index.md
     - Pipeline: api/pipeline.md
@@ -117,4 +118,5 @@ nav:
     - Comparison: api/comparison.md
     - Qubit Suggestion: api/suggest.md
     - Drift Detection: api/drift.md
+    - Modalities: api/modalities.md
   - Contributing: contributing.md

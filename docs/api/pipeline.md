@@ -128,3 +128,55 @@ print(result.drift_report.drifted_features)   # list of feature names
 ```
 
 Drift is checked automatically on every `transform()` call. A `QuPrepWarning` is issued when drift is detected. The drift detector state is preserved through `save()`/`load()`.
+
+### Time series pipeline (v0.7.0)
+
+```python
+import quprep as qd
+
+pipeline = qd.Pipeline(
+    ingester=qd.TimeSeriesIngester(time_column="date"),
+    preprocessor=qd.WindowTransformer(window_size=8, step=1),
+    encoder=qd.AngleEncoder(),
+)
+result = pipeline.fit_transform("sensor_data.csv")
+
+print(len(result.encoded))                        # n_windows
+print(result.encoded[0].metadata["n_qubits"])     # window_size × n_features
+```
+
+The `preprocessor` stage runs after ingestion and before cleaning/reduction. It is designed for shape-changing transforms like `WindowTransformer`.
+
+### Sparse data (v0.7.0)
+
+```python
+import scipy.sparse as sp
+import quprep as qd
+
+sparse_matrix = sp.csr_matrix(X)
+result = qd.Pipeline(encoder=qd.AngleEncoder()).fit_transform(sparse_matrix)
+```
+
+scipy.sparse matrices are accepted anywhere a NumPy array is expected. They are converted to dense at ingestion.
+
+### Labels and multi-label (v0.7.0)
+
+```python
+import quprep as qd
+
+# Attach labels at fit_transform time
+result = qd.Pipeline(encoder=qd.AngleEncoder()).fit_transform(X, y=y)
+print(result.dataset.labels)   # preserved through all stages
+
+# Or embed labels in the Dataset via CSVIngester
+from quprep.ingest.csv_ingester import CSVIngester
+
+pipeline = qd.Pipeline(
+    ingester=CSVIngester(target_columns="label"),
+    encoder=qd.AngleEncoder(),
+)
+result = pipeline.fit_transform("data.csv")
+print(result.dataset.labels.shape)   # (n_samples,)
+```
+
+For `FeatureSelector(method="mutual_info")`, labels in `dataset.labels` are used automatically — no separate `labels=` argument needed.
