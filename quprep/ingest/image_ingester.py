@@ -133,7 +133,7 @@ class ImageIngester:
 
         data = np.stack(arrays, axis=0)          # (n, n_pixels)
         n_pixels = data.shape[1]
-        label_arr = np.array(labels) if any(l is not None for l in labels) else None
+        label_arr = np.array(labels) if any(lbl is not None for lbl in labels) else None
 
         return Dataset(
             data=data,

@@ -28,6 +28,14 @@ API reference for the v0.7.0 data modality components: `TimeSeriesIngester`, `Wi
 
 ---
 
+## TextIngester
+
+::: quprep.ingest.text_ingester.TextIngester
+    options:
+      show_source: true
+
+---
+
 ## NumpyIngester — sparse & multi-label
 
 ::: quprep.ingest.numpy_ingester.NumpyIngester

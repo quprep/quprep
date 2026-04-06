@@ -11,20 +11,46 @@
 pip install quprep
 ```
 
-## Optional framework dependencies
+## Optional dependencies
 
-Framework-specific exporters are optional. Install only what you need:
+Install only what you need.
+
+### Quantum framework exporters
 
 ```bash
 pip install quprep[qiskit]     # Qiskit QuantumCircuit export
 pip install quprep[pennylane]  # PennyLane QNode export
 pip install quprep[cirq]       # Cirq Circuit export
 pip install quprep[tket]       # TKET/pytket Circuit export
-pip install quprep[viz]        # matplotlib circuit diagrams
-pip install quprep[all]        # All framework exports + visualization
+pip install quprep[braket]     # Amazon Braket Circuit export
+pip install quprep[qsharp]     # Q# / Azure Quantum export
+pip install quprep[iqm]        # IQM native format export
+pip install quprep[frameworks] # All framework exporters at once
 ```
 
 `draw_ascii()` is always available with no extra dependencies.
+
+### Data modalities
+
+```bash
+pip install quprep[image]      # Image ingestion (Pillow)
+pip install quprep[text]       # Text embeddings (sentence-transformers)
+pip install quprep[modalities] # All modality extras at once
+```
+
+### Visualization
+
+```bash
+pip install quprep[viz]        # matplotlib circuit diagrams
+```
+
+### Mix and match
+
+```bash
+pip install quprep[iqm,text]          # IQM export + text ingestion
+pip install quprep[frameworks,modalities,viz]  # everything
+pip install quprep[all]               # all extras
+```
 
 ## Verify
 

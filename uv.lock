@@ -3748,6 +3748,7 @@ all = [
     { name = "matplotlib" },
     { name = "pennylane", version = "0.42.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "pennylane", version = "0.44.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "pillow" },
     { name = "pytket" },
     { name = "qiskit" },
     { name = "qsharp" },
@@ -3768,6 +3769,9 @@ dev = [
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "ruff" },
+]
+image = [
+    { name = "pillow" },
 ]
 iqm = [
     { name = "iqm-client" },
@@ -3813,6 +3817,8 @@ requires-dist = [
     { name = "pandas", specifier = ">=2.0" },
     { name = "pennylane", marker = "extra == 'all'", specifier = ">=0.35" },
     { name = "pennylane", marker = "extra == 'pennylane'", specifier = ">=0.35" },
+    { name = "pillow", marker = "extra == 'all'", specifier = ">=9.0" },
+    { name = "pillow", marker = "extra == 'image'", specifier = ">=9.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0" },
     { name = "pytket", marker = "extra == 'all'", specifier = ">=1.25" },
@@ -3825,7 +3831,7 @@ requires-dist = [
     { name = "scikit-learn", specifier = ">=1.3" },
     { name = "scipy", specifier = ">=1.10" },
 ]
-provides-extras = ["qiskit", "pennylane", "cirq", "tket", "braket", "qsharp", "iqm", "viz", "all", "dev"]
+provides-extras = ["qiskit", "pennylane", "cirq", "tket", "braket", "qsharp", "iqm", "viz", "image", "all", "dev"]
 
 [package.metadata.requires-dev]
 dev = [

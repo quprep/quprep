@@ -277,3 +277,110 @@ print(dataset.data.shape)   # (n, 16 × 16 × 3) = (n, 768)
 ```python
 ingester = qd.ImageIngester(size=(28, 28), normalize=False)
 ```
+
+---
+
+## Text data
+
+Two embedding methods are available:
+
+| Method | Deps | Output size | Best for |
+|---|---|---|---|
+| `tfidf` | none (sklearn) | up to `max_features` | Keyword-based tasks, no download needed |
+| `sentence_transformers` | `quprep[text]` | 384–768d dense | Semantic similarity, general NLP |
+
+### From a list of strings
+
+```python
+import quprep as qd
+
+texts = [
+    "quantum computing is powerful",
+    "machine learning needs data",
+    "hybrid algorithms combine both",
+]
+
+ingester = qd.TextIngester(method="tfidf", max_features=32)
+dataset = ingester.load(texts)
+
+print(dataset.data.shape)            # (3, 32)
+print(dataset.metadata["modality"])  # "text"
+print(dataset.metadata["method"])    # "tfidf"
+```
+
+### From a .txt file (one sentence per line)
+
+```python
+ingester = qd.TextIngester(method="tfidf", max_features=64)
+dataset = ingester.load("corpus.txt")
+```
+
+Blank lines are skipped automatically.
+
+### From a CSV
+
+Use `text_column` to name the column containing text, and `target_column` to extract labels:
+
+```python
+ingester = qd.TextIngester(
+    method="tfidf",
+    text_column="review",
+    target_column="sentiment",
+    max_features=128,
+)
+dataset = ingester.load("reviews.csv")
+
+print(dataset.data.shape)     # (n_rows, 128)
+print(dataset.labels)         # sentiment column values
+```
+
+Multi-label targets work the same way as other ingesters:
+
+```python
+ingester = qd.TextIngester(
+    text_column="text",
+    target_column=["y1", "y2"],
+)
+dataset = ingester.load("data.csv")
+print(dataset.labels.shape)   # (n_rows, 2)
+```
+
+### Semantic embeddings (sentence-transformers)
+
+Requires `pip install quprep[text]`.
+
+```python
+ingester = qd.TextIngester(
+    method="sentence_transformers",
+    model="all-MiniLM-L6-v2",   # 384-d, fast — default
+)
+dataset = ingester.load(texts)
+print(dataset.data.shape)   # (3, 384) — directly encode, no PCA needed
+```
+
+### Full text pipeline
+
+```python
+import quprep as qd
+
+pipeline = qd.Pipeline(
+    ingester=qd.TextIngester(method="tfidf", max_features=64),
+    reducer=qd.PCAReducer(n_components=8),   # 64 → 8 features
+    encoder=qd.AngleEncoder(),
+)
+result = pipeline.fit_transform("corpus.txt")
+
+print(len(result.encoded))                       # n_sentences
+print(result.encoded[0].metadata["n_qubits"])    # 8
+```
+
+With sentence-transformers the PCA step is often unnecessary since the output is already compact:
+
+```python
+pipeline = qd.Pipeline(
+    ingester=qd.TextIngester(method="sentence_transformers"),
+    encoder=qd.AngleEncoder(),
+)
+result = pipeline.fit_transform(texts)
+# 384 qubits — add a PCAReducer if your qubit budget is smaller
+```
