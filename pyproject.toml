@@ -49,6 +49,7 @@ braket = ["amazon-braket-sdk>=1.75"]
 qsharp = ["qsharp>=1.0"]
 iqm = ["iqm-client>=20.0"]
 viz = ["matplotlib>=3.7"]
+image = ["Pillow>=9.0"]
 all = [
   "qiskit>=1.0",
   "pennylane>=0.35",
@@ -58,6 +59,7 @@ all = [
   "qsharp>=1.0",
   "iqm-client>=20.0",
   "matplotlib>=3.7",
+  "Pillow>=9.0",
 ]
 dev = [
   "pytest>=7.0",

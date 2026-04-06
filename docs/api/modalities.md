@@ -4,6 +4,14 @@ API reference for the v0.7.0 data modality components: `TimeSeriesIngester`, `Wi
 
 ---
 
+## ImageIngester
+
+::: quprep.ingest.image_ingester.ImageIngester
+    options:
+      show_source: true
+
+---
+
 ## TimeSeriesIngester
 
 ::: quprep.ingest.timeseries_ingester.TimeSeriesIngester

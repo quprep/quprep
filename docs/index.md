@@ -80,7 +80,7 @@ QuPrep converts classical datasets into quantum-circuit-ready format. It is not 
 | **Encode++** | v0.6.0 | ZZFeatureMap, PauliFeatureMap, RandomFourier, TensorProduct, QAOAProblem encoders |
 | **Export++** | v0.6.0 | Amazon Braket, Q# (Azure Quantum), IQM native format |
 | **Plugins** | v0.6.0 | `register_encoder` / `register_exporter` — custom encoders/exporters via `prepare()` |
-| **Modalities** | v0.7.0 | Time series (ingest + sliding window), sparse matrices, multi-label datasets |
+| **Modalities** | v0.7.0 | Time series (ingest + sliding window), sparse matrices, multi-label datasets, image data |
 
 ---
 

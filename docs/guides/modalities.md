@@ -1,6 +1,6 @@
 # Data Modalities
 
-QuPrep v0.7.0 extends beyond tabular data with native support for time series, sparse matrices, and multi-label datasets. All existing encoders and exporters work unchanged — the new components handle the ingestion and reshaping steps.
+QuPrep v0.7.0 extends beyond tabular data with native support for time series, sparse matrices, multi-label datasets, and images. All existing encoders and exporters work unchanged — the new components handle the ingestion and reshaping steps.
 
 ---
 
@@ -197,4 +197,83 @@ ds   = Dataset(data=data, labels=y)
 out = Imputer(strategy="drop").fit_transform(ds)
 print(out.data.shape)    # (2, 2) — NaN row dropped
 print(out.labels)        # [10, 30] — matching labels kept
+```
+
+---
+
+## Image data
+
+Requires `pip install quprep[image]` (Pillow).
+
+### Single image file
+
+```python
+import quprep as qd
+
+ingester = qd.ImageIngester(size=(28, 28), grayscale=True)
+dataset = ingester.load("photo.png")
+
+print(dataset.data.shape)              # (1, 784)  — 28×28 pixels flattened
+print(dataset.metadata["modality"])    # "image"
+print(dataset.metadata["channels"])    # 1
+```
+
+### Directory — flat (no labels)
+
+```python
+ingester = qd.ImageIngester(size=(28, 28))
+dataset = ingester.load("images/")    # all .png/.jpg/.jpeg/... at top level
+
+print(dataset.data.shape)   # (n_images, 784)
+print(dataset.labels)       # None
+```
+
+### Directory — class subfolders (ImageFolder convention)
+
+```
+images/
+  cat/
+    img1.jpg
+    img2.jpg
+  dog/
+    img1.jpg
+```
+
+```python
+ingester = qd.ImageIngester(size=(32, 32))
+dataset = ingester.load("images/")
+
+print(dataset.data.shape)    # (3, 1024)
+print(dataset.labels)        # ['cat', 'cat', 'dog']
+```
+
+### Full image pipeline
+
+```python
+import quprep as qd
+
+pipeline = qd.Pipeline(
+    ingester=qd.ImageIngester(size=(28, 28)),
+    reducer=qd.PCAReducer(n_components=8),   # 784 → 8 features
+    encoder=qd.AngleEncoder(),
+)
+result = pipeline.fit_transform("images/")
+
+print(len(result.encoded))                        # n_images
+print(result.encoded[0].metadata["n_qubits"])     # 8
+print(result.dataset.labels)                      # class labels preserved
+```
+
+**RGB images** — set `grayscale=False` to keep all 3 channels:
+
+```python
+ingester = qd.ImageIngester(size=(16, 16), grayscale=False)
+dataset = ingester.load("images/")
+print(dataset.data.shape)   # (n, 16 × 16 × 3) = (n, 768)
+```
+
+**Without normalization** — set `normalize=False` to keep raw [0, 255] pixel values:
+
+```python
+ingester = qd.ImageIngester(size=(28, 28), normalize=False)
 ```

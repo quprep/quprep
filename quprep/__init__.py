@@ -73,6 +73,7 @@ from quprep.export.qasm_export import QASMExporter
 from quprep.export.visualize import draw_ascii, draw_matplotlib
 
 # Ingesters
+from quprep.ingest.image_ingester import ImageIngester
 from quprep.ingest.timeseries_ingester import TimeSeriesIngester
 
 # Normalizer
@@ -159,6 +160,7 @@ __all__ = [
     # Batch export
     "batch_export",
     # Ingesters
+    "ImageIngester",
     "TimeSeriesIngester",
     # Preprocessors
     "WindowTransformer",
