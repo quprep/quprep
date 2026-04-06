@@ -1,6 +1,6 @@
 # Data Modalities
 
-QuPrep v0.7.0 extends beyond tabular data with native support for time series, sparse matrices, multi-label datasets, and images. All existing encoders and exporters work unchanged — the new components handle the ingestion and reshaping steps.
+QuPrep v0.7.0 extends beyond tabular data with native support for time series, sparse matrices, multi-label datasets, images, text, and graphs. All existing encoders and exporters work unchanged — the new components handle the ingestion and reshaping steps.
 
 ---
 
@@ -383,4 +383,113 @@ pipeline = qd.Pipeline(
 )
 result = pipeline.fit_transform(texts)
 # 384 qubits — add a PCAReducer if your qubit budget is smaller
+```
+
+---
+
+## Graph data
+
+Two paths are provided, matching different use cases:
+
+| Path | Class | Output | Best for |
+|---|---|---|---|
+| **Lossy** | `GraphIngester` | Feature vector (Laplacian + degree) | Graph classification with standard encoders |
+| **Lossless** | `GraphStateEncoder` | Graph state circuit $\|G\rangle$ | Structure-preserving quantum graph algorithms |
+
+### Lossy path — GraphIngester
+
+Extracts a fixed-size feature vector from each graph. Works with any existing encoder.
+
+```python
+import numpy as np
+import quprep as qd
+
+# Triangle graph adjacency matrix
+adj = np.array([[0,1,1],[1,0,1],[1,1,0]], dtype=float)
+
+ingester = qd.GraphIngester()   # features="all" (Laplacian eigenvalues + degrees)
+dataset = ingester.load(adj)
+
+print(dataset.data.shape)             # (1, 6)  — 3 eigenvalues + 3 degrees
+print(dataset.metadata["modality"])   # "graph"
+```
+
+**Feature options:**
+
+```python
+qd.GraphIngester(features="laplacian_eigenvalues")  # Laplacian spectrum only
+qd.GraphIngester(features="degree")                 # degree sequence only
+qd.GraphIngester(features="all")                    # both (default)
+```
+
+**Batch of graphs** — use `n_features` to pad/truncate to a common size:
+
+```python
+graphs = [adj_3node, adj_5node, adj_7node]
+dataset = qd.GraphIngester(n_features=8).load(graphs)
+print(dataset.data.shape)   # (3, 8) — all padded/truncated to 8 features
+```
+
+**networkx graphs:**
+
+```python
+import networkx as nx
+
+G = nx.karate_club_graph()
+dataset = qd.GraphIngester(n_features=16).load(G)
+```
+
+**Full lossy pipeline:**
+
+```python
+import quprep as qd
+
+pipeline = qd.Pipeline(
+    ingester=qd.GraphIngester(n_features=8),
+    encoder=qd.AngleEncoder(),
+)
+result = pipeline.fit_transform([adj1, adj2, adj3])
+print(len(result.encoded))                       # 3 graphs
+print(result.encoded[0].metadata["n_qubits"])    # 8
+```
+
+### Lossless path — GraphStateEncoder
+
+Produces a true graph state $|G\rangle = \prod_{(i,j)\in E} CZ_{ij}\, H^{\otimes n}|0\rangle^n$. Every edge becomes a CZ entangling gate — the full graph structure is preserved in the circuit.
+
+```python
+import numpy as np
+import quprep as qd
+
+adj = np.array([[0,1,1,0],[1,0,1,0],[1,1,0,1],[0,0,1,0]], dtype=float)
+
+encoder = qd.GraphStateEncoder()
+result = encoder.encode_graph(adj)
+
+print(result.metadata["n_qubits"])   # 4
+print(result.metadata["edges"])      # [(0,1),(0,2),(1,2),(2,3)]
+print(result.metadata["n_edges"])    # 4
+```
+
+**Export to QASM:**
+
+```python
+from quprep.export.qasm_export import QASMExporter
+
+qasm = QASMExporter().export(result)
+print(qasm)
+# OPENQASM 3.0;
+# include "stdgates.inc";
+# qubit[4] q;
+# h q[0]; h q[1]; h q[2]; h q[3];
+# cz q[0], q[1];
+# cz q[0], q[2];
+# ...
+```
+
+**Batch encoding:**
+
+```python
+results = encoder.encode_batch_graphs([adj1, adj2, adj3])
+circuits = QASMExporter().export_batch(results)
 ```

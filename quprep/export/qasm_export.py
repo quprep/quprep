@@ -76,6 +76,8 @@ class QASMExporter:
             return self._export_tensor_product(encoded)
         if encoding == "qaoa_problem":
             return self._export_qaoa_problem(encoded)
+        if encoding == "graph_state":
+            return self._export_graph_state(encoded)
         if encoding == "amplitude":
             raise NotImplementedError(
                 "Amplitude encoding requires exponential-depth state preparation "
@@ -86,7 +88,7 @@ class QASMExporter:
             f"Unknown encoding '{encoding}'. "
             "Supported: angle, entangled_angle, basis, iqp, zz_feature_map, "
             "pauli_feature_map, random_fourier, tensor_product, qaoa_problem, "
-            "reupload, hamiltonian."
+            "reupload, hamiltonian, graph_state."
         )
 
     def _export_angle(self, encoded) -> str:
@@ -271,6 +273,20 @@ class QASMExporter:
             One OpenQASM 3.0 string per sample.
         """
         return [self.export(e) for e in encoded_list]
+
+    def _export_graph_state(self, encoded) -> str:
+        n = encoded.metadata["n_qubits"]
+        edges = encoded.metadata.get("edges", [])
+        lines = [
+            "OPENQASM 3.0;",
+            'include "stdgates.inc";',
+            f"qubit[{n}] q;",
+        ]
+        for i in range(n):
+            lines.append(f"h q[{i}];")
+        for i, j in edges:
+            lines.append(f"cz q[{i}], q[{j}];")
+        return "\n".join(lines) + "\n"
 
     def save(self, encoded, path: str | Path) -> None:
         """

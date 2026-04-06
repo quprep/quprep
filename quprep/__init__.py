@@ -59,6 +59,7 @@ from quprep.encode.amplitude import AmplitudeEncoder
 from quprep.encode.angle import AngleEncoder
 from quprep.encode.basis import BasisEncoder
 from quprep.encode.entangled_angle import EntangledAngleEncoder
+from quprep.encode.graph_state import GraphStateEncoder
 from quprep.encode.hamiltonian import HamiltonianEncoder
 from quprep.encode.iqp import IQPEncoder
 from quprep.encode.pauli_feature_map import PauliFeatureMapEncoder
@@ -73,6 +74,7 @@ from quprep.export.qasm_export import QASMExporter
 from quprep.export.visualize import draw_ascii, draw_matplotlib
 
 # Ingesters
+from quprep.ingest.graph_ingester import GraphIngester
 from quprep.ingest.image_ingester import ImageIngester
 from quprep.ingest.text_ingester import TextIngester
 from quprep.ingest.timeseries_ingester import TimeSeriesIngester
@@ -121,6 +123,7 @@ __all__ = [
     # Encoders
     "AngleEncoder",
     "EntangledAngleEncoder",
+    "GraphStateEncoder",
     "AmplitudeEncoder",
     "BasisEncoder",
     "IQPEncoder",
@@ -161,6 +164,7 @@ __all__ = [
     # Batch export
     "batch_export",
     # Ingesters
+    "GraphIngester",
     "ImageIngester",
     "TextIngester",
     "TimeSeriesIngester",
