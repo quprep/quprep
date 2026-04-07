@@ -41,10 +41,18 @@ class GraphStateEncoder(BaseEncoder):
     The circuit preserves the full graph structure — every edge becomes a
     CZ entangling gate.
 
-    Input to ``encode()`` must be a **flattened upper-triangle** of the
-    adjacency matrix (produced by :class:`~quprep.ingest.graph_ingester.GraphIngester`
-    with ``features='adjacency'``), or pass the adjacency matrix directly
-    via :meth:`encode_graph`.
+    Two usage patterns:
+
+    **Pipeline path** (recommended) — pair with
+    :class:`~quprep.ingest.graph_ingester.GraphIngester` using
+    ``features='adjacency'``::
+
+        dataset = GraphIngester(features="adjacency").load(adj)
+        result  = Pipeline(encoder=GraphStateEncoder()).fit_transform(dataset)
+
+    **Direct path** — pass the adjacency matrix directly::
+
+        result = GraphStateEncoder().encode_graph(adj)
 
     For feature-based (lossy) encoding, use
     :class:`~quprep.ingest.graph_ingester.GraphIngester` with any standard

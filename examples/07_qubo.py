@@ -17,9 +17,8 @@ from quprep.qubo import (
     max_cut,
     qaoa_circuit,
     qubo_to_ising,
-    solve_brute,
-    solve_sa,
 )
+from quprep.qubo.solver import solve_brute, solve_sa  # classical reference utilities
 
 # ── Max-Cut ───────────────────────────────────────────────────────────────────
 print("── Max-Cut ──────────────────────────────────────────────────────────────")

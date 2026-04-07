@@ -231,3 +231,53 @@ class TestGraphStateQASM:
         qasm = QASMExporter().export(result)
         assert qasm.startswith("OPENQASM 3.0;")
         assert "qubit[4] q;" in qasm
+
+
+# ===========================================================================
+# GraphIngester(features="adjacency") — lossless pipeline path
+# ===========================================================================
+
+class TestGraphIngesterAdjacencyMode:
+    def test_output_shape(self):
+        from quprep.ingest.graph_ingester import GraphIngester
+        ds = GraphIngester(features="adjacency").load(_triangle())
+        # 3-node graph → upper triangle has 3*(3-1)//2 = 3 entries
+        assert ds.data.shape == (1, 3)
+
+    def test_values_match_upper_triangle(self):
+        from quprep.ingest.graph_ingester import GraphIngester
+        adj = _triangle()
+        ds = GraphIngester(features="adjacency").load(adj)
+        idx = np.triu_indices(3, k=1)
+        np.testing.assert_array_equal(ds.data[0], adj[idx])
+
+    def test_metadata_flags_adjacency(self):
+        from quprep.ingest.graph_ingester import GraphIngester
+        ds = GraphIngester(features="adjacency").load(_triangle())
+        assert ds.metadata["features"] == "adjacency"
+
+    def test_pipeline_path_with_graph_state_encoder(self):
+        """The clean lossless pipeline: GraphIngester(adjacency) → GraphStateEncoder."""
+        import quprep as qd
+        adj = _triangle()
+        ds = qd.GraphIngester(features="adjacency").load(adj)
+        result = qd.Pipeline(encoder=qd.GraphStateEncoder()).fit_transform(ds)
+        assert len(result.encoded) == 1
+        assert result.encoded[0].metadata["n_qubits"] == 3
+        assert result.encoded[0].metadata["n_edges"] == 3
+
+    def test_batch_same_size_graphs(self):
+        from quprep.ingest.graph_ingester import GraphIngester
+        graphs = [_triangle(), _triangle()]
+        ds = GraphIngester(features="adjacency").load(graphs)
+        assert ds.data.shape == (2, 3)
+
+    def test_batch_different_size_raises(self):
+        from quprep.ingest.graph_ingester import GraphIngester
+        with pytest.raises(ValueError, match="same number of nodes"):
+            GraphIngester(features="adjacency").load([_triangle(), _path4()])
+
+    def test_n_features_with_adjacency_raises(self):
+        from quprep.ingest.graph_ingester import GraphIngester
+        with pytest.raises(ValueError, match="n_features is not supported"):
+            GraphIngester(features="adjacency", n_features=8)

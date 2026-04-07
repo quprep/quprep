@@ -106,9 +106,9 @@ class TestTaskRecommendations:
         result = recommend(_continuous_dataset(), task="kernel")
         assert result.method == "iqp"
 
-    def test_regression_recommends_reupload(self):
+    def test_regression_recommends_reupload_or_random_fourier(self):
         result = recommend(_continuous_dataset(), task="regression")
-        assert result.method == "reupload"
+        assert result.method in ("reupload", "random_fourier")
 
     def test_classification_continuous_recommends_iqp_or_angle(self):
         result = recommend(_continuous_dataset(), task="classification")

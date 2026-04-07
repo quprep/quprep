@@ -1,6 +1,10 @@
 # QUBO / Ising API
 
-The `quprep.qubo` module provides QUBO and Ising problem formulation, solving, QAOA circuit generation, and D-Wave export.
+The `quprep.qubo` module provides QUBO and Ising problem formulation, QAOA circuit generation, and D-Wave export.
+
+Classical reference solvers (`solve_brute`, `solve_sa`) are available in
+`quprep.qubo.solver` for benchmarking quantum results against classical baselines.
+They are not part of the public `quprep.qubo` namespace.
 
 ---
 
@@ -11,10 +15,6 @@ The `quprep.qubo` module provides QUBO and Ising problem formulation, solving, Q
       show_source: false
 
 ::: quprep.qubo.ising.IsingResult
-    options:
-      show_source: false
-
-::: quprep.qubo.solver.SolveResult
     options:
       show_source: false
 
@@ -68,7 +68,17 @@ The `quprep.qubo` module provides QUBO and Ising problem formulation, solving, Q
 
 ---
 
-## Solvers
+## Classical reference solvers
+
+Import from `quprep.qubo.solver` — not part of the `quprep.qubo` public namespace.
+
+```python
+from quprep.qubo.solver import solve_brute, solve_sa, SolveResult
+```
+
+::: quprep.qubo.solver.SolveResult
+    options:
+      show_source: false
 
 ::: quprep.qubo.solver.solve_brute
     options:

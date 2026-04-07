@@ -189,14 +189,16 @@ __all__ = [
 ]
 
 
-def prepare(source, *, encoding: str = "angle", framework: str = "qasm", **kwargs):
+def prepare(source, *, encoding: str = "angle", framework: str = "qasm", ingester=None, **kwargs):
     """
     Convert a dataset to quantum circuits in one call.
 
     Parameters
     ----------
-    source : str, Path, np.ndarray, or pd.DataFrame
-        Input data — file path or in-memory array/frame.
+    source : str, Path, np.ndarray, pd.DataFrame, or Dataset
+        Input data — file path, in-memory array/frame, or a pre-loaded Dataset.
+        For image directories, text files, or graph data pass a modality
+        ingester via the ``ingester`` parameter.
     encoding : str
         Encoding method. One of: 'angle' (default), 'entangled_angle', 'amplitude',
         'basis', 'iqp', 'reupload', 'hamiltonian', 'zz_feature_map',
@@ -206,6 +208,16 @@ def prepare(source, *, encoding: str = "angle", framework: str = "qasm", **kwarg
         Export target. One of: 'qasm' (default, no deps), 'qiskit', 'pennylane',
         'cirq', 'tket', 'braket', 'qsharp', 'iqm'.
         Plugin exporters registered via :func:`register_exporter` are also accepted.
+    ingester : ingester object, optional
+        A modality ingester instance whose ``load(source)`` method is called
+        before encoding. Use this for non-tabular data::
+
+            qd.prepare("images/", encoding="angle", ingester=qd.ImageIngester())
+            qd.prepare(texts, encoding="angle", ingester=qd.TextIngester())
+            qd.prepare(adj, encoding="angle", ingester=qd.GraphIngester(n_features=8))
+
+        When ``None`` (default) the pipeline auto-detects CSV, NumPy arrays,
+        and DataFrames.
     **kwargs
         Extra keyword arguments forwarded to the encoder/exporter constructor.
         Common options: ``rotation`` ('ry'/'rx'/'rz'), ``pad`` (amplitude),
@@ -302,7 +314,7 @@ def prepare(source, *, encoding: str = "angle", framework: str = "qasm", **kwarg
 
     encoder = _encoders[encoding]()
     exporter = _exporters[framework]()
-    return Pipeline(encoder=encoder, exporter=exporter).fit_transform(source)
+    return Pipeline(encoder=encoder, exporter=exporter, ingester=ingester).fit_transform(source)
 
 
 def batch_export(

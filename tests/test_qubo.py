@@ -338,7 +338,9 @@ def test_qubo_module_imports():
     assert hasattr(qubo, "graph_color")
     assert hasattr(qubo, "scheduling")
     assert hasattr(qubo, "qaoa_circuit")
-    assert hasattr(qubo, "solve_brute")
+    # solve_brute/solve_sa are demoted to quprep.qubo.solver — not in __all__
+    assert "solve_brute" not in qubo.__all__
+    assert "solve_sa" not in qubo.__all__
 
 
 # ---------------------------------------------------------------------------
@@ -765,8 +767,8 @@ class TestSolveSA:
         sol5 = solve_sa(q, seed=0, n_steps=2000, restarts=5)
         assert sol5.energy <= sol1.energy + 1e-9
 
-    def test_exported_from_top_level(self):
-        from quprep.qubo import solve_sa
+    def test_accessible_via_submodule(self):
+        from quprep.qubo.solver import solve_sa
         assert callable(solve_sa)
 
     def test_auto_T_start(self):

@@ -16,7 +16,8 @@ QuPrep handles the full pipeline: problem formulation → QUBO matrix → Ising 
 
 ```python
 import numpy as np
-from quprep.qubo import max_cut, solve_brute, qaoa_circuit
+from quprep.qubo import max_cut, qaoa_circuit
+from quprep.qubo.solver import solve_brute  # classical reference utility
 
 adj = np.array([[0,1,1],[1,0,1],[1,1,0]], dtype=float)
 q = max_cut(adj)
@@ -121,11 +122,16 @@ q = number_partition(values=np.array([3.0,1.0,1.0,2.0,2.0,1.0]))
 
 ---
 
-## Solvers
+## Classical reference solvers
+
+These utilities compute the optimal classical solution — useful for benchmarking
+QAOA results against the known optimum. They are not part of the QuPrep
+preprocessing workflow; import them directly from the submodule.
 
 ```python
-from quprep.qubo import solve_brute, solve_sa, max_cut
+from quprep.qubo.solver import solve_brute, solve_sa
 import numpy as np
+from quprep.qubo import max_cut
 
 q = max_cut(np.array([[0,1,1],[1,0,1],[1,1,0]], dtype=float))
 

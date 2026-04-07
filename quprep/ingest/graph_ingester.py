@@ -1,4 +1,4 @@
-"""Graph ingestion — converts graph data to feature vectors (lossy path)."""
+"""Graph ingestion — lossy (feature vector) and lossless (adjacency) paths."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import numpy as np
 
 from quprep.core.dataset import Dataset
 
-_VALID_FEATURES = ("laplacian_eigenvalues", "degree", "all")
+_VALID_FEATURES = ("laplacian_eigenvalues", "degree", "all", "adjacency")
 
 
 class GraphIngester:
@@ -31,15 +31,19 @@ class GraphIngester:
           Laplacian (captures global topology).
         - ``'degree'`` — sorted node degree sequence.
         - ``'all'`` (default) — concatenation of both.
+        - ``'adjacency'`` — flattened upper triangle of the adjacency matrix
+          (lossless path). Use with :class:`~quprep.encode.graph_state.GraphStateEncoder`
+          for structure-preserving quantum encoding. All graphs in a batch must
+          have the same number of nodes.
+
     n_features : int or None
         Pad or truncate the feature vector to exactly this length.
-        If ``None``, the vector length equals the number of nodes
-        (or 2 × n_nodes for ``'all'``). Useful when loading a batch of
-        graphs with different sizes.
+        Not supported for ``features='adjacency'`` (lossless path requires
+        exact adjacency structure).
 
     Examples
     --------
-    From a NumPy adjacency matrix::
+    Lossy path — feature vectors for any standard encoder::
 
         import numpy as np
         import quprep as qd
@@ -47,14 +51,16 @@ class GraphIngester:
         adj = np.array([[0,1,1],[1,0,1],[1,1,0]], dtype=float)
         dataset = qd.GraphIngester().load(adj)
 
-    From a networkx graph::
+    Lossless path — full adjacency for GraphStateEncoder::
+
+        from quprep.core.pipeline import Pipeline
+        enc = qd.GraphIngester(features="adjacency")
+        dataset = enc.load(adj)
+        result = Pipeline(encoder=qd.GraphStateEncoder()).fit_transform(dataset)
+
+    Batch of graphs (lossy)::
 
         import networkx as nx
-        G = nx.karate_club_graph()
-        dataset = qd.GraphIngester(n_features=16).load(G)
-
-    Batch of graphs (list)::
-
         graphs = [nx.path_graph(5), nx.cycle_graph(6), nx.complete_graph(4)]
         dataset = qd.GraphIngester(n_features=8).load(graphs)
         print(dataset.data.shape)   # (3, 8)
@@ -67,6 +73,11 @@ class GraphIngester:
     ):
         if features not in _VALID_FEATURES:
             raise ValueError(f"features must be one of {_VALID_FEATURES}, got '{features}'")
+        if features == "adjacency" and n_features is not None:
+            raise ValueError(
+                "n_features is not supported for features='adjacency'. "
+                "The adjacency path is lossless — truncating would corrupt edge structure."
+            )
         self.features = features
         self.n_features = n_features
 
@@ -105,9 +116,20 @@ class GraphIngester:
             vectors = [self._graph_to_vec(source)]
             n_nodes = [self._n_nodes(source)]
 
-        # pad / truncate to common length
-        target_len = self.n_features or max(v.shape[0] for v in vectors)
-        padded = np.stack([self._fit_length(v, target_len) for v in vectors], axis=0)
+        if self.features == "adjacency":
+            # Lossless path: all graphs must have the same node count
+            lengths = [v.shape[0] for v in vectors]
+            if len(set(lengths)) > 1:
+                raise ValueError(
+                    "features='adjacency' requires all graphs to have the same number "
+                    f"of nodes, but got node counts: {n_nodes}. "
+                    "Use features='all' with n_features= for variable-size batches."
+                )
+            padded = np.stack(vectors, axis=0)
+        else:
+            # Lossy path: pad / truncate to common length
+            target_len = self.n_features or max(v.shape[0] for v in vectors)
+            padded = np.stack([self._fit_length(v, target_len) for v in vectors], axis=0)
 
         n_feat = padded.shape[1]
         return Dataset(
@@ -129,6 +151,9 @@ class GraphIngester:
     def _graph_to_vec(self, graph) -> np.ndarray:
         """Extract a feature vector from a single graph."""
         adj = self._to_adj(graph)
+        if self.features == "adjacency":
+            idx = np.triu_indices(adj.shape[0], k=1)
+            return adj[idx].copy()
         parts = []
         if self.features in ("laplacian_eigenvalues", "all"):
             parts.append(self._laplacian_eigenvalues(adj))

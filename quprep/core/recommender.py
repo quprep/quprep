@@ -134,6 +134,96 @@ _ENCODINGS: dict[str, dict] = {
             "Designed for physics simulation / VQE."
         ),
     },
+    "zz_feature_map": {
+        "nisq_safe": True,
+        "depth": "O(d²·reps)",
+        "qubit_fn": lambda d: d,
+        "task_scores": {
+            "classification": 9,
+            "regression": 5,
+            "qaoa": 2,
+            "kernel": 10,
+            "simulation": 4,
+        },
+        "continuous_bonus": 2,
+        "binary_bonus": 0,
+        "description": (
+            "Havlíček ZZ feature map with pairwise ZZ interactions. "
+            "Gold standard for quantum kernel methods."
+        ),
+    },
+    "pauli_feature_map": {
+        "nisq_safe": True,
+        "depth": "O(d²·reps)",
+        "qubit_fn": lambda d: d,
+        "task_scores": {
+            "classification": 8,
+            "regression": 5,
+            "qaoa": 2,
+            "kernel": 9,
+            "simulation": 5,
+        },
+        "continuous_bonus": 2,
+        "binary_bonus": 0,
+        "description": (
+            "Configurable Pauli string feature map. "
+            "More flexible than ZZFeatureMap; good for kernel methods."
+        ),
+    },
+    "random_fourier": {
+        "nisq_safe": True,
+        "depth": "O(n_components)",
+        "qubit_fn": lambda d: d,
+        "task_scores": {
+            "classification": 8,
+            "regression": 9,
+            "qaoa": 1,
+            "kernel": 9,
+            "simulation": 2,
+        },
+        "continuous_bonus": 3,
+        "binary_bonus": 0,
+        "description": (
+            "Random Fourier features approximating an RBF kernel. "
+            "Requires fit(); strong for regression and large continuous datasets."
+        ),
+    },
+    "tensor_product": {
+        "nisq_safe": True,
+        "depth": "O(d)",
+        "qubit_fn": lambda d: d,
+        "task_scores": {
+            "classification": 7,
+            "regression": 7,
+            "qaoa": 3,
+            "kernel": 6,
+            "simulation": 3,
+        },
+        "continuous_bonus": 2,
+        "binary_bonus": 0,
+        "description": (
+            "Ry+Rz per qubit — full Bloch sphere coverage with no entanglement. "
+            "More expressive than angle encoding, same depth."
+        ),
+    },
+    "qaoa_problem": {
+        "nisq_safe": True,
+        "depth": "O(d·p)",
+        "qubit_fn": lambda d: d,
+        "task_scores": {
+            "classification": 4,
+            "regression": 3,
+            "qaoa": 10,
+            "kernel": 4,
+            "simulation": 5,
+        },
+        "continuous_bonus": 1,
+        "binary_bonus": 2,
+        "description": (
+            "QAOA-inspired feature map. Specifically designed for quantum "
+            "optimization workflows; not a general QML encoder."
+        ),
+    },
 }
 
 _VALID_TASKS = frozenset(_ENCODINGS["angle"]["task_scores"].keys())
@@ -295,6 +385,33 @@ def _score(
         if n_samples > 500:
             score += 3.0
 
+    if encoding in ("zz_feature_map", "pauli_feature_map"):
+        # Correlated features: ZZ/Pauli interactions capture inter-feature relationships
+        if feature_collinear:
+            score += 4.0
+
+        # O(d²) depth — penalise wide datasets
+        if d > 15:
+            score -= (d - 15) * 0.4
+
+    if encoding == "random_fourier":
+        # RBF approximation is poor on binary data — rotations assume continuous input
+        if profile["binary_fraction"] > 0.5:
+            score -= 6.0
+
+        # Shines on large continuous datasets (approximation quality improves with data)
+        if n_samples > 500 and profile["continuous_fraction"] > 0.5:
+            score += 3.0
+
+        # Requires fit() — penalise if no training data (very small datasets)
+        if n_samples < 30:
+            score -= 5.0
+
+    if encoding == "qaoa_problem":
+        # Heavily penalise non-QAOA tasks — this is a specialist encoder
+        if task != "qaoa":
+            score -= 10.0
+
     # ----------------------------------------------------------------
     # Qubit budget
     # ----------------------------------------------------------------
@@ -364,6 +481,33 @@ def _build_reason(
 
     if encoding in ("iqp", "entangled_angle") and feature_collinear:
         parts.append("correlated features benefit from entanglement structure")
+
+    if encoding in ("zz_feature_map", "pauli_feature_map"):
+        if feature_collinear:
+            parts.append("correlated features benefit from ZZ/Pauli interaction structure")
+        if d > 15:
+            parts.append(
+                f"note: {d} features — O(d²) depth may be costly; "
+                "consider angle or reupload for very wide datasets"
+            )
+
+    if encoding == "random_fourier":
+        if profile["binary_fraction"] > 0.5:
+            parts.append(
+                "warning: majority binary features — RBF approximation works best "
+                "on continuous data; consider basis or angle encoding instead"
+            )
+        if n_samples > 500:
+            parts.append(
+                f"{n_samples} samples — RBF kernel approximation improves with more data"
+            )
+        parts.append("note: requires fit() before transform()")
+
+    if encoding == "qaoa_problem" and task != "qaoa":
+        parts.append(
+            "note: QAOAProblemEncoder is designed for quantum optimization workflows; "
+            "for general QML use angle, iqp, or zz_feature_map instead"
+        )
 
     if encoding == "reupload":
         if n_samples > 500:

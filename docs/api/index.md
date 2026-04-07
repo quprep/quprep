@@ -69,7 +69,7 @@ qd.ComparisonResult
 | `quprep.validation.cost` | `CostEstimate`, `estimate_cost` |
 | `quprep.qubo` | `to_qubo`, `QUBOResult`, `qubo_to_ising`, `ising_to_qubo`, `IsingResult` |
 | `quprep.qubo.problems` | `max_cut`, `knapsack`, `tsp`, `portfolio`, `graph_color`, `scheduling`, `number_partition` |
-| `quprep.qubo.solver` | `solve_brute`, `solve_sa`, `SolveResult` |
+| `quprep.qubo.solver` | `solve_brute`, `solve_sa`, `SolveResult` _(classical reference utilities — not in `quprep.qubo.__all__`)_ |
 | `quprep.qubo.qaoa` | `qaoa_circuit` |
 | `quprep.qubo.constraints` | `equality_penalty`, `inequality_penalty` |
 | `quprep.qubo.ising` | `qubo_to_ising`, `ising_to_qubo` |

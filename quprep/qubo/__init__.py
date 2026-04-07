@@ -1,4 +1,14 @@
-"""QUBO / Ising conversion for combinatorial optimization problems."""
+"""QUBO / Ising conversion for combinatorial optimization problems.
+
+Public API (problem formulation → circuit preparation):
+
+    from quprep.qubo import max_cut, to_qubo, qaoa_circuit
+
+Classical reference solvers (benchmarking only — not part of the
+preprocessing workflow):
+
+    from quprep.qubo.solver import solve_brute, solve_sa
+"""
 
 from quprep.qubo.constraints import equality_penalty, inequality_penalty
 from quprep.qubo.converter import QUBOResult, to_qubo
@@ -13,7 +23,7 @@ from quprep.qubo.problems import (
     tsp,
 )
 from quprep.qubo.qaoa import qaoa_circuit
-from quprep.qubo.solver import SolveResult, solve_brute, solve_sa
+from quprep.qubo.solver import SolveResult, solve_brute, solve_sa  # noqa: F401  # backward compat
 from quprep.qubo.utils import add_qubo
 from quprep.qubo.visualize import draw_ising, draw_qubo
 
@@ -33,10 +43,9 @@ __all__ = [
     "scheduling",
     "number_partition",
     "qaoa_circuit",
-    "solve_brute",
-    "solve_sa",
-    "SolveResult",
     "add_qubo",
     "draw_qubo",
     "draw_ising",
+    # solve_brute, solve_sa, SolveResult — classical reference utilities.
+    # Import from quprep.qubo.solver directly.
 ]

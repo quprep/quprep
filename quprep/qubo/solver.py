@@ -1,4 +1,12 @@
-"""QUBO solvers.
+"""Classical reference solvers for QUBO problems.
+
+These are utility functions for benchmarking quantum optimization results
+against classical baselines. They are NOT part of the QuPrep preprocessing
+workflow — they compute answers rather than prepare data for quantum hardware.
+
+Canonical import::
+
+    from quprep.qubo.solver import solve_brute, solve_sa, SolveResult
 
 solve_brute   — exact exhaustive solver for small instances (n <= 20).
 solve_sa      — simulated annealing heuristic for larger instances.

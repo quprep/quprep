@@ -50,7 +50,7 @@ QuPrep converts classical datasets into quantum-circuit-ready format. It is not 
     ---
 
     ```python
-    from quprep.qubo import max_cut, solve_brute, qaoa_circuit
+    from quprep.qubo import max_cut, qaoa_circuit
     q = max_cut(adj)
     qasm = qaoa_circuit(q, p=2)
     ```
