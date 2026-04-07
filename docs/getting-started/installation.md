@@ -34,9 +34,14 @@ pip install quprep[frameworks] # All framework exporters at once
 
 ```bash
 pip install quprep[image]      # Image ingestion (Pillow)
-pip install quprep[text]       # Text embeddings (sentence-transformers)
+pip install quprep[text]       # Text embeddings (sentence-transformers + PyTorch, ~2 GB)
 pip install quprep[modalities] # All modality extras at once
 ```
+
+!!! note "Text embedding size"
+    `quprep[text]` installs `sentence-transformers`, which requires PyTorch (~1–2 GB).
+    If you only need lightweight TF-IDF embeddings (no neural models, no extra deps),
+    use `TextIngester(method="tfidf")` — it works with the base `quprep` install.
 
 ### Visualization
 

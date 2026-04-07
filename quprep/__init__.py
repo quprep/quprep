@@ -97,6 +97,28 @@ from quprep.plugins import (
 # Preprocessors
 from quprep.preprocess.window import WindowTransformer
 
+# QUBO / Ising / quantum optimization
+from quprep.qubo import (
+    IsingResult,
+    QUBOResult,
+    add_qubo,
+    draw_ising,
+    draw_qubo,
+    equality_penalty,
+    graph_color,
+    inequality_penalty,
+    ising_to_qubo,
+    knapsack,
+    max_cut,
+    number_partition,
+    portfolio,
+    qaoa_circuit,
+    qubo_to_ising,
+    scheduling,
+    to_qubo,
+    tsp,
+)
+
 # Reducers
 from quprep.reduce.hardware_aware import HardwareAwareReducer
 from quprep.reduce.lda import LDAReducer
@@ -170,6 +192,25 @@ __all__ = [
     "TimeSeriesIngester",
     # Preprocessors
     "WindowTransformer",
+    # QUBO / quantum optimization
+    "to_qubo",
+    "QUBOResult",
+    "qubo_to_ising",
+    "ising_to_qubo",
+    "IsingResult",
+    "equality_penalty",
+    "inequality_penalty",
+    "max_cut",
+    "tsp",
+    "knapsack",
+    "portfolio",
+    "graph_color",
+    "scheduling",
+    "number_partition",
+    "qaoa_circuit",
+    "add_qubo",
+    "draw_qubo",
+    "draw_ising",
     # Plugins
     "register_encoder",
     "register_exporter",

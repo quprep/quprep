@@ -133,6 +133,9 @@ class Pipeline:
     ----------
     ingester : optional
         Data ingestion component. Auto-detected from source type if omitted.
+    preprocessor : optional
+        Preprocessing step applied after ingestion. Accepts a single transformer
+        or a list of transformers applied in order (e.g. ``[WindowTransformer(), ...]``).
     cleaner : optional
         Data cleaning component (Imputer, OutlierHandler, CategoricalEncoder).
     reducer : optional
@@ -445,13 +448,20 @@ class Pipeline:
         audit: list[dict] = []
 
         if self.preprocessor is not None:
-            n_s_in, n_f_in = dataset.n_samples, dataset.n_features
-            dataset = self.preprocessor.fit_transform(dataset)
-            audit.append({
-                "stage": "preprocessor",
-                "n_samples_in": n_s_in, "n_features_in": n_f_in,
-                "n_samples_out": dataset.n_samples, "n_features_out": dataset.n_features,
-            })
+            _preprocessors = (
+                self.preprocessor
+                if isinstance(self.preprocessor, list)
+                else [self.preprocessor]
+            )
+            for i, pre in enumerate(_preprocessors):
+                n_s_in, n_f_in = dataset.n_samples, dataset.n_features
+                dataset = pre.fit_transform(dataset)
+                label = "preprocessor" if len(_preprocessors) == 1 else f"preprocessor[{i}]"
+                audit.append({
+                    "stage": label,
+                    "n_samples_in": n_s_in, "n_features_in": n_f_in,
+                    "n_samples_out": dataset.n_samples, "n_features_out": dataset.n_features,
+                })
 
         if self.cleaner is not None:
             from quprep.clean.selector import FeatureSelector
@@ -519,13 +529,20 @@ class Pipeline:
         audit: list[dict] = []
 
         if self.preprocessor is not None:
-            n_s_in, n_f_in = dataset.n_samples, dataset.n_features
-            dataset = self.preprocessor.transform(dataset)
-            audit.append({
-                "stage": "preprocessor",
-                "n_samples_in": n_s_in, "n_features_in": n_f_in,
-                "n_samples_out": dataset.n_samples, "n_features_out": dataset.n_features,
-            })
+            _preprocessors = (
+                self.preprocessor
+                if isinstance(self.preprocessor, list)
+                else [self.preprocessor]
+            )
+            for i, pre in enumerate(_preprocessors):
+                n_s_in, n_f_in = dataset.n_samples, dataset.n_features
+                dataset = pre.transform(dataset)
+                label = "preprocessor" if len(_preprocessors) == 1 else f"preprocessor[{i}]"
+                audit.append({
+                    "stage": label,
+                    "n_samples_in": n_s_in, "n_features_in": n_f_in,
+                    "n_samples_out": dataset.n_samples, "n_features_out": dataset.n_features,
+                })
 
         if self.cleaner is not None:
             n_s_in, n_f_in = dataset.n_samples, dataset.n_features
