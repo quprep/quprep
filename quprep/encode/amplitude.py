@@ -20,9 +20,12 @@ Reference: Mottonen et al., "Decomposition of arbitrary quantum gates"
 
 from __future__ import annotations
 
+import warnings
+
 import numpy as np
 
 from quprep.encode.base import BaseEncoder, EncodedResult
+from quprep.validation import QuPrepWarning
 
 
 class AmplitudeEncoder(BaseEncoder):
@@ -89,6 +92,13 @@ class AmplitudeEncoder(BaseEncoder):
             padded = np.zeros(next_pow2, dtype=float)
             padded[:d] = x
             padded /= np.linalg.norm(padded)  # re-normalize after padding
+            warnings.warn(
+                f"AmplitudeEncoder: d={d} is not a power of two — zero-padded to {next_pow2} "
+                f"and re-normalized. {next_pow2 - d} zero amplitude(s) added. "
+                "Use a dimensionality reducer to avoid this.",
+                QuPrepWarning,
+                stacklevel=2,
+            )
         else:
             padded = x.copy()
 

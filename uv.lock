@@ -4126,6 +4126,7 @@ all = [
     { name = "qiskit" },
     { name = "qsharp" },
     { name = "sentence-transformers" },
+    { name = "umap-learn" },
 ]
 braket = [
     { name = "amazon-braket-sdk", version = "1.110.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -4182,6 +4183,9 @@ text = [
 tket = [
     { name = "pytket" },
 ]
+umap = [
+    { name = "umap-learn" },
+]
 viz = [
     { name = "matplotlib" },
 ]
@@ -4234,8 +4238,10 @@ requires-dist = [
     { name = "sentence-transformers", marker = "extra == 'all'", specifier = ">=2.0" },
     { name = "sentence-transformers", marker = "extra == 'modalities'", specifier = ">=2.0" },
     { name = "sentence-transformers", marker = "extra == 'text'", specifier = ">=2.0" },
+    { name = "umap-learn", marker = "extra == 'all'", specifier = ">=0.5" },
+    { name = "umap-learn", marker = "extra == 'umap'", specifier = ">=0.5" },
 ]
-provides-extras = ["qiskit", "pennylane", "cirq", "tket", "braket", "qsharp", "iqm", "viz", "image", "text", "frameworks", "modalities", "all", "dev"]
+provides-extras = ["qiskit", "pennylane", "cirq", "tket", "braket", "qsharp", "iqm", "viz", "image", "text", "umap", "frameworks", "modalities", "all", "dev"]
 
 [package.metadata.requires-dev]
 dev = [

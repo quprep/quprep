@@ -51,6 +51,7 @@ iqm = ["iqm-client>=20.0"]
 viz = ["matplotlib>=3.7"]
 image = ["Pillow>=9.0"]
 text = ["sentence-transformers>=2.0"]
+umap = ["umap-learn>=0.5"]
 # Convenience groups
 frameworks = [
   "qiskit>=1.0",
@@ -76,6 +77,7 @@ all = [
   "matplotlib>=3.7",
   "Pillow>=9.0",
   "sentence-transformers>=2.0",
+  "umap-learn>=0.5",
 ]
 dev = [
   "pytest>=7.0",

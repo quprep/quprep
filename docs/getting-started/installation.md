@@ -43,6 +43,12 @@ pip install quprep[modalities] # All modality extras at once
     If you only need lightweight TF-IDF embeddings (no neural models, no extra deps),
     use `TextIngester(method="tfidf")` — it works with the base `quprep` install.
 
+### Dimensionality reduction
+
+```bash
+pip install quprep[umap]       # UMAP reducer (umap-learn + numba, ~500 MB)
+```
+
 ### Visualization
 
 ```bash
@@ -53,8 +59,8 @@ pip install quprep[viz]        # matplotlib circuit diagrams
 
 ```bash
 pip install quprep[iqm,text]          # IQM export + text ingestion
-pip install quprep[frameworks,modalities,viz]  # everything
-pip install quprep[all]               # all extras
+pip install quprep[frameworks,modalities,viz]  # everything except UMAP
+pip install quprep[all]               # all extras including UMAP (~500 MB extra for umap-learn)
 ```
 
 ## Verify

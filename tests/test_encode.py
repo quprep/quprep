@@ -24,6 +24,7 @@ from quprep.encode.qaoa_problem import QAOAProblemEncoder
 from quprep.encode.random_fourier import RandomFourierEncoder
 from quprep.encode.tensor_product import TensorProductEncoder
 from quprep.encode.zz_feature_map import ZZFeatureMapEncoder
+from quprep.validation import QuPrepWarning
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -176,6 +177,12 @@ class TestAmplitudeEncoder:
         assert result.metadata["padded"] is True
         assert len(result.parameters) == 4
         assert np.isclose(np.linalg.norm(result.parameters), 1.0, atol=1e-10)
+
+    def test_non_power_of_two_emits_warning(self):
+        enc = AmplitudeEncoder(pad=True)
+        x = _l2_normalize(np.array([1.0, 2.0, 3.0]))  # d=3 → padded to 4
+        with pytest.warns(QuPrepWarning, match="zero-padded"):
+            enc.encode(x)
 
     def test_non_power_of_two_no_pad_raises(self):
         enc = AmplitudeEncoder(pad=False)

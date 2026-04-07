@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+# Last updated: 2026-04-08
+# These qubit counts go stale as vendors retire and launch devices.
+# Update this dict when adding new backends or when a device count changes.
+# Long-term: fetch from provider APIs or a versioned YAML config.
 BACKEND_PROFILES: dict[str, dict] = {
     # IBM
     "ibm_brisbane": {"qubits": 127, "architecture": "superconducting"},
