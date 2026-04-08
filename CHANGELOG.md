@@ -12,6 +12,42 @@ QuPrep uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.7.0] — 2026-04-09
+
+### Added
+
+**Data modalities**
+- `TimeSeriesIngester` — timestamped CSV ingestion; stores time column in `dataset.metadata["time_index"]`; excludes time from feature matrix
+- `WindowTransformer` — sliding window over `(n_timesteps, n_features)` → `(n_windows, window × n_features)`; lag-named features; use via `Pipeline(preprocessor=WindowTransformer(...))`
+- `ImageIngester` — loads images from flat or subdirectory-labeled directory structures; grayscale/RGB, configurable resize and normalization; `pip install quprep[image]`
+- `TextIngester` — TF-IDF (no extra deps) or sentence-transformer dense embeddings (`pip install quprep[text]`); accepts CSV, `.txt` file lists, or Python string lists; `target_column` support
+- `GraphIngester` — two ingestion paths: lossy (Laplacian eigenvalues + degree features, configurable `n_features`, padding) and lossless (`features="adjacency"` — flattened upper triangle of adjacency matrix); `networkx.Graph` support
+- `GraphStateEncoder` — lossless graph state circuit: H⊗n followed by CZ gates per adjacency edge; pairs with `GraphIngester(features="adjacency")` for a clean pipeline path; QASM export
+- Sparse data support — `NumpyIngester` and `Pipeline` automatically convert `scipy.sparse` matrices to dense
+- Multi-label / multi-output — `NumpyIngester(y=labels)`, `CSVIngester(target_columns=[...])`, `Dataset.labels` propagated through all pipeline stages
+
+**New extras**
+- `quprep[image]` — `Pillow` for `ImageIngester`
+- `quprep[text]` — `sentence-transformers` (+ PyTorch ~1–2 GB) for neural text embeddings; TF-IDF works with base install
+- `quprep[umap]` — `umap-learn` for `UMAPReducer`; previously referenced in error messages but the extra did not exist
+- `quprep[modalities]` — `Pillow` + `sentence-transformers` convenience group
+
+**API improvements**
+- `prepare(..., ingester=)` — new parameter accepts any modality ingester; enables one-liner use with `TimeSeriesIngester`, `ImageIngester`, `TextIngester`, `GraphIngester`
+- `Pipeline(preprocessor=[t1, t2, ...])` — `preprocessor` slot now accepts a list of transformers; audit log labels them `preprocessor[0]`, `preprocessor[1]`, etc.
+
+### Changed
+- `recommend()` — added 5 missing v0.6.0 encoders: `ZZFeatureMap`, `PauliFeatureMap`, `RandomFourier`, `TensorProduct`, `QAOAProblem`; all with dataset-aware scoring; previously silently covered only 7 of 12 encoders
+- `quprep.qubo.__all__` — `solve_brute`, `solve_sa`, `SolveResult` removed from `__all__`; canonical import is now `from quprep.qubo.solver import solve_brute, solve_sa`; backward-compat import kept (no breaking change)
+- `AmplitudeEncoder` — emits `QuPrepWarning` when input is zero-padded to the next power of two
+
+### Fixed
+- `GraphStateEncoder` had no documented pipeline path; `GraphIngester(features="adjacency")` added as the canonical lossless route
+- `prepare()` missing `ingester=` parameter made modality ingesters unusable via the one-liner API
+- `quprep.qubo` symbols (`max_cut`, `to_qubo`, `qaoa_circuit`, etc.) were not accessible via `qd.*` namespace
+
+---
+
 ## [0.6.0] — 2026-04-03
 
 ### Added
@@ -271,7 +307,8 @@ First public release. Covers the full ingest → clean → normalize → encode 
 
 ---
 
-[Unreleased]: https://github.com/quprep/quprep/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/quprep/quprep/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/quprep/quprep/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/quprep/quprep/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/quprep/quprep/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/quprep/quprep/compare/v0.3.0...v0.4.0

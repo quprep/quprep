@@ -119,4 +119,5 @@ nav:
     - Qubit Suggestion: api/suggest.md
     - Drift Detection: api/drift.md
     - Modalities: api/modalities.md
+    - Plugin Registry: api/plugins.md
   - Contributing: contributing.md

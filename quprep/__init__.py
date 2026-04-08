@@ -36,7 +36,7 @@ Recommendation::
     rec = qd.recommend(df, task="classification", qubits=8)
 """
 
-__version__ = "0.6.0"
+__version__ = "0.7.0"
 __author__ = "Hasarindu Perera"
 __license__ = "Apache-2.0"
 
@@ -230,7 +230,10 @@ __all__ = [
 ]
 
 
-def prepare(source, *, encoding: str = "angle", framework: str = "qasm", ingester=None, **kwargs):
+def prepare(
+    source, *, encoding: str = "angle", framework: str = "qasm",
+    ingester=None, preprocessor=None, **kwargs
+):
     """
     Convert a dataset to quantum circuits in one call.
 
@@ -355,7 +358,9 @@ def prepare(source, *, encoding: str = "angle", framework: str = "qasm", ingeste
 
     encoder = _encoders[encoding]()
     exporter = _exporters[framework]()
-    return Pipeline(encoder=encoder, exporter=exporter, ingester=ingester).fit_transform(source)
+    return Pipeline(
+        encoder=encoder, exporter=exporter, ingester=ingester, preprocessor=preprocessor,
+    ).fit_transform(source)
 
 
 def batch_export(

@@ -5,6 +5,8 @@ import warnings
 import numpy as np
 import pytest
 
+import quprep.reduce as reduce_module
+import quprep.validation as validation_module
 from quprep.core.dataset import Dataset
 from quprep.validation import (
     DataSchema,
@@ -12,6 +14,7 @@ from quprep.validation import (
     QuPrepWarning,
     SchemaViolationError,
     validate_dataset,
+    warn_qubit_mismatch,
 )
 
 
@@ -180,6 +183,72 @@ def test_schema_infer_to_json_roundtrip():
     json_str = DataSchema.infer(ds).to_json()
     restored = DataSchema.from_json(json_str)
     restored.validate(ds)  # must still pass on source data
+
+
+def test_validation_module_imports():
+    # Covers validation/__init__.py — all symbols accessible from module
+    assert validation_module.CostEstimate is not None
+    assert validation_module.estimate_cost is not None
+    assert validation_module.validate_dataset is not None
+    assert validation_module.DataSchema is not None
+
+
+def test_reduce_module_imports():
+    # Covers reduce/__init__.py — all symbols accessible from module
+    assert reduce_module.PCAReducer is not None
+    assert reduce_module.LDAReducer is not None
+    assert reduce_module.HardwareAwareReducer is not None
+
+
+def test_warn_qubit_mismatch_fires():
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        warn_qubit_mismatch(n_features=8, n_qubits=4, encoding="angle")
+    assert len(w) == 1
+    assert issubclass(w[0].category, QuPrepWarning)
+    assert "8" in str(w[0].message)
+    assert "4" in str(w[0].message)
+
+
+def test_warn_qubit_mismatch_no_warn_when_ok():
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        warn_qubit_mismatch(n_features=4, n_qubits=8, encoding="angle")
+    assert len(w) == 0
+
+
+def test_validate_dataset_with_context():
+    ds = Dataset(data=np.ones((5, 3), dtype=np.int32))
+    with pytest.raises(ValueError, match="after Imputer"):
+        validate_dataset(ds, context="after Imputer")
+
+
+def test_schema_name_mismatch():
+    ds = Dataset(
+        data=np.ones((3, 1)),
+        feature_names=["actual_name"],
+    )
+    schema = DataSchema([FeatureSpec("expected_name", dtype="continuous")])
+    with pytest.raises(SchemaViolationError, match="expected name"):
+        schema.validate(ds)
+
+
+def test_schema_infer_no_feature_names():
+    # infer() falls back to feature_N names when no feature_names set
+    ds = Dataset(data=np.array([[1.0, 2.0], [3.0, 4.0]]))
+    schema = DataSchema.infer(ds)
+    assert schema.features[0].name == "feature_0"
+    assert schema.features[1].name == "feature_1"
+
+
+def test_schema_infer_with_nan_column():
+    # Column with all NaN → min_value/max_value are None, nullable=True
+    data = np.array([[1.0, np.nan], [2.0, np.nan]])
+    ds = Dataset(data=data, feature_names=["x", "y"])
+    schema = DataSchema.infer(ds)
+    assert schema.features[1].nullable is True
+    assert schema.features[1].min_value is None
+    assert schema.features[1].max_value is None
 
 
 def test_schema_collects_all_violations():

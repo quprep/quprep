@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "quprep"
-version = "0.6.0"
+version = "0.7.0"
 description = "Quantum data preparation — the missing preprocessing layer between classical datasets and quantum computing frameworks"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -22,7 +22,7 @@ keywords = [
   "NISQ",
 ]
 classifiers = [
-  "Development Status :: 3 - Alpha",
+  "Development Status :: 4 - Beta",
   "Intended Audience :: Science/Research",
   "Intended Audience :: Developers",
   "License :: OSI Approved :: Apache Software License",
@@ -120,12 +120,17 @@ filterwarnings = [
 [tool.coverage.run]
 source = ["quprep"]
 branch = false
+omit = ["*/quprep/__init__.py", "*/reduce/__init__.py", "*/validation/__init__.py", "*/clean/__init__.py", "*/encode/__init__.py", "*/export/__init__.py", "*/ingest/__init__.py", "*/qubo/__init__.py", "*/core/__init__.py"]
 
 [tool.coverage.report]
 exclude_lines = [
     "pragma: no cover",
     "if TYPE_CHECKING:",
     "\\.\\.\\.",
+    "^\\s*@(abstract)?property$",
+    "^\\s*@abstractmethod$",
+    "^\\s*def __repr__",
+    "^\\s*def __str__",
 ]
 
 [tool.ruff]
@@ -140,8 +145,12 @@ python_version = "3.10"
 strict = false
 ignore_missing_imports = true
 
+[tool.uv.sources]
+quprep = { workspace = true }
+
 [dependency-groups]
 dev = [
     "ipykernel>=7.2.0",
+    "quprep[all]",
     "umap-learn>=0.5.11",
 ]

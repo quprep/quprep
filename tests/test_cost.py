@@ -146,6 +146,53 @@ def test_qaoa_multi_layer_cost():
 
 
 # ---------------------------------------------------------------------------
+# QAOAProblemEncoder — nisq_safe=False warning
+# ---------------------------------------------------------------------------
+
+def test_qaoa_full_large_warns():
+    # Full connectivity, many features, many layers → not nisq_safe
+    c = _cost(QAOAProblemEncoder(p=5, connectivity="full"), 20)
+    assert c.nisq_safe is False
+    assert c.warning is not None
+    assert "QAOAProblemEncoder" in c.warning
+
+
+# ---------------------------------------------------------------------------
+# HamiltonianEncoder — nisq_safe=False warning
+# ---------------------------------------------------------------------------
+
+def test_hamiltonian_large_warns():
+    c = _cost(HamiltonianEncoder(trotter_steps=10), 20)
+    assert c.nisq_safe is False
+    assert c.warning is not None
+    assert "HamiltonianEncoder" in c.warning
+
+
+# ---------------------------------------------------------------------------
+# EntangledAngleEncoder — nisq_safe=False warning
+# ---------------------------------------------------------------------------
+
+def test_entangled_large_warns():
+    c = _cost(EntangledAngleEncoder(layers=10, entanglement="full"), 20)
+    assert c.nisq_safe is False
+    assert c.warning is not None
+
+
+# ---------------------------------------------------------------------------
+# Fallback — unknown encoder type
+# ---------------------------------------------------------------------------
+
+def test_fallback_unknown_encoder():
+    class MyEncoder:
+        pass
+    c = _cost(MyEncoder(), 5)
+    assert c.encoding == "MyEncoder"
+    assert c.n_qubits == 5
+    assert c.nisq_safe is True
+    assert c.warning is None
+
+
+# ---------------------------------------------------------------------------
 # Return type
 # ---------------------------------------------------------------------------
 

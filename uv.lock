@@ -4099,7 +4099,7 @@ wheels = [
 
 [[package]]
 name = "quprep"
-version = "0.6.0"
+version = "0.7.0"
 source = { editable = "." }
 dependencies = [
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -4193,6 +4193,7 @@ viz = [
 [package.dev-dependencies]
 dev = [
     { name = "ipykernel" },
+    { name = "quprep", extra = ["all"] },
     { name = "umap-learn" },
 ]
 
@@ -4246,6 +4247,7 @@ provides-extras = ["qiskit", "pennylane", "cirq", "tket", "braket", "qsharp", "i
 [package.metadata.requires-dev]
 dev = [
     { name = "ipykernel", specifier = ">=7.2.0" },
+    { name = "quprep", extras = ["all"], editable = "." },
     { name = "umap-learn", specifier = ">=0.5.11" },
 ]
 

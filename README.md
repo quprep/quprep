@@ -16,36 +16,22 @@
 
 ---
 
-QuPrep converts classical datasets into quantum-circuit-ready format. It is **not** a quantum computing framework, simulator, or training tool. It is the preprocessing step that feeds into [Qiskit](https://qiskit.org), [PennyLane](https://pennylane.ai), [Cirq](https://quantumai.google/cirq), [TKET](https://tket.quantinuum.com), and any other quantum workflow.
-
-Think of QuPrep as the **pandas of quantum data preparation**: a focused, composable tool that does one thing exceptionally well.
+QuPrep converts classical datasets into quantum-circuit-ready format. It is **not** a quantum computing framework, simulator, or training tool — it is the preprocessing step that feeds into [Qiskit](https://qiskit.org), [PennyLane](https://pennylane.ai), [Cirq](https://quantumai.google/cirq), [TKET](https://tket.quantinuum.com), and any other quantum workflow.
 
 ```
-CSV / DataFrame / NumPy  →  QuPrep  →  circuit-ready output for your framework
+CSV / DataFrame / NumPy / images / text / graphs  →  QuPrep  →  circuit-ready output
 ```
 
 ## What QuPrep does
 
-- Ingest CSV, NumPy arrays, and Pandas DataFrames
-- Clean missing values, outliers, and categorical features
-- Reduce dimensionality to fit your hardware qubit budget (PCA, LDA, DFT, UMAP, hardware-aware)
-- Normalize data correctly per encoding method — automatically
-- Encode data using 12 encoding methods: Angle, Amplitude, Basis, IQP, Entangled Angle, Re-uploading, Hamiltonian, ZZFeatureMap, PauliFeatureMap, RandomFourier, TensorProduct, QAOAProblem
-- Recommend the best encoding for your dataset and task
-- Suggest a qubit budget based on dataset size and target task
-- Compare encoders side-by-side on cost, depth, and NISQ safety
-- Export circuits to OpenQASM 3.0, Qiskit, PennyLane, Cirq, TKET, Amazon Braket, Q#, IQM
-- Save entire batches of circuits as individual QASM files
-- Visualize circuits as ASCII diagrams or matplotlib figures
-- Save and reload fitted pipelines without re-fitting
-- Detect data drift between training and new data automatically
-- Formulate combinatorial optimization problems as QUBO / Ising models (Max-Cut, TSP, Knapsack, Portfolio, Graph Colouring, Scheduling, Number Partitioning)
-- Solve with exact brute-force (n ≤ 20) or simulated annealing (any n)
-- Generate QAOA circuits and export to D-Wave Ocean SDK format
+- Ingest tabular data, time series, images, text, and graphs — all in the same pipeline API
+- Clean, normalize, and reduce dimensionality to fit your hardware qubit budget
+- Encode data into circuits using 13 encoding methods (Angle, Amplitude, IQP, ZZFeatureMap, GraphState, and more)
+- Recommend, compare, and auto-select the best encoding for your dataset and task
+- Export circuits to 8 frameworks: OpenQASM 3.0, Qiskit, PennyLane, Cirq, TKET, Braket, Q#, IQM
+- Formulate combinatorial optimization problems as QUBO / Ising models; export as QAOA circuit templates for your quantum framework
 
-## What QuPrep does NOT do
-
-It does not train models, simulate circuits, run on quantum hardware, optimize variational parameters, or replace any existing framework.
+QuPrep does **not** train models, simulate circuits, run on quantum hardware, or optimize variational parameters.
 
 ---
 
@@ -55,15 +41,28 @@ It does not train models, simulate circuits, run on quantum hardware, optimize v
 pip install quprep
 ```
 
-With optional framework exports:
+With optional extras:
 
 ```bash
+# Framework exporters
 pip install quprep[qiskit]     # Qiskit QuantumCircuit
 pip install quprep[pennylane]  # PennyLane QNode
 pip install quprep[cirq]       # Cirq Circuit
 pip install quprep[tket]       # TKET/pytket Circuit
+pip install quprep[braket]     # Amazon Braket Circuit
+pip install quprep[qsharp]     # Q# / Azure Quantum
+pip install quprep[iqm]        # IQM native format
+pip install quprep[frameworks] # all framework exporters at once
+
+# Data modalities
+pip install quprep[image]      # image ingestion (Pillow)
+pip install quprep[text]       # text embeddings (sentence-transformers, ~2 GB)
+pip install quprep[modalities] # image + text at once
+
+# Other
+pip install quprep[umap]       # UMAP dimensionality reduction
 pip install quprep[viz]        # matplotlib circuit diagrams
-pip install quprep[all]        # everything above
+pip install quprep[all]        # everything
 ```
 
 **Requirements:** Python ≥ 3.10. Core dependencies: `numpy`, `scipy`, `pandas`, `scikit-learn`.
@@ -81,22 +80,13 @@ result = qd.prepare("data.csv", encoding="angle", framework="qasm")
 print(result.circuit)
 ```
 
-### Encoding recommendation
+### Full pipeline
 
 ```python
 import quprep as qd
 
-rec = qd.recommend("data.csv", task="classification", qubits=8)
-print(rec)                    # ranked table with reasoning
-result = rec.apply("data.csv")
-```
-
-### Pipeline API
-
-```python
-import quprep as qd  # all public classes on the top-level namespace
-
 pipeline = qd.Pipeline(
+    cleaner=qd.Imputer(),
     reducer=qd.PCAReducer(n_components=8),
     encoder=qd.IQPEncoder(reps=2),
     exporter=qd.PennyLaneExporter(),   # pip install quprep[pennylane]
@@ -105,116 +95,55 @@ result = pipeline.fit_transform("data.csv")
 qnode = result.circuit   # callable qml.QNode
 ```
 
-### Circuit visualization
+### Data modalities — time series, images, text, graphs
 
 ```python
 import quprep as qd
 
-# ASCII — no dependencies
-print(qd.draw_ascii(result.encoded[0]))
+# Time series — sliding window then encode
+from quprep.ingest.time_series_ingester import TimeSeriesIngester
+from quprep.clean.window_transformer import WindowTransformer
 
-# matplotlib — pip install quprep[viz]
-qd.draw_matplotlib(result.encoded[0], filename="circuit.png")
-```
+result = qd.Pipeline(
+    preprocessor=WindowTransformer(window_size=5, step=1),
+    encoder=qd.AngleEncoder(),
+).fit_transform(TimeSeriesIngester(time_column="date").load("sensor.csv"))
 
-### QUBO / combinatorial optimization
+# Images — pip install quprep[image]
+from quprep.ingest.image_ingester import ImageIngester
+result = qd.prepare("images/", encoding="angle", ingester=ImageIngester(size=(8, 8), grayscale=True))
 
-```python
-from quprep.qubo import max_cut, knapsack, solve_brute, solve_sa, qaoa_circuit
+# Text — TF-IDF (no deps) or sentence-transformers (pip install quprep[text])
+from quprep.ingest.text_ingester import TextIngester
+texts = ["quantum computing is powerful", "machine learning meets QML", ...]
+result = qd.prepare(texts, encoding="angle", ingester=TextIngester(method="tfidf", max_features=16))
+
+# Graphs — lossless graph state encoding
+from quprep.ingest.graph_ingester import GraphIngester
+from quprep.encode.graph_state import GraphStateEncoder
 import numpy as np
-
-# Max-Cut on a weighted graph
-adj = np.array([[0,1,1],[1,0,1],[1,1,0]], dtype=float)
-q = max_cut(adj)
-print(q.evaluate(np.array([0., 1., 1.])))  # -2.0
-
-# Brute-force (n ≤ 20) or simulated annealing (any n)
-sol = solve_brute(q)        # exact
-sol = solve_sa(q, seed=42)  # heuristic, scales to n ~ 500+
-
-# Generate a QAOA circuit
-qasm = qaoa_circuit(q, p=2)
-
-# D-Wave Ocean SDK export
-bqm_dict = q.to_dwave()   # {(i, j): coeff}
+graph_list = [np.array([[0,1,1],[1,0,0],[1,0,0]], dtype=float), ...]  # adjacency matrices
+result = qd.Pipeline(encoder=GraphStateEncoder()).fit_transform(
+    GraphIngester(features="adjacency").load(graph_list)
+)
 ```
 
-### Qubit suggestion
+---
 
-```python
-import quprep as qd
+## More features
 
-s = qd.suggest_qubits("data.csv", task="classification")
-print(s.n_qubits)        # recommended qubit count
-print(s.encoding_hint)   # e.g. "angle"
-print(s.warning)         # set if dataset exceeds NISQ ceiling
-```
-
-### Data drift detection
-
-```python
-import quprep as qd
-
-det = qd.DriftDetector()
-pipeline = qd.Pipeline(encoder=qd.AngleEncoder(), drift_detector=det)
-pipeline.fit(X_train)
-
-result = pipeline.transform(X_new)
-print(result.drift_report.overall_drift)      # True / False
-print(result.drift_report.drifted_features)   # list of feature names
-```
-
-### Pipeline save / load
-
-```python
-import quprep as qd
-
-pipeline = qd.Pipeline(reducer=qd.PCAReducer(n_components=8), encoder=qd.AngleEncoder())
-pipeline.fit(X_train)
-pipeline.save("pipeline.pkl")
-
-loaded = qd.Pipeline.load("pipeline.pkl")
-result = loaded.transform(X_new)   # no re-fitting needed
-```
-
-### Validation & cost estimation
-
-```python
-import quprep as qd
-
-# Define expected schema and attach to pipeline
-schema = qd.DataSchema([
-    qd.FeatureSpec("age",    dtype="continuous", min_value=0, max_value=120),
-    qd.FeatureSpec("income", dtype="continuous", min_value=0),
-])
-pipeline = qd.Pipeline(encoder=qd.AngleEncoder(), schema=schema)
-result = pipeline.fit_transform("data.csv")
-
-# Cost estimate is computed automatically at fit time
-print(result.cost.nisq_safe)    # True
-print(result.cost.circuit_depth)
-result.summary()                # audit table + cost breakdown
-```
-
-### CLI
-
-```bash
-quprep convert data.csv --encoding angle --framework qasm
-quprep convert data.csv --encoding iqp --framework pennylane
-quprep convert data.csv --encoding angle --save-dir circuits/  # save each sample as a file
-
-quprep recommend data.csv --task classification --qubits 8
-quprep suggest data.csv --task classification       # qubit budget recommendation
-quprep compare data.csv --task classification       # side-by-side encoder comparison
-
-quprep validate data.csv                              # shape, columns, NaN report
-quprep validate data.csv --infer-schema schema.json  # infer schema and save
-quprep validate data.csv --schema schema.json        # enforce schema (exit 1 on violation)
-
-quprep qubo maxcut --adjacency "0,1,1;1,0,1;1,1,0" --solve
-quprep qubo knapsack --weights "2,3,4" --values "3,4,5" --capacity 5
-quprep qubo qaoa maxcut --adjacency "0,1,1;1,0,1;1,1,0" --p 2 --output circuit.qasm
-```
+| Feature | Docs |
+|---|---|
+| Encoding recommendation — ranked by dataset profile and task | [guide](https://docs.quprep.org/en/latest/guides/encodings/) |
+| Qubit budget suggestion — NISQ-safe ceiling with reasoning | [API](https://docs.quprep.org/en/latest/api/) |
+| Side-by-side encoder comparison — depth, gates, NISQ safety | [API](https://docs.quprep.org/en/latest/api/) |
+| Data drift detection — warn when new data leaves training distribution | [API](https://docs.quprep.org/en/latest/api/) |
+| Pipeline save / load — serialize fitted pipelines, no re-fitting | [API](https://docs.quprep.org/en/latest/api/) |
+| Schema validation & cost estimation — gate count before encoding | [guide](https://docs.quprep.org/en/latest/guides/validation/) |
+| QUBO / Ising formulation — Max-Cut, TSP, Knapsack, QAOA circuits, D-Wave export | [guide](https://docs.quprep.org/en/latest/guides/qubo/) |
+| Plugin system — register custom encoders and exporters | [guide](https://docs.quprep.org/en/latest/guides/plugins/) |
+| Circuit visualization — ASCII (no deps) or matplotlib | [API](https://docs.quprep.org/en/latest/api/) |
+| Batch QASM export — save all samples to disk as individual files | [API](https://docs.quprep.org/en/latest/api/) |
 
 ---
 
@@ -234,6 +163,9 @@ quprep qubo qaoa maxcut --adjacency "0,1,1;1,0,1;1,1,0" --p 2 --output circuit.q
 | Random Fourier | n_components | O(1) | ✅ Excellent | RBF kernel approximation |
 | Tensor Product | ⌈d/2⌉ | O(1) | ✅ Excellent | Qubit-efficient encoding |
 | QAOA Problem | n = d | O(p) | ✅ Good | QAOA warm-start, problem-inspired maps |
+| Graph State | n = nodes | O(edges) | ✅ Good | Graph-structured data (lossless) |
+
+---
 
 ## Supported export frameworks
 
@@ -252,32 +184,31 @@ quprep qubo qaoa maxcut --adjacency "0,1,1;1,0,1;1,1,0" --p 2 --output circuit.q
 
 ## Documentation
 
-Full documentation at **[docs.quprep.org](https://docs.quprep.org)**
+Full documentation at **[docs.quprep.org](https://docs.quprep.org/en/latest/)**
 
-- [Installation](https://docs.quprep.org/getting-started/installation)
-- [Quickstart guide](https://docs.quprep.org/getting-started/quickstart)
-- [Encoding guide](https://docs.quprep.org/guides/encodings)
-- [API reference](https://docs.quprep.org/api)
+- [Installation](https://docs.quprep.org/en/latest/getting-started/installation/)
+- [Quickstart guide](https://docs.quprep.org/en/latest/getting-started/quickstart/)
+- [Encoding guide](https://docs.quprep.org/en/latest/guides/encodings/)
+- [API reference](https://docs.quprep.org/en/latest/api/)
 
 ---
 
 ## Examples
 
-See the [`examples/`](examples/) directory. Launch any notebook directly:
-
 | # | Topic | Launch |
 |---|---|---|
-| 01 | Quickstart — `prepare()` one-liner | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/quprep/quprep/blob/main/examples/01_quickstart.ipynb) [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/quprep/quprep/v0.6.0?labpath=examples%2F01_quickstart.ipynb) <a href="https://account.qbraid.com?gitHubUrl=https://github.com/quprep/quprep/blob/main/examples/01_quickstart.ipynb"><img src="https://qbraid-static.s3.amazonaws.com/logos/Launch_on_qBraid_white.png" width="93"/></a> |
-| 02 | Full pipeline — clean → encode → export → save/load | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/quprep/quprep/blob/main/examples/02_pipeline.ipynb) [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/quprep/quprep/v0.6.0?labpath=examples%2F02_pipeline.ipynb) <a href="https://account.qbraid.com?gitHubUrl=https://github.com/quprep/quprep/blob/main/examples/02_pipeline.ipynb"><img src="https://qbraid-static.s3.amazonaws.com/logos/Launch_on_qBraid_white.png" width="93"/></a> |
-| 03 | All encoders compared | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/quprep/quprep/blob/main/examples/03_encoders.ipynb) [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/quprep/quprep/v0.6.0?labpath=examples%2F03_encoders.ipynb) <a href="https://account.qbraid.com?gitHubUrl=https://github.com/quprep/quprep/blob/main/examples/03_encoders.ipynb"><img src="https://qbraid-static.s3.amazonaws.com/logos/Launch_on_qBraid_white.png" width="93"/></a> |
-| 04 | Framework export — QASM, Qiskit, PennyLane, Cirq, TKET, Braket, Q#, IQM | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/quprep/quprep/blob/main/examples/04_export.ipynb) [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/quprep/quprep/v0.6.0?labpath=examples%2F04_export.ipynb) <a href="https://account.qbraid.com?gitHubUrl=https://github.com/quprep/quprep/blob/main/examples/04_export.ipynb"><img src="https://qbraid-static.s3.amazonaws.com/logos/Launch_on_qBraid_white.png" width="93"/></a> |
-| 05 | Encoding recommendation | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/quprep/quprep/blob/main/examples/05_recommend.ipynb) [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/quprep/quprep/v0.6.0?labpath=examples%2F05_recommend.ipynb) <a href="https://account.qbraid.com?gitHubUrl=https://github.com/quprep/quprep/blob/main/examples/05_recommend.ipynb"><img src="https://qbraid-static.s3.amazonaws.com/logos/Launch_on_qBraid_white.png" width="93"/></a> |
-| 06 | Circuit visualization — ASCII + matplotlib | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/quprep/quprep/blob/main/examples/06_visualization.ipynb) [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/quprep/quprep/v0.6.0?labpath=examples%2F06_visualization.ipynb) <a href="https://account.qbraid.com?gitHubUrl=https://github.com/quprep/quprep/blob/main/examples/06_visualization.ipynb"><img src="https://qbraid-static.s3.amazonaws.com/logos/Launch_on_qBraid_white.png" width="93"/></a> |
-| 07 | QUBO / Ising — Max-Cut, Knapsack, solvers, D-Wave export, QAOA | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/quprep/quprep/blob/main/examples/07_qubo.ipynb) [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/quprep/quprep/v0.6.0?labpath=examples%2F07_qubo.ipynb) <a href="https://account.qbraid.com?gitHubUrl=https://github.com/quprep/quprep/blob/main/examples/07_qubo.ipynb"><img src="https://qbraid-static.s3.amazonaws.com/logos/Launch_on_qBraid_white.png" width="93"/></a> |
-| 08 | Validation, schema & cost | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/quprep/quprep/blob/main/examples/08_validation.ipynb) [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/quprep/quprep/v0.6.0?labpath=examples%2F08_validation.ipynb) <a href="https://account.qbraid.com?gitHubUrl=https://github.com/quprep/quprep/blob/main/examples/08_validation.ipynb"><img src="https://qbraid-static.s3.amazonaws.com/logos/Launch_on_qBraid_white.png" width="93"/></a> |
-| 09 | Data drift detection | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/quprep/quprep/blob/main/examples/09_drift.ipynb) [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/quprep/quprep/v0.6.0?labpath=examples%2F09_drift.ipynb) <a href="https://account.qbraid.com?gitHubUrl=https://github.com/quprep/quprep/blob/main/examples/09_drift.ipynb"><img src="https://qbraid-static.s3.amazonaws.com/logos/Launch_on_qBraid_white.png" width="93"/></a> |
-| 10 | Qubit suggestion — `suggest_qubits`, task hints, NISQ ceiling | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/quprep/quprep/blob/main/examples/10_suggest.ipynb) [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/quprep/quprep/v0.6.0?labpath=examples%2F10_suggest.ipynb) <a href="https://account.qbraid.com?gitHubUrl=https://github.com/quprep/quprep/blob/main/examples/10_suggest.ipynb"><img src="https://qbraid-static.s3.amazonaws.com/logos/Launch_on_qBraid_white.png" width="93"/></a> |
-| 11 | Plugin system — register custom encoders and exporters | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/quprep/quprep/blob/main/examples/11_plugins.ipynb) [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/quprep/quprep/v0.6.0?labpath=examples%2F11_plugins.ipynb) <a href="https://account.qbraid.com?gitHubUrl=https://github.com/quprep/quprep/blob/main/examples/11_plugins.ipynb"><img src="https://qbraid-static.s3.amazonaws.com/logos/Launch_on_qBraid_white.png" width="93"/></a> |
+| 01 | Quickstart — `prepare()` one-liner | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/quprep/quprep/blob/main/examples/01_quickstart.ipynb) [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/quprep/quprep/v0.7.0?labpath=examples%2F01_quickstart.ipynb) <a href="https://account.qbraid.com?gitHubUrl=https://github.com/quprep/quprep/blob/main/examples/01_quickstart.ipynb"><img src="https://qbraid-static.s3.amazonaws.com/logos/Launch_on_qBraid_white.png" width="93"/></a> |
+| 02 | Full pipeline — clean → encode → export → save/load | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/quprep/quprep/blob/main/examples/02_pipeline.ipynb) [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/quprep/quprep/v0.7.0?labpath=examples%2F02_pipeline.ipynb) <a href="https://account.qbraid.com?gitHubUrl=https://github.com/quprep/quprep/blob/main/examples/02_pipeline.ipynb"><img src="https://qbraid-static.s3.amazonaws.com/logos/Launch_on_qBraid_white.png" width="93"/></a> |
+| 03 | All encoders compared | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/quprep/quprep/blob/main/examples/03_encoders.ipynb) [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/quprep/quprep/v0.7.0?labpath=examples%2F03_encoders.ipynb) <a href="https://account.qbraid.com?gitHubUrl=https://github.com/quprep/quprep/blob/main/examples/03_encoders.ipynb"><img src="https://qbraid-static.s3.amazonaws.com/logos/Launch_on_qBraid_white.png" width="93"/></a> |
+| 04 | Framework export — QASM, Qiskit, PennyLane, Cirq, TKET, Braket, Q#, IQM | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/quprep/quprep/blob/main/examples/04_export.ipynb) [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/quprep/quprep/v0.7.0?labpath=examples%2F04_export.ipynb) <a href="https://account.qbraid.com?gitHubUrl=https://github.com/quprep/quprep/blob/main/examples/04_export.ipynb"><img src="https://qbraid-static.s3.amazonaws.com/logos/Launch_on_qBraid_white.png" width="93"/></a> |
+| 05 | Encoding recommendation | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/quprep/quprep/blob/main/examples/05_recommend.ipynb) [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/quprep/quprep/v0.7.0?labpath=examples%2F05_recommend.ipynb) <a href="https://account.qbraid.com?gitHubUrl=https://github.com/quprep/quprep/blob/main/examples/05_recommend.ipynb"><img src="https://qbraid-static.s3.amazonaws.com/logos/Launch_on_qBraid_white.png" width="93"/></a> |
+| 06 | Circuit visualization — ASCII + matplotlib | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/quprep/quprep/blob/main/examples/06_visualization.ipynb) [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/quprep/quprep/v0.7.0?labpath=examples%2F06_visualization.ipynb) <a href="https://account.qbraid.com?gitHubUrl=https://github.com/quprep/quprep/blob/main/examples/06_visualization.ipynb"><img src="https://qbraid-static.s3.amazonaws.com/logos/Launch_on_qBraid_white.png" width="93"/></a> |
+| 07 | QUBO / Ising — Max-Cut, Knapsack, solvers, D-Wave export, QAOA | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/quprep/quprep/blob/main/examples/07_qubo.ipynb) [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/quprep/quprep/v0.7.0?labpath=examples%2F07_qubo.ipynb) <a href="https://account.qbraid.com?gitHubUrl=https://github.com/quprep/quprep/blob/main/examples/07_qubo.ipynb"><img src="https://qbraid-static.s3.amazonaws.com/logos/Launch_on_qBraid_white.png" width="93"/></a> |
+| 08 | Validation, schema & cost | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/quprep/quprep/blob/main/examples/08_validation.ipynb) [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/quprep/quprep/v0.7.0?labpath=examples%2F08_validation.ipynb) <a href="https://account.qbraid.com?gitHubUrl=https://github.com/quprep/quprep/blob/main/examples/08_validation.ipynb"><img src="https://qbraid-static.s3.amazonaws.com/logos/Launch_on_qBraid_white.png" width="93"/></a> |
+| 09 | Data drift detection | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/quprep/quprep/blob/main/examples/09_drift.ipynb) [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/quprep/quprep/v0.7.0?labpath=examples%2F09_drift.ipynb) <a href="https://account.qbraid.com?gitHubUrl=https://github.com/quprep/quprep/blob/main/examples/09_drift.ipynb"><img src="https://qbraid-static.s3.amazonaws.com/logos/Launch_on_qBraid_white.png" width="93"/></a> |
+| 10 | Qubit suggestion — `suggest_qubits`, task hints, NISQ ceiling | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/quprep/quprep/blob/main/examples/10_suggest.ipynb) [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/quprep/quprep/v0.7.0?labpath=examples%2F10_suggest.ipynb) <a href="https://account.qbraid.com?gitHubUrl=https://github.com/quprep/quprep/blob/main/examples/10_suggest.ipynb"><img src="https://qbraid-static.s3.amazonaws.com/logos/Launch_on_qBraid_white.png" width="93"/></a> |
+| 11 | Plugin system — register custom encoders and exporters | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/quprep/quprep/blob/main/examples/11_plugins.ipynb) [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/quprep/quprep/v0.7.0?labpath=examples%2F11_plugins.ipynb) <a href="https://account.qbraid.com?gitHubUrl=https://github.com/quprep/quprep/blob/main/examples/11_plugins.ipynb"><img src="https://qbraid-static.s3.amazonaws.com/logos/Launch_on_qBraid_white.png" width="93"/></a> |
+| 12 | Data modalities — time series, image, text, graph | [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/quprep/quprep/blob/main/examples/12_modalities.ipynb) [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/quprep/quprep/v0.7.0?labpath=examples%2F12_modalities.ipynb) <a href="https://account.qbraid.com?gitHubUrl=https://github.com/quprep/quprep/blob/main/examples/12_modalities.ipynb"><img src="https://qbraid-static.s3.amazonaws.com/logos/Launch_on_qBraid_white.png" width="93"/></a> |
 
 ---
 
@@ -306,7 +237,7 @@ If you use QuPrep in your research, please cite:
   title     = {QuPrep: Quantum Data Preparation},
   year      = {2026},
   publisher = {Zenodo},
-  version   = {0.5.0},
+  version   = {0.7.0},
   doi       = {10.5281/zenodo.19286258},
   url       = {https://doi.org/10.5281/zenodo.19286258},
   license   = {Apache-2.0},

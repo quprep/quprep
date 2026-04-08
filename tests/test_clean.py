@@ -293,6 +293,40 @@ class TestCategoricalEncoder:
         ds.categorical_data["c"] = ["a", "b"]
         assert isinstance(CategoricalEncoder().fit_transform(ds), Dataset)
 
+    def test_fit_then_transform_separately(self):
+        # Covers fit() and transform() as separate calls (not just fit_transform)
+        ds_train = make_dataset(np.zeros((3, 0), dtype=float))
+        ds_train.categorical_data["col"] = ["a", "b", "c"]
+        enc = CategoricalEncoder(strategy="label")
+        enc.fit(ds_train)
+        ds_test = make_dataset(np.zeros((2, 0), dtype=float))
+        ds_test.categorical_data["col"] = ["a", "c"]
+        result = enc.transform(ds_test)
+        assert result.n_features == 1
+
+    def test_handle_unknown_error_raises(self):
+        # Covers the handle_unknown='error' branch in _encode_with_categories
+        ds_train = make_dataset(np.zeros((2, 0), dtype=float))
+        ds_train.categorical_data["col"] = ["a", "b"]
+        enc = CategoricalEncoder(strategy="label", handle_unknown="error")
+        enc.fit(ds_train)
+        ds_test = make_dataset(np.zeros((1, 0), dtype=float))
+        ds_test.categorical_data["col"] = ["unknown_category"]
+        with pytest.raises(ValueError, match="Unknown categories"):
+            enc.transform(ds_test)
+
+    def test_onehot_unseen_category_fills_zero(self):
+        # Covers the missing-column fill branch (line 142) in onehot encoding
+        ds_train = make_dataset(np.zeros((2, 0), dtype=float))
+        ds_train.categorical_data["col"] = ["a", "b"]
+        enc = CategoricalEncoder(strategy="onehot")
+        enc.fit(ds_train)
+        ds_test = make_dataset(np.zeros((1, 0), dtype=float))
+        ds_test.categorical_data["col"] = ["a"]  # only 1 of 2 categories present
+        result = enc.transform(ds_test)
+        assert result.n_features == 2   # still 2 onehot columns
+        assert result.data[0, 1] == 0.0  # unseen category column is 0
+
 
 # ---------------------------------------------------------------------------
 # FeatureSelector

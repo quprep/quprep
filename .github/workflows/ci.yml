@@ -33,7 +33,7 @@ jobs:
         run: uv run ruff check .
 
       - name: Run tests
-        run: uv run pytest --cov=quprep --cov-report=xml
+        run: uv run pytest --cov=quprep --cov-report=xml --cov-fail-under=85
 
       - name: Upload coverage
         uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6.0.0
