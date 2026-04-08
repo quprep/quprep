@@ -33,15 +33,17 @@ pip install quprep[frameworks] # All framework exporters at once
 ### Data modalities
 
 ```bash
-pip install quprep[image]      # Image ingestion (Pillow)
-pip install quprep[text]       # Text embeddings (sentence-transformers + PyTorch, ~2 GB)
-pip install quprep[modalities] # All modality extras at once
+pip install quprep[image]        # Image ingestion (Pillow)
+pip install quprep[text]         # Text embeddings (sentence-transformers + PyTorch, ~2 GB)
+pip install quprep[huggingface]  # HuggingFace Datasets connector (datasets library)
+pip install quprep[modalities]   # All modality extras at once
 ```
 
 !!! note "Text embedding size"
     `quprep[text]` installs `sentence-transformers`, which requires PyTorch (~1–2 GB).
     If you only need lightweight TF-IDF embeddings (no neural models, no extra deps),
-    use `TextIngester(method="tfidf")` — it works with the base `quprep` install.
+    use `TextIngester(method="tfidf")` or `HuggingFaceIngester(text_method="tfidf")` —
+    both work with the base `quprep` install.
 
 ### Dimensionality reduction
 
@@ -58,9 +60,10 @@ pip install quprep[viz]        # matplotlib circuit diagrams
 ### Mix and match
 
 ```bash
-pip install quprep[iqm,text]          # IQM export + text ingestion
-pip install quprep[frameworks,modalities,viz]  # everything except UMAP
-pip install quprep[all]               # all extras including UMAP (~500 MB extra for umap-learn)
+pip install quprep[iqm,text]                        # IQM export + text ingestion
+pip install quprep[huggingface,image,text]          # all data ingestion extras
+pip install quprep[frameworks,modalities,viz]       # everything except UMAP and HuggingFace
+pip install quprep[all]                             # all extras including UMAP and HuggingFace datasets
 ```
 
 ## Verify

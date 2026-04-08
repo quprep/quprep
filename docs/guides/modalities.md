@@ -493,3 +493,186 @@ print(qasm)
 results = encoder.encode_batch_graphs([adj1, adj2, adj3])
 circuits = QASMExporter().export_batch(results)
 ```
+
+---
+
+## HuggingFace datasets
+
+Requires `pip install quprep[huggingface]` (the `datasets` library from HuggingFace).
+
+### Connecting to HuggingFace
+
+`HuggingFaceIngester` is a direct wrapper around HuggingFace's `load_dataset`. The mapping is straightforward:
+
+```python
+# Standard HuggingFace usage:
+from datasets import load_dataset
+
+dataset    = load_dataset("username/my_dataset")
+train_data = load_dataset("username/my_dataset", split="train")
+valid_data = load_dataset("username/my_dataset", split="validation")
+test_data  = load_dataset("username/my_dataset", split="test")
+
+# QuPrep equivalent — same dataset, same splits:
+import quprep as qd
+
+ds_train = qd.HuggingFaceIngester(split="train").load("username/my_dataset")
+ds_valid = qd.HuggingFaceIngester(split="validation").load("username/my_dataset")
+ds_test  = qd.HuggingFaceIngester(split="test").load("username/my_dataset")
+```
+
+QuPrep adds automatic modality detection, label extraction, and direct integration with encoders and pipelines on top of the raw `load_dataset` call.
+
+**Public datasets require no account.** Anyone can load public datasets with just `pip install quprep[huggingface]` — no HuggingFace account or token needed.
+
+**Gated datasets require a token.** Datasets where you've accepted terms on the HuggingFace website require authentication:
+
+```python
+# Option 1 — login once in your terminal, token stored in ~/.huggingface/token:
+#   huggingface-cli login
+# Then pass token=True in code:
+ds = qd.HuggingFaceIngester(split="train", token=True).load("meta-llama/Llama-3-8B")
+
+# Option 2 — pass the token string directly:
+ds = qd.HuggingFaceIngester(split="train", token="hf_abc123").load("owner/gated-dataset")
+```
+
+### Modality auto-detection
+
+| HuggingFace feature type | Detected modality | Notes |
+|---|---|---|
+| `Image` column | `image` | Requires `quprep[image]` (Pillow) |
+| String-only, no numeric | `text` | TF-IDF by default; no extra deps |
+| Numeric / mixed | `tabular` | String columns dropped unless `numeric_only=False` |
+| Audio / Video only | Error | `NotImplementedError` with clear message |
+
+### Tabular dataset
+
+```python
+import quprep as qd
+
+ds = qd.HuggingFaceIngester(
+    split="train",
+    target_columns="label",
+).load("imodels/credit-card")
+
+print(ds.data.shape)              # (n_samples, n_features)
+print(ds.labels.shape)            # (n_samples,)
+print(ds.metadata["source"])      # "huggingface:imodels/credit-card"
+print(ds.metadata["modality"])    # "tabular"
+```
+
+Full pipeline:
+
+```python
+pipeline = qd.Pipeline(
+    encoder=qd.AngleEncoder(),
+)
+result = pipeline.fit_transform(ds)
+print(len(result.encoded))
+```
+
+### Image dataset (auto-detected)
+
+```python
+ds = qd.HuggingFaceIngester(
+    split="train",
+    target_columns="label",
+    image_size=(28, 28),    # resize to 28×28 before flattening
+    grayscale=True,
+).load("ylecun/mnist")
+
+print(ds.data.shape)     # (60000, 784)
+print(ds.labels.shape)   # (60000,)
+```
+
+Override the image column explicitly when needed:
+
+```python
+ds = qd.HuggingFaceIngester(
+    modality="image",
+    image_column="img",
+    image_size=(32, 32),
+    grayscale=False,     # keep RGB → 32×32×3 = 3072 pixels
+).load("cifar10")
+```
+
+### Text dataset (auto-detected)
+
+```python
+ds = qd.HuggingFaceIngester(
+    split="train",
+    target_columns="label",
+    text_method="tfidf",   # default — no extra deps
+    max_features=64,
+).load("imdb")
+
+print(ds.data.shape)   # (25000, 64)
+```
+
+Semantic embeddings with sentence-transformers (requires `quprep[text]`):
+
+```python
+ds = qd.HuggingFaceIngester(
+    split="train",
+    text_method="sentence_transformers",
+    text_model="all-MiniLM-L6-v2",   # 384-d, fast
+).load("imdb")
+
+print(ds.data.shape)   # (25000, 384)
+```
+
+Override the text column when the dataset has multiple string columns:
+
+```python
+ds = qd.HuggingFaceIngester(
+    modality="text",
+    text_column="premise",
+    target_columns="label",
+).load("snli")
+```
+
+### Graph dataset (explicit)
+
+Graph datasets require `modality="graph"` — auto-detection does not apply here since graph structure is stored in varying column formats.
+
+```python
+ds = qd.HuggingFaceIngester(
+    modality="graph",
+    split="train",
+    target_columns="y",
+    edge_index_column="edge_index",  # COO format: shape [2, E]
+    n_graph_features=8,              # pad/truncate Laplacian+degree features
+).load("graphs-datasets/ogbg-molhiv")
+
+print(ds.data.shape)     # (n_graphs, 8)
+print(ds.labels.shape)   # (n_graphs,)
+```
+
+Internally, graph datasets are routed through `GraphIngester` — all the same feature options apply (`features="laplacian_eigenvalues"`, `features="all"`, etc.).
+
+### Dataset configs / subsets
+
+Some datasets have multiple configurations (languages, domains, etc.). Pass `config_name` — this maps to the `name` argument in `load_dataset`:
+
+```python
+# Standard HF:
+load_dataset("amazon_reviews_multi", name="en", split="train")
+
+# QuPrep:
+ds = qd.HuggingFaceIngester(split="train").load("amazon_reviews_multi", config_name="en")
+ds = qd.HuggingFaceIngester(split="train").load("amazon_reviews_multi", config_name="de")
+```
+
+### Unsupported modalities
+
+If a dataset contains only audio or video columns (with no numeric fallback), QuPrep raises `NotImplementedError` with a clear message:
+
+```python
+# Raises NotImplementedError: Dataset 'foo/bar' contains audio data (column(s): ['audio']).
+# QuPrep currently supports: ['tabular', 'image', 'text', 'graph'].
+# Pass modality='tabular' to ignore unsupported columns and process any remaining numeric features.
+ds = qd.HuggingFaceIngester().load("foo/audio-only-dataset")
+```
+
+If a dataset has mixed audio + numeric columns, auto-detection falls through to `tabular` and processes the numeric columns, ignoring audio.

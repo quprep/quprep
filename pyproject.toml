@@ -52,6 +52,7 @@ viz = ["matplotlib>=3.7"]
 image = ["Pillow>=9.0"]
 text = ["sentence-transformers>=2.0"]
 umap = ["umap-learn>=0.5"]
+huggingface = ["datasets>=2.0"]
 # Convenience groups
 frameworks = [
   "qiskit>=1.0",
@@ -78,6 +79,7 @@ all = [
   "Pillow>=9.0",
   "sentence-transformers>=2.0",
   "umap-learn>=0.5",
+  "datasets>=2.0",
 ]
 dev = [
   "pytest>=7.0",

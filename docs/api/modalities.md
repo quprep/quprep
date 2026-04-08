@@ -1,6 +1,14 @@
 # Modalities — Ingesters & Preprocessors
 
-API reference for the v0.7.0 data modality components: `TimeSeriesIngester`, `WindowTransformer`, `ImageIngester`, `TextIngester`, `GraphIngester`, `GraphStateEncoder`, and the `NumpyIngester`/`CSVIngester` extensions for sparse data and multi-label support.
+API reference for the data modality components: `HuggingFaceIngester`, `TimeSeriesIngester`, `WindowTransformer`, `ImageIngester`, `TextIngester`, `GraphIngester`, `GraphStateEncoder`, and the `NumpyIngester`/`CSVIngester` extensions for sparse data and multi-label support.
+
+---
+
+## HuggingFaceIngester
+
+::: quprep.ingest.huggingface_ingester.HuggingFaceIngester
+    options:
+      show_source: true
 
 ---
 
