@@ -77,6 +77,8 @@ from quprep.export.visualize import draw_ascii, draw_matplotlib
 from quprep.ingest.graph_ingester import GraphIngester
 from quprep.ingest.huggingface_ingester import HuggingFaceIngester
 from quprep.ingest.image_ingester import ImageIngester
+from quprep.ingest.kaggle_ingester import KaggleIngester
+from quprep.ingest.openml_ingester import OpenMLIngester
 from quprep.ingest.text_ingester import TextIngester
 from quprep.ingest.timeseries_ingester import TimeSeriesIngester
 
@@ -189,6 +191,8 @@ __all__ = [
     # Ingesters
     "GraphIngester",
     "HuggingFaceIngester",
+    "KaggleIngester",
+    "OpenMLIngester",
     "ImageIngester",
     "TextIngester",
     "TimeSeriesIngester",

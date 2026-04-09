@@ -36,6 +36,8 @@ pip install quprep[frameworks] # All framework exporters at once
 pip install quprep[image]        # Image ingestion (Pillow)
 pip install quprep[text]         # Text embeddings (sentence-transformers + PyTorch, ~2 GB)
 pip install quprep[huggingface]  # HuggingFace Datasets connector (datasets library)
+pip install quprep[kaggle]       # Kaggle dataset/competition connector (kaggle API)
+pip install quprep[openml]       # OpenML dataset connector (openml library)
 pip install quprep[modalities]   # All modality extras at once
 ```
 
@@ -60,10 +62,10 @@ pip install quprep[viz]        # matplotlib circuit diagrams
 ### Mix and match
 
 ```bash
-pip install quprep[iqm,text]                        # IQM export + text ingestion
-pip install quprep[huggingface,image,text]          # all data ingestion extras
-pip install quprep[frameworks,modalities,viz]       # everything except UMAP and HuggingFace
-pip install quprep[all]                             # all extras including UMAP and HuggingFace datasets
+pip install quprep[iqm,text]                             # IQM export + text ingestion
+pip install quprep[huggingface,kaggle,openml,image,text] # all data ingestion extras
+pip install quprep[frameworks,modalities,viz]            # everything except UMAP and dataset connectors
+pip install quprep[all]                                  # all extras including UMAP, HuggingFace, Kaggle, and OpenML
 ```
 
 ## Verify

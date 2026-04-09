@@ -63,6 +63,8 @@ qd.ComparisonResult
 | `quprep.ingest.csv_ingester` | `CSVIngester` |
 | `quprep.ingest.numpy_ingester` | `NumpyIngester` |
 | `quprep.ingest.huggingface_ingester` | `HuggingFaceIngester` |
+| `quprep.ingest.kaggle_ingester` | `KaggleIngester` |
+| `quprep.ingest.openml_ingester` | `OpenMLIngester` |
 | `quprep.ingest.profiler` | `profile`, `DatasetProfile` |
 | `quprep.core.dataset` | `Dataset` |
 | `quprep.compare` | `compare_encodings`, `ComparisonResult` |

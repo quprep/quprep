@@ -496,6 +496,187 @@ circuits = QASMExporter().export_batch(results)
 
 ---
 
+## Kaggle datasets
+
+Requires `pip install quprep[kaggle]` and a Kaggle API token.
+
+### Authentication
+
+Kaggle requires an account and an API token for all downloads (including public datasets).
+
+1. Create an account at [kaggle.com](https://www.kaggle.com)
+2. Go to **Settings → API → Create New Token** — this downloads `kaggle.json`
+3. Place it at `~/.kaggle/kaggle.json` (Linux/Mac) or `%USERPROFILE%\.kaggle\kaggle.json` (Windows)
+
+Alternatively, set environment variables:
+
+```bash
+export KAGGLE_USERNAME=your_username
+export KAGGLE_KEY=your_api_key
+```
+
+### Datasets
+
+Kaggle datasets use the `owner/dataset-name` format, visible in the dataset URL:
+`https://www.kaggle.com/datasets/owner/dataset-name`
+
+```python
+import quprep as qd
+
+# Load all files — picks the first CSV found
+ds = qd.KaggleIngester(target_columns="Survived").load("heptapod/titanic")
+
+print(ds.data.shape)           # (n_samples, n_features)
+print(ds.labels.shape)         # (n_samples,)
+print(ds.metadata["source"])   # "kaggle:dataset:heptapod/titanic"
+print(ds.metadata["file"])     # name of the CSV loaded
+```
+
+Load a specific file from a multi-file dataset:
+
+```python
+ds = qd.KaggleIngester(
+    file_name="train.csv",
+    target_columns="label",
+).load("owner/dataset-name")
+```
+
+### Competition data
+
+Competition data uses just the competition slug (visible in the URL):
+`https://www.kaggle.com/competitions/titanic`
+
+```python
+# Download all competition files, load first CSV
+ds = qd.KaggleIngester(target_columns="Survived").load_competition("titanic")
+
+# Or load a specific file
+ds = qd.KaggleIngester(file_name="train.csv").load_competition("titanic")
+
+print(ds.metadata["source"])       # "kaggle:competition:titanic"
+print(ds.metadata["competition"])  # "titanic"
+```
+
+### Full pipeline
+
+```python
+import quprep as qd
+
+pipeline = qd.Pipeline(
+    cleaner=qd.Imputer(strategy="median"),
+    reducer=qd.PCAReducer(n_components=8),
+    encoder=qd.AngleEncoder(),
+)
+
+ds = qd.KaggleIngester(
+    file_name="train.csv",
+    target_columns="SalePrice",
+).load("competitions/house-prices-advanced-regression-techniques")
+
+result = pipeline.fit_transform(ds)
+print(len(result.encoded))
+```
+
+### Categorical columns
+
+By default non-numeric columns are dropped. Set `numeric_only=False` to keep them in `Dataset.categorical_data` for encoding with `CategoricalEncoder`:
+
+```python
+ds = qd.KaggleIngester(
+    target_columns="Survived",
+    numeric_only=False,
+).load("heptapod/titanic")
+
+print(ds.categorical_data.keys())   # e.g. {'Sex', 'Embarked', 'Name', ...}
+```
+
+---
+
+## OpenML datasets
+
+Requires `pip install quprep[openml]`. No account is needed for public datasets — OpenML is fully open.
+
+OpenML datasets are identified by an integer ID or by name. You can browse datasets at [openml.org/search?type=data](https://www.openml.org/search?type=data).
+
+### Load by dataset ID
+
+```python
+import quprep as qd
+
+# Iris — dataset ID 61
+ds = qd.OpenMLIngester(target_column="class").load(61)
+
+print(ds.data.shape)              # (150, 4)
+print(ds.labels.shape)            # (150,)
+print(ds.metadata["source"])      # "openml:61"
+print(ds.metadata["dataset_name"])  # "iris"
+print(ds.metadata["version"])     # e.g. 1
+```
+
+### Load by dataset name
+
+```python
+# Latest version is used automatically
+ds = qd.OpenMLIngester(target_column="class").load("iris")
+
+# Specific version
+ds = qd.OpenMLIngester(target_column="class", version=1).load("iris")
+```
+
+### No target (unsupervised)
+
+```python
+# MNIST_784 — no label extraction
+ds = qd.OpenMLIngester().load(554)
+
+print(ds.data.shape)   # (70000, 784)
+print(ds.labels)       # None
+```
+
+When `target_column` is not set, OpenML's default target attribute is used if the dataset defines one. Pass `target_column=None` explicitly and set `default_target_attribute` to empty on the dataset if you want no labels at all — or just ignore `ds.labels`.
+
+### Full pipeline
+
+```python
+import quprep as qd
+
+pipeline = qd.Pipeline(
+    cleaner=qd.Imputer(strategy="median"),
+    reducer=qd.PCAReducer(n_components=8),
+    encoder=qd.AngleEncoder(),
+)
+
+ds = qd.OpenMLIngester(target_column="class").load("credit-g")
+result = pipeline.fit_transform(ds)
+
+print(len(result.encoded))
+print(result.encoded[0].metadata["n_qubits"])   # 8
+```
+
+### Categorical columns
+
+OpenML datasets often have categorical features. By default they are dropped. Set `numeric_only=False` to keep them in `Dataset.categorical_data`:
+
+```python
+ds = qd.OpenMLIngester(
+    target_column="class",
+    numeric_only=False,
+).load("credit-g")
+
+print(ds.categorical_data.keys())   # categorical feature names
+```
+
+Then use `CategoricalEncoder` to encode them before encoding:
+
+```python
+pipeline = qd.Pipeline(
+    cleaner=qd.CategoricalEncoder(method="onehot"),
+    encoder=qd.AngleEncoder(),
+)
+```
+
+---
+
 ## HuggingFace datasets
 
 Requires `pip install quprep[huggingface]` (the `datasets` library from HuggingFace).

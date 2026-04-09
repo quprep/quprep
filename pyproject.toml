@@ -53,6 +53,8 @@ image = ["Pillow>=9.0"]
 text = ["sentence-transformers>=2.0"]
 umap = ["umap-learn>=0.5"]
 huggingface = ["datasets>=2.0"]
+kaggle = ["kaggle>=1.6"]
+openml = ["openml>=0.14"]
 # Convenience groups
 frameworks = [
   "qiskit>=1.0",
@@ -80,6 +82,8 @@ all = [
   "sentence-transformers>=2.0",
   "umap-learn>=0.5",
   "datasets>=2.0",
+  "kaggle>=1.6",
+  "openml>=0.14",
 ]
 dev = [
   "pytest>=7.0",
