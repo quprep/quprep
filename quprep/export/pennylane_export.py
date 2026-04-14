@@ -79,11 +79,24 @@ class PennyLaneExporter:
             Callable quantum circuit. Invoke with no arguments to execute
             and obtain the quantum state vector.
         """
+        import warnings
+
         import pennylane as qml
 
         encoding = encoded.metadata.get("encoding", "unknown")
         n = encoded.metadata["n_qubits"]
         params = encoded.parameters.copy()
+
+        if n > 100:
+            warnings.warn(
+                f"PennyLane's circuit drawer (qml.draw) uses recursion and will likely "
+                f"hit Python's recursion limit for circuits with more than ~100 qubits. "
+                f"This circuit has {n} qubits. Call qml.draw(circuit)() at your own risk, "
+                f"or use framework='qasm' to visualise the circuit safely.",
+                UserWarning,
+                stacklevel=2,
+            )
+
         dev = qml.device(self.device, wires=n)
 
         if encoding == "angle":

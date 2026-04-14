@@ -54,9 +54,29 @@
 
 /* ── Header logo + title ──────────────────────────────────── */
 
-/* Remove the book logo */
+/* Remove the book logo from the header bar */
 .md-header__button.md-logo {
   display: none;
+}
+
+/* ── Mobile nav drawer logo ───────────────────────────────── */
+/* Hide the default book icon in the mobile nav drawer */
+nav.md-nav--primary label.md-nav__title a.md-nav__button.md-logo {
+  display: none !important;
+}
+/* Apply gradient text matching the desktop header title */
+.md-nav--primary > .md-nav__title {
+  font-family: 'Ubuntu', system-ui, sans-serif !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.025em !important;
+  -webkit-font-smoothing: antialiased;
+  background-image: linear-gradient(135deg, hsl(263, 70%, 50%), hsl(38, 92%, 50%));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+[data-md-color-scheme="slate"] .md-nav--primary > .md-nav__title {
+  background-image: linear-gradient(135deg, hsl(263, 70%, 60%), hsl(38, 92%, 55%));
 }
 
 /* Header font — Ubuntu matches quprep.org navbar */
