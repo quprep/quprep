@@ -10,6 +10,11 @@ Usage
     quprep qubo knapsack --weights "2,3,4" --values "3,4,5" --capacity 5
     quprep qubo tsp --distances "0,1,2;1,0,1;2,1,0"
     quprep qubo schedule --times "3,1,4,2" --machines 2
+    quprep inspect dataset.csv
+    quprep inspect dataset.csv --task classification --qubits 8
+    quprep benchmark dataset.csv
+    quprep benchmark dataset.csv --samples 10 --task classification
+    quprep benchmark dataset.csv --include angle,iqp,amplitude --output results.json
     quprep validate dataset.csv
     quprep validate dataset.csv --schema schema.json
     quprep compare dataset.csv --task classification --qubits 8
@@ -271,6 +276,68 @@ def build_parser() -> argparse.ArgumentParser:
         help="Comma-separated list of encoders to exclude.",
     )
 
+    # quprep inspect
+    inspect = subparsers.add_parser(
+        "inspect",
+        help="Profile a dataset: shape, types, missing values, sparsity, and recommendation.",
+    )
+    inspect.add_argument("source", help="Input file path (CSV, TSV).")
+    inspect.add_argument(
+        "--task",
+        default="classification",
+        choices=["classification", "regression", "qaoa", "kernel", "simulation"],
+        help="Task for encoding recommendation (default: classification).",
+    )
+    inspect.add_argument(
+        "--qubits",
+        type=int,
+        default=None,
+        help="Maximum qubit budget for recommendation.",
+    )
+    inspect.add_argument(
+        "--no-recommend",
+        action="store_true",
+        help="Skip encoding recommendation.",
+    )
+
+    # quprep benchmark
+    benchmark = subparsers.add_parser(
+        "benchmark",
+        help="Encode a dataset with all encoders and report gate count, depth, and timing.",
+    )
+    benchmark.add_argument("source", help="Input file path (CSV, TSV).")
+    benchmark.add_argument(
+        "--samples",
+        type=int,
+        default=5,
+        metavar="N",
+        help="Number of samples to encode per encoder (default: 5).",
+    )
+    benchmark.add_argument(
+        "--task",
+        default=None,
+        choices=["classification", "regression", "qaoa", "kernel", "simulation"],
+        help="Highlight the recommended encoder for this task.",
+    )
+    benchmark.add_argument(
+        "--include",
+        default=None,
+        metavar="ENCODINGS",
+        help="Comma-separated encoder names to include (default: all).",
+    )
+    benchmark.add_argument(
+        "--exclude",
+        default=None,
+        metavar="ENCODINGS",
+        help="Comma-separated encoder names to exclude.",
+    )
+    benchmark.add_argument(
+        "--output",
+        default=None,
+        metavar="FILE",
+        help="Save results as JSON to FILE.",
+    )
+
     # quprep validate
     validate = subparsers.add_parser(
         "validate",
@@ -493,6 +560,263 @@ def cmd_qubo(args) -> int:
         return 1
 
 
+def cmd_inspect(args) -> int:
+    try:
+        from quprep.ingest.csv_ingester import CSVIngester
+        dataset = CSVIngester().load(args.source)
+    except FileNotFoundError:
+        print(f"[quprep] File not found: {args.source}", file=sys.stderr)
+        return 1
+    except Exception as exc:
+        print(f"[quprep] Failed to load '{args.source}': {exc}", file=sys.stderr)
+        return 1
+
+
+    from quprep.ingest.profiler import profile
+
+    p = profile(dataset)
+
+    # Header
+    print(f"Source   : {args.source}")
+    print(f"Shape    : {p.n_samples} samples × {p.n_features} features")
+
+    if p.feature_names:
+        preview = p.feature_names[:8]
+        suffix = f" … (+{p.n_features - 8} more)" if p.n_features > 8 else ""
+        print(f"Columns  : {', '.join(preview)}{suffix}")
+
+    # Feature types
+    if p.feature_types:
+        type_counts: dict[str, int] = {}
+        for t in p.feature_types:
+            type_counts[t] = type_counts.get(t, 0) + 1
+        print(f"Types    : {', '.join(f'{t}: {n}' for t, n in type_counts.items())}")
+
+    # Missing values
+    total_missing = int(p.missing_counts.sum()) if p.missing_counts is not None else 0
+    if total_missing == 0:
+        print("Missing  : none")
+    else:
+        total_values = p.n_samples * p.n_features
+        print(
+            f"Missing  : {total_missing} ({100.0 * total_missing / total_values:.1f}%"
+            f" of {total_values} values)"
+        )
+        for i, count in enumerate(p.missing_counts):
+            if count > 0:
+                name = (
+                    p.feature_names[i] if i < len(p.feature_names) else f"feature[{i}]"
+                )
+                print(f"           '{name}': {int(count)}")
+
+    # Sparsity (fraction of zeros)
+    total = dataset.data.size
+    n_zeros = int((dataset.data == 0).sum())
+    print(f"Sparsity : {100.0 * n_zeros / total:.1f}% zeros ({n_zeros}/{total})")
+
+    # Per-feature stats (first 10)
+    max_show = min(p.n_features, 10)
+    print(f"\nFeature stats (first {max_show}):")
+    col_w = max((len(n) for n in p.feature_names[:max_show]), default=12)
+    for i in range(max_show):
+        name = p.feature_names[i] if i < len(p.feature_names) else f"feature[{i}]"
+        lo = p.mins[i] if p.mins is not None else float("nan")
+        hi = p.maxs[i] if p.maxs is not None else float("nan")
+        mu = p.means[i] if p.means is not None else float("nan")
+        sd = p.stds[i] if p.stds is not None else float("nan")
+        missing_n = int(p.missing_counts[i]) if p.missing_counts is not None else 0
+        missing_str = f"  {missing_n} missing" if missing_n else ""
+        print(
+            f"  {name:<{col_w}}  [{lo:.4g}, {hi:.4g}]"
+            f"  mean={mu:.4g}  std={sd:.4g}{missing_str}"
+        )
+    if p.n_features > max_show:
+        print(f"  … ({p.n_features - max_show} more features)")
+
+    # Encoding recommendation
+    if not args.no_recommend:
+        print()
+        try:
+            from quprep.core.recommender import recommend
+            rec = recommend(dataset, task=args.task, qubits=args.qubits)
+            print(str(rec))
+        except Exception as exc:
+            print(f"[quprep] Recommendation failed: {exc}", file=sys.stderr)
+
+    return 0
+
+
+def cmd_benchmark(args) -> int:
+    import time
+
+
+    # Load data
+    try:
+        from quprep.ingest.csv_ingester import CSVIngester
+        dataset = CSVIngester().load(args.source)
+    except FileNotFoundError:
+        print(f"[quprep] File not found: {args.source}", file=sys.stderr)
+        return 1
+    except Exception as exc:
+        print(f"[quprep] Failed to load '{args.source}': {exc}", file=sys.stderr)
+        return 1
+
+    from quprep.compare import _default_encoders
+    from quprep.normalize.scalers import auto_normalizer
+    from quprep.validation.cost import estimate_cost
+
+    encoders = _default_encoders()
+
+    # Filter by --include / --exclude
+    include = [s.strip() for s in args.include.split(",")] if args.include else None
+    exclude = {s.strip() for s in args.exclude.split(",")} if args.exclude else set()
+    if include is not None:
+        unknown = set(include) - set(encoders)
+        if unknown:
+            print(f"[quprep] Unknown encoder(s): {', '.join(sorted(unknown))}", file=sys.stderr)
+            return 1
+        encoders = {k: v for k, v in encoders.items() if k in include}
+    encoders = {k: v for k, v in encoders.items() if k not in exclude}
+
+    # Determine recommended encoder (for task annotation)
+    recommended: str | None = None
+    if args.task:
+        try:
+            from quprep.core.recommender import recommend
+            rec = recommend(dataset, task=args.task)
+            recommended = rec.method
+        except Exception:
+            pass
+
+    # Slice dataset to --samples rows
+    n_bench = min(args.samples, dataset.n_samples)
+    from quprep.core.dataset import Dataset
+    bench_dataset = Dataset(
+        data=dataset.data[:n_bench],
+        feature_names=dataset.feature_names,
+        feature_types=dataset.feature_types,
+    )
+
+    # Header
+    print(f"Source   : {args.source}")
+    print(
+        f"Shape    : {dataset.n_samples} samples × {dataset.n_features} features"
+        f"  (benchmarking on {n_bench} sample{'s' if n_bench != 1 else ''})"
+    )
+    print()
+
+    # Run each encoder
+    col_enc = 20
+    col_q   = 7
+    col_g   = 7
+    col_d   = 7
+    col_2q  = 9
+    col_t   = 13
+    col_n   = 9
+
+    header = (
+        f"{'Encoding':<{col_enc}}  {'Qubits':>{col_q}}  {'Gates':>{col_g}}"
+        f"  {'Depth':>{col_d}}  {'2Q-Gates':>{col_2q}}"
+        f"  {'Time/sample':>{col_t}}  {'NISQ':>{col_n}}"
+    )
+    sep = (
+        f"{'-' * col_enc}  {'-' * col_q}  {'-' * col_g}"
+        f"  {'-' * col_d}  {'-' * col_2q}"
+        f"  {'-' * col_t}  {'-' * col_n}"
+    )
+    print(header)
+    print(sep)
+
+    results = []
+    for name, encoder in encoders.items():
+        # Normalize data the same way the pipeline would
+        _encoding_to_key = {
+            "angle": "angle_ry",
+            "entangled_angle": "angle_ry",
+            "amplitude": "amplitude",
+            "basis": "basis",
+            "iqp": "angle_ry",
+            "reupload": "angle_ry",
+            "hamiltonian": "hamiltonian",
+            "qaoa_problem": "angle_ry",
+        }
+        norm_key = _encoding_to_key.get(name)
+        try:
+            normalizer = auto_normalizer(norm_key) if norm_key else None
+            norm_dataset = normalizer.fit_transform(bench_dataset) if normalizer else bench_dataset
+        except Exception:
+            norm_dataset = bench_dataset
+
+        # Time encoding
+        error = None
+        t_ms = float("nan")
+        cost = None
+        try:
+            t0 = time.perf_counter()
+            encoder.encode_batch(norm_dataset)
+            t1 = time.perf_counter()
+            t_ms = 1000.0 * (t1 - t0) / n_bench
+            cost = estimate_cost(encoder, dataset.n_features)
+        except Exception as exc:
+            error = str(exc)
+
+        marker = " *" if name == recommended else "  "
+        label = name + marker
+
+        if error:
+            row_str = (
+                f"{label:<{col_enc}}  {'—':>{col_q}}  {'—':>{col_g}}"
+                f"  {'—':>{col_d}}  {'—':>{col_2q}}"
+                f"  {'—':>{col_t}}  ERROR: {error[:30]}"
+            )
+        else:
+            time_str = f"{t_ms:.2f} ms"
+            nisq_str = "yes" if cost.nisq_safe else "NO"
+            row_str = (
+                f"{label:<{col_enc}}  {cost.n_qubits:>{col_q}}  {cost.gate_count:>{col_g}}"
+                f"  {cost.circuit_depth:>{col_d}}  {cost.two_qubit_gates:>{col_2q}}"
+                f"  {time_str:>{col_t}}  {nisq_str:>{col_n}}"
+            )
+            results.append({
+                "encoding": name,
+                "n_qubits": cost.n_qubits,
+                "gate_count": cost.gate_count,
+                "circuit_depth": cost.circuit_depth,
+                "two_qubit_gates": cost.two_qubit_gates,
+                "time_per_sample_ms": round(t_ms, 4),
+                "nisq_safe": cost.nisq_safe,
+                "warning": cost.warning,
+            })
+
+        print(row_str)
+
+    if recommended:
+        print(f"\n* recommended for task={args.task}")
+
+    warnings = [r for r in results if r.get("warning")]
+    if warnings:
+        print()
+        for r in warnings:
+            print(f"  [{r['encoding']}] {r['warning']}")
+
+    if args.output:
+        import json
+        from pathlib import Path
+        payload = {
+            "source": args.source,
+            "n_samples": dataset.n_samples,
+            "n_features": dataset.n_features,
+            "n_bench_samples": n_bench,
+            "task": args.task,
+            "recommended": recommended,
+            "results": results,
+        }
+        Path(args.output).write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        print(f"\n[quprep] Results saved to {args.output}")
+
+    return 0
+
+
 def cmd_validate(args) -> int:
     try:
         from quprep.ingest.csv_ingester import CSVIngester
@@ -675,6 +999,12 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "qubo":
         return cmd_qubo(args)
+
+    if args.command == "inspect":
+        return cmd_inspect(args)
+
+    if args.command == "benchmark":
+        return cmd_benchmark(args)
 
     if args.command == "suggest":
         return cmd_suggest(args)

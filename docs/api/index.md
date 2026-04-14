@@ -18,7 +18,7 @@ Everything else is accessed via submodules.
 ```python
 import quprep as qd
 
-qd.__version__         # "0.7.0"
+qd.__version__         # "0.8.0"
 qd.prepare(...)
 qd.Pipeline(...)
 qd.recommend(...)
@@ -33,6 +33,8 @@ qd.DataSchema(...)
 qd.estimate_cost(...)
 qd.compare_encodings(...)
 qd.ComparisonResult
+qd.fingerprint_pipeline(...)
+qd.FingerprintResult
 ```
 
 ---
@@ -67,6 +69,7 @@ qd.ComparisonResult
 | `quprep.ingest.openml_ingester` | `OpenMLIngester` |
 | `quprep.ingest.profiler` | `profile`, `DatasetProfile` |
 | `quprep.core.dataset` | `Dataset` |
+| `quprep.core.fingerprint` | `fingerprint_pipeline`, `FingerprintResult` |
 | `quprep.compare` | `compare_encodings`, `ComparisonResult` |
 | `quprep.validation` | `DataSchema`, `FeatureSpec`, `SchemaViolationError`, `validate_dataset`, `warn_qubit_mismatch`, `QuPrepWarning` |
 | `quprep.validation.cost` | `CostEstimate`, `estimate_cost` |

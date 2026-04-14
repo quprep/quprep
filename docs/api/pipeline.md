@@ -20,6 +20,22 @@ The `Pipeline` class chains all preprocessing stages. Each stage is optional —
 
 ---
 
+## FingerprintResult
+
+::: quprep.core.fingerprint.FingerprintResult
+    options:
+      show_source: false
+
+---
+
+## fingerprint_pipeline
+
+::: quprep.core.fingerprint.fingerprint_pipeline
+    options:
+      show_source: false
+
+---
+
 ## Examples
 
 ### Minimal — encode only
@@ -180,3 +196,27 @@ print(result.dataset.labels.shape)   # (n_samples,)
 ```
 
 For `FeatureSelector(method="mutual_info")`, labels in `dataset.labels` are used automatically — no separate `labels=` argument needed.
+
+### Reproducibility fingerprinting (v0.8.0)
+
+```python
+import quprep as qd
+
+pipeline = qd.Pipeline(
+    cleaner=qd.Imputer(strategy="knn"),
+    reducer=qd.PCAReducer(n_components=4),
+    encoder=qd.AngleEncoder(rotation="ry"),
+    exporter=qd.QASMExporter(),
+)
+
+fp = pipeline.fingerprint()
+
+print(fp.hash)       # sha256 hex — stable across runs for the same config
+fp.save("experiment.json")          # JSON (default)
+fp.save("experiment.yaml", format="yaml")   # YAML (requires pyyaml)
+print(fp.to_json())  # full JSON string including hash and UTC timestamp
+```
+
+The hash captures every stage class, all constructor parameters, and installed dependency versions.
+It is deterministic — the same configuration always produces the same hash regardless of when or
+where it runs. Include it in paper methods sections to make experiments exactly reproducible.

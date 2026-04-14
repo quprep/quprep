@@ -47,3 +47,24 @@ best   = result.best(prefer="nisq")
 ::: quprep.core.recommender.recommend
     options:
       show_source: false
+
+---
+
+## fingerprint_pipeline
+
+::: quprep.core.fingerprint.fingerprint_pipeline
+    options:
+      show_source: false
+
+---
+
+## FingerprintResult
+
+::: quprep.core.fingerprint.FingerprintResult
+    options:
+      show_source: false
+      members:
+        - hash
+        - config
+        - to_json
+        - save

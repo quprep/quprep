@@ -324,7 +324,7 @@ class TestPrepare:
 
     def test_version_accessible(self):
         import quprep
-        assert quprep.__version__ == "0.7.0"
+        assert quprep.__version__ == "0.8.0"
 
 
 # ---------------------------------------------------------------------------
@@ -773,3 +773,103 @@ class TestPrepareNewFrameworks:
             import quprep
             with pytest.raises(ImportError):
                 quprep.prepare(simple_array, framework="braket")
+
+
+# ---------------------------------------------------------------------------
+# Functional coverage gaps (pipeline.py lines not yet hit)
+# ---------------------------------------------------------------------------
+
+
+class TestPipelineFunctionalCoverage:
+    """Covers specific branches in pipeline.py that require targeted inputs."""
+
+    def test_fit_with_y_stores_labels(self, simple_array):
+        """Line 216: dataset.labels = np.asarray(y) when fit(X, y=y)."""
+        p = Pipeline()
+        p.fit(simple_array, y=[0, 1, 0, 1, 0])
+        # The pipeline stores labels internally; verify it doesn't crash
+        result = p.transform(simple_array)
+        assert result is not None
+
+    def test_transform_with_preprocessor_runs_apply_stages(self):
+        """Lines 554-563: _apply_stages preprocessor loop via transform()."""
+        import numpy as np
+
+        from quprep.preprocess.window import WindowTransformer
+        X = np.random.default_rng(0).random((30, 3))
+        p = Pipeline(preprocessor=WindowTransformer(window_size=4, step=4))
+        p.fit(X)
+        result = p.transform(X)
+        assert result is not None
+
+    def test_transform_with_reducer_runs_apply_stages(self, simple_array):
+        """Lines 579-581: _apply_stages reducer audit entry via transform()."""
+        from quprep.reduce.pca import PCAReducer
+        p = Pipeline(reducer=PCAReducer(n_components=2))
+        p.fit(simple_array)
+        result = p.transform(simple_array)
+        assert result is not None
+
+    def test_fit_with_schema_validates(self):
+        """Line 458: schema.validate(dataset) runs when pipeline has a schema."""
+        import numpy as np
+
+        from quprep.ingest.numpy_ingester import NumpyIngester
+        from quprep.validation.schema import DataSchema, FeatureSpec
+        X = np.array([[1.0, 2.0], [3.0, 4.0]])
+        dataset = NumpyIngester().load(X)
+        schema = DataSchema([
+            FeatureSpec(dataset.feature_names[0], dtype="continuous"),
+            FeatureSpec(dataset.feature_names[1], dtype="continuous"),
+        ])
+        p = Pipeline(schema=schema)
+        result = p.fit_transform(X)
+        assert result is not None
+
+    def test_encoding_key_returns_none_for_unrecognised_encoder(self):
+        """Line 691: _encoding_key returns None for encoders not in the map."""
+        from quprep.encode.graph_state import GraphStateEncoder
+        p = Pipeline(encoder=GraphStateEncoder())
+        key = p._encoding_key()
+        assert key is None
+
+    def test_summary_with_cost_warning(self, simple_array):
+        """Line 103 in PipelineResult.summary(): cost.warning branch."""
+        from quprep.core.pipeline import PipelineResult
+        from quprep.validation.cost import CostEstimate
+        cost = CostEstimate(
+            encoding="angle", n_features=3, n_qubits=3,
+            gate_count=3, circuit_depth=1, two_qubit_gates=0,
+            nisq_safe=True, warning="circuit depth warning",
+        )
+        result = PipelineResult(dataset=None, encoded=[], circuits=None, cost=cost)
+        summary = result.summary()
+        assert "circuit depth warning" in summary
+
+    def test_ingest_scipy_sparse_import_error(self):
+        """Lines 656-657: _ingest scipy.sparse ImportError path."""
+        import sys
+        from unittest.mock import patch
+
+        import numpy as np
+        X = np.eye(3)
+        p = Pipeline()
+        p.fit(X)
+        # Simulate scipy not available → falls through to next branch
+        with patch.dict(sys.modules, {"scipy": None, "scipy.sparse": None}):
+            result = p.transform(X)
+        assert result is not None
+
+    def test_ingest_pandas_import_error(self):
+        """Lines 662-665: _ingest pandas ImportError path."""
+        import sys
+        from unittest.mock import patch
+
+        import numpy as np
+        X = np.eye(3)
+        p = Pipeline()
+        p.fit(X)
+        # Patch pandas out; numpy array still works via earlier branch
+        with patch.dict(sys.modules, {"pandas": None}):
+            result = p.transform(X)
+        assert result is not None

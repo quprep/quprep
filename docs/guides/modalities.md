@@ -541,6 +541,12 @@ ds = qd.KaggleIngester(
 ).load("owner/dataset-name")
 ```
 
+Re-download a previously cached dataset with `force=True`:
+
+```python
+ds = qd.KaggleIngester(force=True).load("owner/dataset-name")
+```
+
 ### Competition data
 
 Competition data uses just the competition slug (visible in the URL):
@@ -621,6 +627,12 @@ ds = qd.OpenMLIngester(target_column="class").load("iris")
 
 # Specific version
 ds = qd.OpenMLIngester(target_column="class", version=1).load("iris")
+```
+
+OpenML caches downloaded datasets locally. The cache format can be changed (default is `"pickle"`):
+
+```python
+ds = qd.OpenMLIngester(target_column="class", cache_format="feather").load("iris")
 ```
 
 ### No target (unsupervised)
@@ -743,6 +755,18 @@ print(ds.metadata["source"])      # "huggingface:imodels/credit-card"
 print(ds.metadata["modality"])    # "tabular"
 ```
 
+Non-numeric columns are dropped by default. Set `numeric_only=False` to keep them in `Dataset.categorical_data` for encoding with `CategoricalEncoder`:
+
+```python
+ds = qd.HuggingFaceIngester(
+    split="train",
+    target_columns="label",
+    numeric_only=False,
+).load("imodels/credit-card")
+
+print(ds.categorical_data.keys())   # string/categorical column names
+```
+
 Full pipeline:
 
 ```python
@@ -822,13 +846,18 @@ ds = qd.HuggingFaceIngester(
     modality="graph",
     split="train",
     target_columns="y",
-    edge_index_column="edge_index",  # COO format: shape [2, E]
-    n_graph_features=8,              # pad/truncate Laplacian+degree features
+    edge_index_column="edge_index",    # COO format: shape [2, E]
+    node_feature_column="x",           # optional — pre-computed node features
+    n_graph_features=8,                # pad/truncate Laplacian+degree features
 ).load("graphs-datasets/ogbg-molhiv")
 
 print(ds.data.shape)     # (n_graphs, 8)
 print(ds.labels.shape)   # (n_graphs,)
 ```
+
+- `edge_index_column` — column holding the COO edge index (shape `[2, E]`).
+- `node_feature_column` — optional column with pre-computed node feature matrix. If present, features are averaged over nodes to produce a graph-level vector.
+- `n_graph_features` — target feature dimensionality; Laplacian eigenvalues + degree stats are padded/truncated to this size.
 
 Internally, graph datasets are routed through `GraphIngester` — all the same feature options apply (`features="laplacian_eigenvalues"`, `features="all"`, etc.).
 

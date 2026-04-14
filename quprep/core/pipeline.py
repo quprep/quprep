@@ -395,6 +395,28 @@ class Pipeline:
         with open(path, "wb") as f:
             pickle.dump(self, f, protocol=pickle.HIGHEST_PROTOCOL)
 
+    def fingerprint(self):
+        """
+        Compute a reproducibility fingerprint for this pipeline.
+
+        Returns a :class:`~quprep.core.fingerprint.FingerprintResult` containing
+        a deterministic SHA-256 hash of the full pipeline configuration (stage
+        classes, parameters, and dependency versions). The hash is stable across
+        runs for the same configuration and suitable for paper methods sections.
+
+        Returns
+        -------
+        FingerprintResult
+
+        Examples
+        --------
+        >>> fp = pipeline.fingerprint()
+        >>> print(fp.hash)
+        >>> fp.save("experiment.json")
+        """
+        from quprep.core.fingerprint import fingerprint_pipeline
+        return fingerprint_pipeline(self)
+
     @classmethod
     def load(cls, path: str | Path) -> Pipeline:
         """

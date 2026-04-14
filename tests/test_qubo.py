@@ -833,3 +833,16 @@ class TestCLIPortfolioGraphcolor:
             "--solve",
         ])
         assert ret == 0
+
+
+# ---------------------------------------------------------------------------
+# qubo/problems/__init__.py — import coverage
+# ---------------------------------------------------------------------------
+
+
+def test_problems_package_importable():
+    """Importing the problems package covers its __init__.py."""
+    import quprep.qubo.problems as pkg  # noqa: F401
+    assert callable(pkg.max_cut)
+    assert callable(pkg.tsp)
+    assert callable(pkg.knapsack)

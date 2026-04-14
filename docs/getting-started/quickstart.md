@@ -164,6 +164,14 @@ quprep convert data.csv --samples 5
 
 # Get encoding recommendation
 quprep recommend data.csv --task classification --qubits 8
+
+# Inspect a dataset (shape, types, missing, sparsity, recommendation)
+quprep inspect data.csv
+quprep inspect data.csv --task kernel --no-recommend
+
+# Benchmark all encoders — gate count, depth, and encode time
+quprep benchmark data.csv --task classification
+quprep benchmark data.csv --samples 10 --include angle,iqp --output bench.json
 ```
 
 ---

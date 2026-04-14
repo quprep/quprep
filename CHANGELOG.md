@@ -12,6 +12,29 @@ QuPrep uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.8.0] — 2026-04-14
+
+### Added
+
+**Data connectors**
+- `HuggingFaceIngester` — load any HuggingFace dataset with automatic modality detection (`modality="auto"` sniffs Image/text/tabular/graph feature schemas); supports tabular, image, text, and graph modalities; `pip install quprep[huggingface]`
+- `OpenMLIngester` — load OpenML datasets by integer ID (`load(61)`) or name (`load("iris")`); version pinning; no account required for public datasets; `pip install quprep[openml]`
+- `KaggleIngester` — download Kaggle datasets (`load("owner/name")`) and competition data (`load_competition("slug")`); uses `~/.kaggle/kaggle.json` or env vars; `pip install quprep[kaggle]`
+
+**CLI tools**
+- `quprep inspect <file>` — profile a dataset without encoding: shape, feature types, missing values, sparsity, per-feature statistics, and an optional encoding recommendation
+- `quprep benchmark <file>` — run all (or selected) encoders on a dataset and report gate count, circuit depth, two-qubit gates, encode time, and NISQ safety in a side-by-side table; `--include`, `--exclude`, `--task`, `--samples`, `--output` flags
+
+**Reproducibility**
+- `fingerprint_pipeline(pipeline)` → `FingerprintResult` — deterministic SHA-256 hash of the full pipeline configuration (stage classes + parameters + dependency versions); stable across runs for the same config; serialisable to dict/JSON for paper methods sections and experiment logs
+
+**New extras**
+- `quprep[huggingface]` — `datasets>=2.0`
+- `quprep[openml]` — `openml>=0.14`
+- `quprep[kaggle]` — `kaggle>=1.6`
+
+---
+
 ## [0.7.0] — 2026-04-09
 
 ### Added
@@ -307,7 +330,8 @@ First public release. Covers the full ingest → clean → normalize → encode 
 
 ---
 
-[Unreleased]: https://github.com/quprep/quprep/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/quprep/quprep/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/quprep/quprep/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/quprep/quprep/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/quprep/quprep/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/quprep/quprep/compare/v0.4.0...v0.5.0

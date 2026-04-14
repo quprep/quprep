@@ -152,3 +152,73 @@ Or use `recommend()` directly with `.apply()`:
 rec = qd.recommend("data.csv", task="classification")
 pipeline_result = rec.apply("data.csv")
 ```
+
+---
+
+## Reproducibility fingerprinting
+
+Once you've chosen an encoding, lock in the exact configuration with a deterministic hash — useful for paper methods sections and experiment logs.
+
+```python
+import quprep as qd
+
+pipeline = qd.Pipeline(
+    cleaner=qd.Imputer(strategy="knn"),
+    reducer=qd.PCAReducer(n_components=4),
+    encoder=qd.AngleEncoder(rotation="ry"),
+    exporter=qd.QASMExporter(),
+)
+
+fp = pipeline.fingerprint()
+print(fp.hash)   # sha256 hex — same config always produces the same hash
+```
+
+Or via the standalone function:
+
+```python
+fp = qd.fingerprint_pipeline(pipeline)
+```
+
+### What the hash captures
+
+- Class name and all constructor parameters for every configured stage
+- Installed versions of key dependencies (numpy, scikit-learn, scipy, qiskit, pennylane, etc.)
+- QuPrep version and Python version
+
+The hash is **stable across runs** — the timestamp is excluded so that the same configuration always produces the same hash regardless of when or where it runs.
+
+### Exporting for a paper
+
+```python
+# JSON (default) — attach to supplementary material
+fp.save("experiment.json")
+
+# YAML — requires pyyaml
+fp.save("experiment.yaml", format="yaml")
+
+# Inline JSON string
+print(fp.to_json())
+```
+
+Example JSON output:
+
+```json
+{
+  "hash": "sha256:a3f7c1...",
+  "timestamp": "2026-04-10T10:23:00+00:00",
+  "quprep_version": "0.8.0",
+  "python_version": "3.12.0",
+  "stages": {
+    "cleaner":  { "class": "Imputer",    "params": { "strategy": "knn" } },
+    "reducer":  { "class": "PCAReducer", "params": { "n_components": 4 } },
+    "encoder":  { "class": "AngleEncoder","params": { "rotation": "ry" } },
+    "exporter": { "class": "QASMExporter","params": {} }
+  },
+  "dependencies": {
+    "numpy": "1.26.4",
+    "scikit-learn": "1.4.2"
+  }
+}
+```
+
+Include the `hash` value in your paper's methods section. Readers can reproduce your exact setup by inspecting the JSON and recreating the pipeline.

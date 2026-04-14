@@ -513,3 +513,19 @@ class TestCoverageGaps:
         profile = rec_mod._profile_source(data)
         # Should not raise — exception is caught; feature_collinear defaults to False
         assert profile["feature_collinear"] is False
+
+
+# ---------------------------------------------------------------------------
+# Recommender — wide dataset penalty (lines 395, 489)
+# ---------------------------------------------------------------------------
+
+
+def test_recommend_wide_dataset_hits_zz_penalty():
+    """Lines 395 and 489: d > 15 penalty and note for zz_feature_map / pauli_feature_map."""
+    import quprep as qd
+    rng = np.random.default_rng(0)
+    # 16 features triggers the d > 15 branch for zz/pauli scoring
+    X = rng.random((50, 16))
+    rec = qd.recommend(X, task="classification")
+    assert rec is not None
+    assert hasattr(rec, "method")

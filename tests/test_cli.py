@@ -641,3 +641,280 @@ class TestCommandValueErrorPaths:
         with patch("quprep.compare.compare_encodings", side_effect=RuntimeError("boom")):
             rc = main(["compare", csv_file])
         assert rc == 1
+
+
+# ---------------------------------------------------------------------------
+# quprep inspect
+# ---------------------------------------------------------------------------
+
+class TestInspectCommand:
+    def test_inspect_returns_zero(self, csv_file, capsys):
+        rc = main(["inspect", csv_file])
+        assert rc == 0
+
+    def test_inspect_shows_shape(self, csv_file, capsys):
+        main(["inspect", csv_file])
+        out = capsys.readouterr().out
+        assert "3 samples" in out
+        assert "4 features" in out
+
+    def test_inspect_shows_source(self, csv_file, capsys):
+        main(["inspect", csv_file])
+        out = capsys.readouterr().out
+        assert "Source" in out
+
+    def test_inspect_shows_columns(self, csv_file, capsys):
+        main(["inspect", csv_file])
+        out = capsys.readouterr().out
+        assert "x0" in out
+
+    def test_inspect_shows_missing_none(self, csv_file, capsys):
+        main(["inspect", csv_file])
+        out = capsys.readouterr().out
+        assert "none" in out.lower()
+
+    def test_inspect_reports_missing_values(self, tmp_path, capsys):
+        f = tmp_path / "nan.csv"
+        f.write_text("a,b\n1.0,2.0\n,3.0\n")
+        rc = main(["inspect", str(f)])
+        assert rc == 0
+        out = capsys.readouterr().out
+        assert "missing" in out.lower()
+
+    def test_inspect_shows_sparsity(self, csv_file, capsys):
+        main(["inspect", csv_file])
+        out = capsys.readouterr().out
+        assert "Sparsity" in out
+
+    def test_inspect_shows_feature_stats(self, csv_file, capsys):
+        main(["inspect", csv_file])
+        out = capsys.readouterr().out
+        assert "Feature stats" in out
+        assert "mean=" in out
+
+    def test_inspect_shows_recommendation(self, csv_file, capsys):
+        main(["inspect", csv_file])
+        out = capsys.readouterr().out
+        assert "Recommended" in out or "encoding" in out.lower()
+
+    def test_inspect_no_recommend_flag(self, csv_file, capsys):
+        rc = main(["inspect", csv_file, "--no-recommend"])
+        assert rc == 0
+        out = capsys.readouterr().out
+        assert "Recommended encoding" not in out
+
+    def test_inspect_task_flag(self, csv_file, capsys):
+        rc = main(["inspect", csv_file, "--task", "kernel"])
+        assert rc == 0
+
+    def test_inspect_missing_file_returns_one(self, capsys):
+        rc = main(["inspect", "nonexistent.csv"])
+        assert rc == 1
+        assert "not found" in capsys.readouterr().err.lower()
+
+    def test_inspect_parser_defaults(self):
+        args = build_parser().parse_args(["inspect", "data.csv"])
+        assert args.task == "classification"
+        assert args.qubits is None
+        assert args.no_recommend is False
+
+    def test_inspect_many_features_truncated(self, tmp_path, capsys):
+        # 15 features — display should truncate at 10 and show "(+5 more)"
+        header = ",".join(f"f{i}" for i in range(15))
+        row = ",".join(["0.1"] * 15)
+        f = tmp_path / "wide.csv"
+        f.write_text(f"{header}\n{row}\n")
+        main(["inspect", str(f)])
+        out = capsys.readouterr().out
+        assert "more" in out
+
+
+# ---------------------------------------------------------------------------
+# quprep benchmark
+# ---------------------------------------------------------------------------
+
+class TestBenchmarkCommand:
+    def test_benchmark_returns_zero(self, csv_file, capsys):
+        rc = main(["benchmark", csv_file, "--samples", "2"])
+        assert rc == 0
+
+    def test_benchmark_prints_table_header(self, csv_file, capsys):
+        main(["benchmark", csv_file, "--samples", "2"])
+        out = capsys.readouterr().out
+        assert "Encoding" in out
+        assert "Gates" in out
+        assert "Depth" in out
+
+    def test_benchmark_prints_source(self, csv_file, capsys):
+        main(["benchmark", csv_file, "--samples", "2"])
+        out = capsys.readouterr().out
+        assert "Source" in out
+
+    def test_benchmark_with_include(self, csv_file, capsys):
+        rc = main(["benchmark", csv_file, "--include", "angle,basis", "--samples", "2"])
+        assert rc == 0
+        out = capsys.readouterr().out
+        assert "angle" in out
+        assert "amplitude" not in out
+
+    def test_benchmark_with_exclude(self, csv_file, capsys):
+        rc = main(["benchmark", csv_file, "--exclude", "amplitude,hamiltonian", "--samples", "2"])
+        assert rc == 0
+        out = capsys.readouterr().out
+        assert "amplitude" not in out
+
+    def test_benchmark_with_task_shows_marker(self, csv_file, capsys):
+        rc = main(["benchmark", csv_file, "--task", "classification", "--samples", "2"])
+        assert rc == 0
+        out = capsys.readouterr().out
+        assert "*" in out  # recommended marker
+
+    def test_benchmark_output_json(self, csv_file, tmp_path, capsys):
+        import json
+        out_file = str(tmp_path / "bench.json")
+        rc = main(["benchmark", csv_file, "--samples", "2", "--output", out_file])
+        assert rc == 0
+        data = json.loads(open(out_file).read())
+        assert "results" in data
+        assert "n_features" in data
+
+    def test_benchmark_unknown_include_returns_one(self, csv_file, capsys):
+        rc = main(["benchmark", csv_file, "--include", "notanencoder"])
+        assert rc == 1
+        assert "Unknown" in capsys.readouterr().err
+
+    def test_benchmark_missing_file_returns_one(self, capsys):
+        rc = main(["benchmark", "nonexistent.csv"])
+        assert rc == 1
+        assert "not found" in capsys.readouterr().err.lower()
+
+    def test_benchmark_parser_defaults(self):
+        args = build_parser().parse_args(["benchmark", "data.csv"])
+        assert args.samples == 5
+        assert args.task is None
+        assert args.include is None
+        assert args.exclude is None
+        assert args.output is None
+
+    def test_benchmark_samples_capped_at_dataset_size(self, csv_file, capsys):
+        # CSV has 3 rows; requesting 100 samples should not error
+        rc = main(["benchmark", csv_file, "--samples", "100"])
+        assert rc == 0
+
+    def test_benchmark_load_exception(self, capsys):
+        from unittest.mock import patch
+        with patch("quprep.ingest.csv_ingester.CSVIngester.load", side_effect=ValueError("bad")):
+            rc = main(["benchmark", "data.csv"])
+        assert rc == 1
+        assert "failed" in capsys.readouterr().err.lower()
+
+    def test_benchmark_encoder_error_shows_error_row(self, csv_file, capsys):
+        from unittest.mock import patch
+        # Patch one encoder's encode_batch to fail — the error row branch runs
+        with patch(
+            "quprep.encode.angle.AngleEncoder.encode_batch",
+            side_effect=RuntimeError("encode fail"),
+        ):
+            rc = main(["benchmark", csv_file, "--include", "angle", "--samples", "2"])
+        assert rc == 0
+        out = capsys.readouterr().out
+        assert "ERROR" in out
+
+    def test_benchmark_with_nisq_warning(self, csv_file, capsys):
+        # qaoa_problem on a wide dataset triggers a NISQ warning row
+        # Use a wide CSV so gate count may produce a warning
+        rc = main(["benchmark", csv_file, "--include", "qaoa_problem", "--samples", "2"])
+        assert rc == 0  # warnings don't fail the command
+
+    def test_benchmark_task_recommend_exception(self, csv_file, capsys):
+        """Lines 688-689: recommend() failure inside benchmark is non-fatal."""
+        from unittest.mock import patch
+        with patch("quprep.core.recommender.recommend", side_effect=RuntimeError("rec fail")):
+            rc = main(["benchmark", csv_file, "--task", "classification",
+                       "--include", "angle", "--samples", "2"])
+        assert rc == 0  # recommend failure is silently swallowed
+
+    def test_benchmark_normalizer_exception(self, csv_file, capsys):
+        """Lines 747-748: normalizer failure falls back to raw dataset."""
+        from unittest.mock import patch
+        with patch("quprep.normalize.scalers.Scaler.fit_transform",
+                   side_effect=RuntimeError("norm fail")):
+            rc = main(["benchmark", csv_file, "--include", "angle", "--samples", "2"])
+        assert rc == 0  # graceful fallback, not an error
+
+    def test_benchmark_cost_warning_prints(self, csv_file, capsys):
+        """Lines 798-800: NISQ warning section printed when cost.warning is set."""
+        from unittest.mock import MagicMock, patch
+
+        from quprep.validation.cost import CostEstimate
+        mock_cost = CostEstimate(
+            encoding="angle", n_features=3, n_qubits=3,
+            gate_count=3, circuit_depth=1, two_qubit_gates=0,
+            nisq_safe=True, warning="test warning message",
+        )
+        with patch("quprep.encode.angle.AngleEncoder.encode_batch", return_value=[MagicMock()]), \
+             patch("quprep.validation.cost.estimate_cost", return_value=mock_cost):
+            rc = main(["benchmark", csv_file, "--include", "angle", "--samples", "2"])
+        out = capsys.readouterr().out
+        assert rc == 0
+        assert "test warning message" in out
+
+
+# ---------------------------------------------------------------------------
+# inspect error paths
+# ---------------------------------------------------------------------------
+
+class TestInspectErrorPaths:
+    def test_inspect_load_exception(self, capsys):
+        from unittest.mock import patch
+        with patch("quprep.ingest.csv_ingester.CSVIngester.load", side_effect=ValueError("bad")):
+            rc = main(["inspect", "data.csv"])
+        assert rc == 1
+        assert "failed" in capsys.readouterr().err.lower()
+
+    def test_inspect_recommend_exception(self, csv_file, capsys):
+        from unittest.mock import patch
+        with patch("quprep.core.recommender.recommend", side_effect=RuntimeError("boom")):
+            rc = main(["inspect", csv_file])
+        assert rc == 0  # recommendation failure is non-fatal
+        assert "Recommendation failed" in capsys.readouterr().err
+
+
+# ---------------------------------------------------------------------------
+# QUBO — uncovered branches
+# ---------------------------------------------------------------------------
+
+class TestQuboCoverageBranches:
+    def test_build_qubo_unknown_problem_raises(self):
+        import argparse
+
+        from quprep.cli import _build_qubo_from_args
+        args = argparse.Namespace(adjacency=None)
+        with pytest.raises(ValueError, match="Unknown problem"):
+            _build_qubo_from_args("invalid_problem", args)
+
+    def test_print_qubo_with_slack_vars(self, capsys):
+        # to_qubo with inequality constraint → slack variables → n_original != Q.shape[0]
+        import numpy as np
+
+        from quprep.cli import _print_qubo
+        from quprep.qubo.converter import to_qubo
+        cost = np.array([[0.0, 1.0], [1.0, 0.0]])
+        result = to_qubo(
+            cost,
+            constraints=[{"A": np.array([1.0, 1.0]), "b": 1.5, "type": "ineq", "penalty": 10}],
+        )
+        assert result.n_original != result.Q.shape[0]  # confirms slack vars exist
+        rc = _print_qubo(result, solve=False)
+        out = capsys.readouterr().out
+        assert "slack" in out
+        assert rc == 0
+
+    def test_maxcut_solve_large_uses_sa(self, capsys):
+        # 21-node graph → n > 20 → simulated annealing path
+        n = 21
+        rows = ";".join(",".join("1" if i != j else "0" for j in range(n)) for i in range(n))
+        rc = main(["qubo", "maxcut", "--adjacency", rows, "--solve"])
+        assert rc == 0
+        out = capsys.readouterr().out
+        assert "simulated annealing" in out.lower()

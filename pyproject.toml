@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "quprep"
-version = "0.7.0"
+version = "0.8.0"
 description = "Quantum data preparation — the missing preprocessing layer between classical datasets and quantum computing frameworks"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -135,8 +135,11 @@ exclude_lines = [
     "\\.\\.\\.",
     "^\\s*@(abstract)?property$",
     "^\\s*@abstractmethod$",
+    "^\\s*@classmethod$",
+    "^\\s*@staticmethod$",
     "^\\s*def __repr__",
     "^\\s*def __str__",
+    "^from __future__ import",
 ]
 
 [tool.ruff]

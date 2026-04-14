@@ -36,7 +36,7 @@ Recommendation::
     rec = qd.recommend(df, task="classification", qubits=8)
 """
 
-__version__ = "0.7.0"
+__version__ = "0.8.0"
 __author__ = "Hasarindu Perera"
 __license__ = "Apache-2.0"
 
@@ -50,6 +50,7 @@ from quprep.clean.selector import FeatureSelector
 # Comparison
 from quprep.compare import ComparisonResult, compare_encodings
 from quprep.core.drift import DriftDetector, DriftReport
+from quprep.core.fingerprint import FingerprintResult, fingerprint_pipeline
 from quprep.core.pipeline import Pipeline, PipelineResult
 from quprep.core.qubit_suggestion import QubitSuggestion, suggest_qubits
 from quprep.core.recommender import recommend
@@ -186,6 +187,9 @@ __all__ = [
     # Drift detection
     "DriftDetector",
     "DriftReport",
+    # Reproducibility
+    "fingerprint_pipeline",
+    "FingerprintResult",
     # Batch export
     "batch_export",
     # Ingesters

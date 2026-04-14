@@ -81,6 +81,9 @@ QuPrep converts classical datasets into quantum-circuit-ready format. It is not 
 | **Export++** | v0.6.0 | Amazon Braket, Q# (Azure Quantum), IQM native format |
 | **Plugins** | v0.6.0 | `register_encoder` / `register_exporter` — custom encoders/exporters via `prepare()` |
 | **Modalities** | v0.7.0 | Time series, sparse matrices, multi-label, image, text (TF-IDF + sentence-transformers), graph (lossy feature extraction + lossless graph state encoding) |
+| **Connectors** | v0.8.0 | HuggingFace datasets, OpenML, Kaggle — load any public dataset in one line |
+| **CLI tools** | v0.8.0 | `quprep inspect` (dataset profile), `quprep benchmark` (encoder comparison table) |
+| **Reproducibility** | v0.8.0 | `fingerprint_pipeline()` — deterministic SHA-256 hash of pipeline config for paper methods sections |
 
 ---
 
@@ -117,6 +120,14 @@ It prepares your data. Everything else is your framework's job.
 ## CLI
 
 ```bash
+# Profile a dataset (shape, types, missing, sparsity, recommendation)
+quprep inspect data.csv
+quprep inspect data.csv --task kernel --qubits 8
+
+# Benchmark all encoders (gate count, depth, timing)
+quprep benchmark data.csv --task classification
+quprep benchmark data.csv --include angle,iqp,amplitude --output bench.json
+
 # Encode a CSV to OpenQASM 3.0
 quprep convert data.csv --encoding angle
 

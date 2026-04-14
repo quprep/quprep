@@ -103,7 +103,8 @@ nav:
     - Framework Export: guides/export.md
     - QUBO / Ising: guides/qubo.md
     - Validation & Cost: guides/validation.md
-    - Encoding Comparison: guides/comparison.md
+    - Inspect & Benchmark: guides/inspect_benchmark.md
+    - Comparison & Fingerprinting: guides/comparison.md
     - Qubit Suggestion: guides/suggest.md
     - Data Drift Detection: guides/drift.md
     - Plugin System: guides/plugins.md
