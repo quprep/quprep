@@ -738,12 +738,12 @@ class TestPrepareNewFrameworks:
         result = quprep.prepare(simple_array, encoding="tensor_product", framework="qasm")
         assert len(result.circuits) == len(simple_array)
 
-    def test_prepare_random_fourier_raises_before_fit(self, simple_array):
+    def test_prepare_random_fourier_auto_fits(self, simple_array):
         import quprep
-        # RandomFourierEncoder needs fit() first — pipeline calls encode_batch which
-        # calls encode() on each row, hitting the RuntimeError
-        with pytest.raises(RuntimeError, match="fitted"):
-            quprep.prepare(simple_array, encoding="random_fourier", framework="qasm")
+        # Pipeline now auto-fits RandomFourierEncoder when it has a fit() method
+        # and hasn't been fitted yet — no RuntimeError should be raised
+        result = quprep.prepare(simple_array, encoding="random_fourier", framework="qasm")
+        assert len(result.circuits) == len(simple_array)
 
     def test_prepare_qiskit_lazy_loader(self, simple_array):
         """Lazy loader is exercised when qiskit is installed, skipped otherwise."""

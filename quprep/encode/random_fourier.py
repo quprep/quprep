@@ -95,6 +95,7 @@ class RandomFourierEncoder(BaseEncoder):
         rng = np.random.default_rng(self.random_state)
         self._W = rng.normal(0, np.sqrt(2.0 * self.gamma), size=(self.n_components, d))
         self._b = rng.uniform(0, 2 * np.pi, size=(self.n_components,))
+        self._is_fitted = True
         return self
 
     def encode(self, x: np.ndarray) -> EncodedResult:
