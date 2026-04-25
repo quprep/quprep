@@ -85,6 +85,15 @@ from quprep.ingest.openml_ingester import OpenMLIngester
 from quprep.ingest.text_ingester import TextIngester
 from quprep.ingest.timeseries_ingester import TimeSeriesIngester
 
+# Metrics
+from quprep.metrics import (
+    EncoderMetrics,
+    entanglement_capability,
+    expressibility,
+    kernel_alignment,
+    score_encoding,
+)
+
 # Normalizer
 from quprep.normalize.scalers import Scaler
 
@@ -205,6 +214,12 @@ __all__ = [
     "ImageIngester",
     "TextIngester",
     "TimeSeriesIngester",
+    # Metrics
+    "expressibility",
+    "entanglement_capability",
+    "kernel_alignment",
+    "EncoderMetrics",
+    "score_encoding",
     # Preprocessors
     "WindowTransformer",
     "NoiseProfile",

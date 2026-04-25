@@ -85,6 +85,7 @@ QuPrep converts classical datasets into quantum-circuit-ready format. It is not 
 | **CLI tools** | v0.8.0 | `quprep inspect` (dataset profile), `quprep benchmark` (encoder comparison table) |
 | **Reproducibility** | v0.8.0 | `fingerprint_pipeline()` — deterministic SHA-256 hash of pipeline config for paper methods sections |
 | **Noise-aware preprocessing** | v0.9.0 | Assign high-variance features to least-noisy qubits; minimise SWAP count given hardware topology; remap angles away from 0/π poles |
+| **Encoding quality metrics** | v0.9.0 | Simulation-based expressibility, entanglement capability, and kernel alignment scores; `use_metrics=True` in `recommend()` for data-driven re-ranking |
 
 ---
 

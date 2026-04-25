@@ -132,6 +132,27 @@ The `reason` field always explains which dataset signals drove the recommendatio
 
 ---
 
+## Simulation-based re-ranking (`use_metrics=True`)
+
+Pass `use_metrics=True` to augment the heuristic scores with circuit-level metrics computed by simulating each encoding on samples from your data:
+
+```python
+rec = qd.recommend("data.csv", task="classification", use_metrics=True)
+print(rec)
+```
+
+When `n_features ≤ 12`, QuPrep simulates the candidate encodings with a lightweight numpy statevector backend and adds the following bonuses to each encoding's heuristic score:
+
+| Metric | Bonus range | Direction |
+|---|---|---|
+| Expressibility (KL divergence) | up to **+8** | lower KL → more expressive → higher bonus |
+| Entanglement capability | up to **+6** | classification / kernel tasks only |
+| Kernel alignment | up to **±12** | higher alignment → better class separation |
+
+The recommendation is then re-ranked by the combined score. For datasets with more than 12 features the metrics pass is skipped and the heuristic scores are used unchanged.
+
+---
+
 ## Combining both
 
 ```python
@@ -206,7 +227,7 @@ Example JSON output:
 {
   "hash": "sha256:a3f7c1...",
   "timestamp": "2026-04-10T10:23:00+00:00",
-  "quprep_version": "0.8.0",
+  "quprep_version": "0.9.0",
   "python_version": "3.12.0",
   "stages": {
     "cleaner":  { "class": "Imputer",    "params": { "strategy": "knn" } },

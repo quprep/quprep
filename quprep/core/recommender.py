@@ -535,6 +535,7 @@ def recommend(
     *,
     task: str = "classification",
     qubits: int | None = None,
+    use_metrics: bool = False,
     **kwargs,
 ) -> EncodingRecommendation:
     """
@@ -554,6 +555,11 @@ def recommend(
         ``'kernel'``, or ``'simulation'``. Default ``'classification'``.
     qubits : int, optional
         Maximum qubit budget. Encodings that exceed this are heavily penalised.
+    use_metrics : bool
+        When ``True`` and ``n_features ≤ 12``, augment heuristic scores with
+        data-driven circuit metrics (expressibility, entanglement capability,
+        and — for labelled datasets — kernel alignment).  Adds a few seconds
+        of simulation time; disabled by default.
     **kwargs
         Reserved for future use (e.g. ``backend='ibm_brisbane'``).
 
@@ -573,12 +579,25 @@ def recommend(
         )
 
     # Ingest and profile
-    profile = _profile_source(source)
+    dataset = _ingest_source(source)
+    profile = _build_profile(dataset)
 
-    # Score all encodings
+    # Heuristic scores
+    heuristic: dict[str, float] = {
+        name: _score(name, profile, task, qubits) for name in _ENCODINGS
+    }
+
+    # Optional data-driven metric bonuses
+    metric_bonuses: dict[str, float] = {}
+    metrics_used: bool = False
+    if use_metrics and profile["n_features"] <= 12:
+        metric_bonuses, metrics_used = _compute_metric_bonuses(
+            dataset, task, profile["n_features"]
+        )
+
     scored = []
     for name in _ENCODINGS:
-        s = _score(name, profile, task, qubits)
+        s = heuristic[name] + metric_bonuses.get(name, 0.0)
         scored.append((name, s))
     scored.sort(key=lambda x: x[1], reverse=True)
 
@@ -586,12 +605,15 @@ def recommend(
     def _make(name: str, s: float) -> EncodingRecommendation:
         enc = _ENCODINGS[name]
         d = profile["n_features"]
+        reason = _build_reason(name, profile, task, s, qubits)
+        if metrics_used and name in metric_bonuses and metric_bonuses[name] != 0.0:
+            reason = reason.rstrip(".") + "; score adjusted by data-driven metrics."
         return EncodingRecommendation(
             method=name,
             qubits=enc["qubit_fn"](d),
             depth=enc["depth"],
             nisq_safe=enc["nisq_safe"],
-            reason=_build_reason(name, profile, task, s, qubits),
+            reason=reason,
             score=round(s, 1),
         )
 
@@ -606,8 +628,8 @@ def recommend(
 # Internal helpers
 # ---------------------------------------------------------------------------
 
-def _profile_source(source) -> dict:
-    """Ingest source and return a lightweight profile dict."""
+def _ingest_source(source):
+    """Ingest *source* into a Dataset."""
     from quprep.core.dataset import Dataset
     from quprep.ingest.csv_ingester import CSVIngester
     from quprep.ingest.numpy_ingester import NumpyIngester
@@ -619,14 +641,16 @@ def _profile_source(source) -> dict:
         _has_pandas = False
 
     if isinstance(source, Dataset):
-        dataset = source
-    elif isinstance(source, str) or hasattr(source, "__fspath__"):
-        dataset = CSVIngester().load(str(source))
-    elif _has_pandas and isinstance(source, pd.DataFrame):
-        dataset = NumpyIngester().load(source)
-    else:
-        dataset = NumpyIngester().load(source)
+        return source
+    if isinstance(source, str) or hasattr(source, "__fspath__"):
+        return CSVIngester().load(str(source))
+    if _has_pandas and isinstance(source, pd.DataFrame):
+        return NumpyIngester().load(source)
+    return NumpyIngester().load(source)
 
+
+def _build_profile(dataset) -> dict:
+    """Build a lightweight statistics profile from a Dataset."""
     data = dataset.data
     n_samples, n_features = data.shape
 
@@ -677,3 +701,57 @@ def _profile_source(source) -> dict:
         "has_negatives": has_negatives,
         "feature_collinear": feature_collinear,
     }
+
+
+# keep the old name as an alias so any external callers don't break
+def _profile_source(source) -> dict:
+    return _build_profile(_ingest_source(source))
+
+
+def _compute_metric_bonuses(
+    dataset, task: str, n_features: int
+) -> tuple[dict[str, float], bool]:
+    """Compute data-driven metric bonuses for all encodings.
+
+    Returns (bonuses_dict, metrics_were_computed).  Silently returns empty
+    dict on any simulation failure.
+    """
+    from quprep.compare import _default_encoders
+    from quprep.metrics.expressibility import entanglement_capability, expressibility
+    from quprep.metrics.kernel import kernel_alignment
+
+    bonuses: dict[str, float] = {}
+    try:
+        encoders = _default_encoders()
+        # Fit RandomFourierEncoder if present
+        if "random_fourier" in encoders:
+            try:
+                encoders["random_fourier"].fit(dataset)
+            except Exception:
+                del encoders["random_fourier"]
+
+        _KERNEL_TASKS = {"classification", "kernel"}
+        _ENT_TASKS = {"classification", "kernel", "simulation"}
+
+        for name, enc in encoders.items():
+            bonus = 0.0
+            exp = expressibility(enc, dataset, n_samples=100, seed=42)
+            if exp is not None:
+                # Lower KL = more expressive → positive bonus (max +8)
+                bonus += max(0.0, 4.0 - exp) * 2.0
+
+            if task in _ENT_TASKS:
+                ent = entanglement_capability(enc, dataset, n_samples=50, seed=42)
+                if ent is not None:
+                    bonus += ent * 6.0  # up to +6
+
+            if task in _KERNEL_TASKS and dataset.labels is not None:
+                ka = kernel_alignment(enc, dataset, max_samples=100, seed=42)
+                if ka is not None:
+                    bonus += ka * 12.0  # up to ±12
+
+            bonuses[name] = bonus
+    except Exception:
+        return {}, False
+
+    return bonuses, bool(bonuses)

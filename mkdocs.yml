@@ -110,6 +110,7 @@ nav:
     - Plugin System: guides/plugins.md
     - Data Modalities: guides/modalities.md
     - Noise-Aware Preprocessing: guides/noise_aware.md
+    - Encoding Quality Metrics: guides/quality_metrics.md
   - API Reference:
     - Overview: api/index.md
     - Pipeline: api/pipeline.md
@@ -123,4 +124,5 @@ nav:
     - Modalities: api/modalities.md
     - Plugin Registry: api/plugins.md
     - Noise-Aware Preprocessing: api/noise_aware.md
+    - Quality Metrics: api/metrics.md
   - Contributing: contributing.md

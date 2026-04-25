@@ -18,7 +18,7 @@ Everything else is accessed via submodules.
 ```python
 import quprep as qd
 
-qd.__version__         # "0.8.0"
+qd.__version__         # "0.9.0"
 qd.prepare(...)
 qd.Pipeline(...)
 qd.recommend(...)
@@ -35,6 +35,21 @@ qd.compare_encodings(...)
 qd.ComparisonResult
 qd.fingerprint_pipeline(...)
 qd.FingerprintResult
+
+# Ingest
+qd.CSVIngester()
+qd.NumpyIngester()
+
+# Noise-aware preprocessing (v0.9.0)
+qd.NoiseProfile(...)
+qd.NoiseAwarePreprocessor(...)
+
+# Encoding quality metrics (v0.9.0)
+qd.expressibility(...)
+qd.entanglement_capability(...)
+qd.kernel_alignment(...)
+qd.score_encoding(...)
+qd.EncoderMetrics
 ```
 
 ---
@@ -50,6 +65,11 @@ qd.FingerprintResult
 | `quprep.encode.iqp` | `IQPEncoder` |
 | `quprep.encode.reupload` | `ReUploadEncoder` |
 | `quprep.encode.hamiltonian` | `HamiltonianEncoder` |
+| `quprep.encode.zz_feature_map` | `ZZFeatureMapEncoder` |
+| `quprep.encode.pauli_feature_map` | `PauliFeatureMapEncoder` |
+| `quprep.encode.random_fourier` | `RandomFourierEncoder` |
+| `quprep.encode.tensor_product` | `TensorProductEncoder` |
+| `quprep.encode.qaoa_problem` | `QAOAProblemEncoder` |
 | `quprep.encode.base` | `BaseEncoder`, `EncodedResult` |
 | `quprep.export.qasm_export` | `QASMExporter` |
 | `quprep.export.qiskit_export` | `QiskitExporter` |
@@ -69,6 +89,7 @@ qd.FingerprintResult
 | `quprep.ingest.openml_ingester` | `OpenMLIngester` |
 | `quprep.ingest.profiler` | `profile`, `DatasetProfile` |
 | `quprep.preprocess.noise_aware` | `NoiseProfile`, `NoiseAwarePreprocessor` |
+| `quprep.metrics` | `expressibility`, `entanglement_capability`, `kernel_alignment`, `EncoderMetrics`, `score_encoding` |
 | `quprep.preprocess.window` | `WindowTransformer` |
 | `quprep.core.dataset` | `Dataset` |
 | `quprep.core.fingerprint` | `fingerprint_pipeline`, `FingerprintResult` |
@@ -97,3 +118,8 @@ qd.FingerprintResult
         - compare_encodings
         - draw_ascii
         - draw_matplotlib
+        - expressibility
+        - entanglement_capability
+        - kernel_alignment
+        - score_encoding
+        - EncoderMetrics
