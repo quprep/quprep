@@ -689,7 +689,19 @@ class Pipeline:
         if isinstance(self.encoder, BasisEncoder):
             return "basis"
         if isinstance(self.encoder, (IQPEncoder, ReUploadEncoder)):
-            return "angle_ry"
+            return "iqp"
         if isinstance(self.encoder, HamiltonianEncoder):
             return "hamiltonian"
+        from quprep.encode.pauli_feature_map import PauliFeatureMapEncoder
+        from quprep.encode.qaoa_problem import QAOAProblemEncoder
+        from quprep.encode.random_fourier import RandomFourierEncoder
+        from quprep.encode.tensor_product import TensorProductEncoder
+        from quprep.encode.zz_feature_map import ZZFeatureMapEncoder
+
+        if isinstance(self.encoder, (PauliFeatureMapEncoder, QAOAProblemEncoder)):
+            return "iqp"
+        if isinstance(
+            self.encoder, (ZZFeatureMapEncoder, TensorProductEncoder, RandomFourierEncoder)
+        ):
+            return "angle_ry"
         return None

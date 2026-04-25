@@ -87,16 +87,17 @@ class TestMinMax:
         result = Scaler(strategy="minmax").fit_transform(simple_ds())
         np.testing.assert_allclose(result.data.max(axis=0), [1.0, 1.0])
 
-    def test_constant_column_maps_to_zero(self):
+    def test_constant_column_maps_to_midpoint(self):
         ds = make_dataset([[5.0, 1.0], [5.0, 2.0], [5.0, 3.0]])
         result = Scaler(strategy="minmax").fit_transform(ds)
-        np.testing.assert_allclose(result.data[:, 0], [0.0, 0.0, 0.0])
+        # constant column → midpoint of [0, 1] = 0.5
+        np.testing.assert_allclose(result.data[:, 0], [0.5, 0.5, 0.5])
 
     def test_single_sample(self):
         ds = make_dataset([[3.0, 7.0]])
         result = Scaler(strategy="minmax").fit_transform(ds)
-        # single row → min == max → constant → maps to 0
-        np.testing.assert_allclose(result.data, [[0.0, 0.0]])
+        # single row → min == max → constant → maps to midpoint
+        np.testing.assert_allclose(result.data, [[0.5, 0.5]])
 
 
 # ---------------------------------------------------------------------------

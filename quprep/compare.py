@@ -15,6 +15,10 @@ _ALL_ENCODINGS = [
     "entangled_angle",
     "hamiltonian",
     "qaoa_problem",
+    "zz_feature_map",
+    "pauli_feature_map",
+    "random_fourier",
+    "tensor_product",
 ]
 
 
@@ -26,8 +30,12 @@ def _default_encoders() -> dict[str, object]:
     from quprep.encode.entangled_angle import EntangledAngleEncoder
     from quprep.encode.hamiltonian import HamiltonianEncoder
     from quprep.encode.iqp import IQPEncoder
+    from quprep.encode.pauli_feature_map import PauliFeatureMapEncoder
     from quprep.encode.qaoa_problem import QAOAProblemEncoder
+    from quprep.encode.random_fourier import RandomFourierEncoder
     from quprep.encode.reupload import ReUploadEncoder
+    from quprep.encode.tensor_product import TensorProductEncoder
+    from quprep.encode.zz_feature_map import ZZFeatureMapEncoder
 
     return {
         "angle": AngleEncoder(),
@@ -38,6 +46,10 @@ def _default_encoders() -> dict[str, object]:
         "entangled_angle": EntangledAngleEncoder(),
         "hamiltonian": HamiltonianEncoder(),
         "qaoa_problem": QAOAProblemEncoder(),
+        "zz_feature_map": ZZFeatureMapEncoder(),
+        "pauli_feature_map": PauliFeatureMapEncoder(),
+        "random_fourier": RandomFourierEncoder(),
+        "tensor_product": TensorProductEncoder(),
     }
 
 
@@ -164,7 +176,7 @@ def compare_encodings(
     source : str, numpy.ndarray, pandas.DataFrame, or Dataset
         Input data — same formats accepted by :class:`~quprep.Pipeline`.
     include : list[str] or None
-        Encoder names to include. If ``None``, all 7 encoders are compared.
+        Encoder names to include. If ``None``, all 12 encoders are compared.
         Valid names: ``"angle"``, ``"amplitude"``, ``"basis"``, ``"iqp"``,
         ``"reupload"``, ``"entangled_angle"``, ``"hamiltonian"``.
     exclude : list[str] or None

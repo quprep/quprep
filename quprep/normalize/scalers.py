@@ -14,6 +14,8 @@ Users can override by passing a Scaler explicitly to the Pipeline.
 
 from __future__ import annotations
 
+import warnings
+
 import numpy as np
 
 from quprep.core.dataset import Dataset
@@ -128,6 +130,21 @@ class Scaler:
         if self.strategy in ("minmax", "minmax_pi", "minmax_pm_pi", "pm_one"):
             self._col_min = np.nanmin(data, axis=0)
             self._col_max = np.nanmax(data, axis=0)
+            if self.strategy in ("minmax", "minmax_pi", "minmax_pm_pi"):
+                zero_var = self._col_max == self._col_min
+                if np.any(zero_var):
+                    from quprep.validation.input_validator import QuPrepWarning
+                    names = (
+                        [dataset.feature_names[i] for i in np.where(zero_var)[0]]
+                        if dataset.feature_names
+                        else list(np.where(zero_var)[0])
+                    )
+                    warnings.warn(
+                        f"Scaler: {int(zero_var.sum())} constant feature(s) detected: "
+                        f"{names}. These will be mapped to the midpoint of the target range.",
+                        QuPrepWarning,
+                        stacklevel=3,
+                    )
         elif self.strategy == "zscore":
             self._mean = np.nanmean(data, axis=0)
             self._std = np.nanstd(data, axis=0)
@@ -236,6 +253,8 @@ def _apply_minmax(
 ) -> np.ndarray:
     """Scale each column to [low, high] using pre-fitted min/max."""
     col_range = col_max - col_min
-    col_range = np.where(col_range == 0, 1.0, col_range)
-    scaled = (data - col_min) / col_range   # → [0, 1]
-    return scaled * (high - low) + low      # → [low, high]
+    is_constant = col_range == 0
+    col_range_safe = np.where(is_constant, 1.0, col_range)
+    scaled = (data - col_min) / col_range_safe   # → [0, 1]; 0 for constant cols
+    result = scaled * (high - low) + low          # → [low, high]; low for constant cols
+    return np.where(is_constant, (low + high) / 2.0, result)

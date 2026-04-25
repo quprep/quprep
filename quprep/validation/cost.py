@@ -229,6 +229,76 @@ def estimate_cost(encoder, n_features: int) -> CostEstimate:
             warning=warning,
         )
 
+    from quprep.encode.zz_feature_map import ZZFeatureMapEncoder
+    if isinstance(encoder, ZZFeatureMapEncoder):
+        n_pairs = d * (d - 1) // 2
+        cnots = 2 * n_pairs * encoder.reps
+        gates = d * encoder.reps + 3 * n_pairs * encoder.reps
+        depth = d * d * encoder.reps
+        nisq_safe = depth < _NISQ_DEPTH_LIMIT and cnots < _NISQ_CNOT_LIMIT
+        warning = (
+            f"ZZFeatureMapEncoder depth ~{depth} may be high for {d} features."
+        ) if not nisq_safe else None
+        return CostEstimate(
+            encoding="zz_feature_map",
+            n_features=d,
+            n_qubits=d,
+            gate_count=gates,
+            circuit_depth=depth,
+            two_qubit_gates=cnots,
+            nisq_safe=nisq_safe,
+            warning=warning,
+        )
+
+    from quprep.encode.pauli_feature_map import PauliFeatureMapEncoder
+    if isinstance(encoder, PauliFeatureMapEncoder):
+        has_pair = any(len(p) == 2 for p in encoder.paulis)
+        n_pairs = d * (d - 1) // 2
+        cnots = (2 * n_pairs * encoder.reps) if has_pair else 0
+        gates = d * encoder.reps + (3 * n_pairs * encoder.reps if has_pair else 0)
+        depth = d * d * encoder.reps if has_pair else d * encoder.reps
+        nisq_safe = depth < _NISQ_DEPTH_LIMIT and cnots < _NISQ_CNOT_LIMIT
+        warning = (
+            f"PauliFeatureMapEncoder depth ~{depth} may be high for {d} features."
+        ) if not nisq_safe else None
+        return CostEstimate(
+            encoding="pauli_feature_map",
+            n_features=d,
+            n_qubits=d,
+            gate_count=gates,
+            circuit_depth=depth,
+            two_qubit_gates=cnots,
+            nisq_safe=nisq_safe,
+            warning=warning,
+        )
+
+    from quprep.encode.tensor_product import TensorProductEncoder
+    if isinstance(encoder, TensorProductEncoder):
+        n_qubits = math.ceil(d / 2)
+        return CostEstimate(
+            encoding="tensor_product",
+            n_features=d,
+            n_qubits=n_qubits,
+            gate_count=d,
+            circuit_depth=2,
+            two_qubit_gates=0,
+            nisq_safe=True,
+            warning=None,
+        )
+
+    from quprep.encode.random_fourier import RandomFourierEncoder
+    if isinstance(encoder, RandomFourierEncoder):
+        return CostEstimate(
+            encoding="random_fourier",
+            n_features=d,
+            n_qubits=encoder.n_components,
+            gate_count=encoder.n_components,
+            circuit_depth=1,
+            two_qubit_gates=0,
+            nisq_safe=True,
+            warning=None,
+        )
+
     # Fallback for custom/unknown encoders
     return CostEstimate(
         encoding=type(encoder).__name__,

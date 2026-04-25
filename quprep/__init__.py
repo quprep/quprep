@@ -75,10 +75,12 @@ from quprep.export.qasm_export import QASMExporter
 from quprep.export.visualize import draw_ascii, draw_matplotlib
 
 # Ingesters
+from quprep.ingest.csv_ingester import CSVIngester
 from quprep.ingest.graph_ingester import GraphIngester
 from quprep.ingest.huggingface_ingester import HuggingFaceIngester
 from quprep.ingest.image_ingester import ImageIngester
 from quprep.ingest.kaggle_ingester import KaggleIngester
+from quprep.ingest.numpy_ingester import NumpyIngester
 from quprep.ingest.openml_ingester import OpenMLIngester
 from quprep.ingest.text_ingester import TextIngester
 from quprep.ingest.timeseries_ingester import TimeSeriesIngester
@@ -194,6 +196,8 @@ __all__ = [
     # Batch export
     "batch_export",
     # Ingesters
+    "CSVIngester",
+    "NumpyIngester",
     "GraphIngester",
     "HuggingFaceIngester",
     "KaggleIngester",
