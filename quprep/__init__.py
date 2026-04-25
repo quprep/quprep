@@ -99,6 +99,7 @@ from quprep.plugins import (
 )
 
 # Preprocessors
+from quprep.preprocess.noise_aware import NoiseAwarePreprocessor, NoiseProfile
 from quprep.preprocess.window import WindowTransformer
 
 # QUBO / Ising / quantum optimization
@@ -202,6 +203,8 @@ __all__ = [
     "TimeSeriesIngester",
     # Preprocessors
     "WindowTransformer",
+    "NoiseProfile",
+    "NoiseAwarePreprocessor",
     # QUBO / quantum optimization
     "to_qubo",
     "QUBOResult",

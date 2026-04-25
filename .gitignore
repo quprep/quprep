@@ -36,6 +36,10 @@ htmlcov/
 site/
 docs/_build/
 
+# JOSS paper build artifacts
+paper.pdf
+jats/
+
 # IDE
 .vscode/
 .idea/

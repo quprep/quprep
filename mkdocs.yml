@@ -109,6 +109,7 @@ nav:
     - Data Drift Detection: guides/drift.md
     - Plugin System: guides/plugins.md
     - Data Modalities: guides/modalities.md
+    - Noise-Aware Preprocessing: guides/noise_aware.md
   - API Reference:
     - Overview: api/index.md
     - Pipeline: api/pipeline.md
@@ -121,4 +122,5 @@ nav:
     - Drift Detection: api/drift.md
     - Modalities: api/modalities.md
     - Plugin Registry: api/plugins.md
+    - Noise-Aware Preprocessing: api/noise_aware.md
   - Contributing: contributing.md

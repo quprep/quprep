@@ -68,6 +68,8 @@ qd.FingerprintResult
 | `quprep.ingest.kaggle_ingester` | `KaggleIngester` |
 | `quprep.ingest.openml_ingester` | `OpenMLIngester` |
 | `quprep.ingest.profiler` | `profile`, `DatasetProfile` |
+| `quprep.preprocess.noise_aware` | `NoiseProfile`, `NoiseAwarePreprocessor` |
+| `quprep.preprocess.window` | `WindowTransformer` |
 | `quprep.core.dataset` | `Dataset` |
 | `quprep.core.fingerprint` | `fingerprint_pipeline`, `FingerprintResult` |
 | `quprep.compare` | `compare_encodings`, `ComparisonResult` |
