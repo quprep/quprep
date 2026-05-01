@@ -138,3 +138,88 @@ class CSVIngester:
             },
             labels=labels,
         )
+
+    def stream(self, path: str | Path, chunksize: int = 1000):
+        """
+        Yield Dataset chunks from a CSV file without loading it fully into RAM.
+
+        Column detection (numeric vs categorical), label extraction, and
+        feature-type inference mirror :meth:`load` — each chunk is a
+        self-contained Dataset.
+
+        Parameters
+        ----------
+        path : str or Path
+        chunksize : int
+            Rows per chunk.
+
+        Yields
+        ------
+        Dataset
+
+        Raises
+        ------
+        FileNotFoundError
+        """
+        path = Path(path)
+        if not path.exists():
+            raise FileNotFoundError(f"File not found: {path}")
+
+        delimiter = self.delimiter
+        if delimiter is None:
+            delimiter = "\t" if path.suffix.lower() == ".tsv" else ","
+
+        reader = pd.read_csv(
+            path,
+            delimiter=delimiter,
+            encoding=self.encoding,
+            chunksize=chunksize,
+        )
+
+        for chunk_idx, df in enumerate(reader):
+            labels = None
+            if self.target_columns is not None:
+                cols = (
+                    [self.target_columns]
+                    if isinstance(self.target_columns, str)
+                    else list(self.target_columns)
+                )
+                labels = df[cols].to_numpy()
+                if labels.shape[1] == 1:
+                    labels = labels.ravel()
+                df = df.drop(columns=cols)
+
+            all_feature_names = list(df.columns)
+            all_feature_types = _detect_feature_types(df)
+
+            numeric_mask = [
+                not (
+                    isinstance(df[col].dtype, pd.CategoricalDtype)
+                    or pd.api.types.is_object_dtype(df[col])
+                )
+                for col in df.columns
+            ]
+            numeric_cols = [c for c, keep in zip(df.columns, numeric_mask) if keep]
+            cat_cols = [c for c, keep in zip(df.columns, numeric_mask) if not keep]
+            numeric_types = [t for t, keep in zip(all_feature_types, numeric_mask) if keep]
+
+            data = (
+                df[numeric_cols].to_numpy(dtype=float)
+                if numeric_cols
+                else np.empty((len(df), 0))
+            )
+            categorical_data = {col: df[col].tolist() for col in cat_cols}
+
+            yield Dataset(
+                data=data,
+                feature_names=numeric_cols,
+                feature_types=numeric_types,
+                categorical_data=categorical_data,
+                metadata={
+                    "source": str(path),
+                    "chunk": chunk_idx,
+                    "original_columns": all_feature_names,
+                    "original_types": all_feature_types,
+                },
+                labels=labels,
+            )

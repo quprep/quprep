@@ -86,6 +86,9 @@ QuPrep converts classical datasets into quantum-circuit-ready format. It is not 
 | **Reproducibility** | v0.8.0 | `fingerprint_pipeline()` — deterministic SHA-256 hash of pipeline config for paper methods sections |
 | **Noise-aware preprocessing** | v0.9.0 | Assign high-variance features to least-noisy qubits; minimise SWAP count given hardware topology; remap angles away from 0/π poles |
 | **Encoding quality metrics** | v0.9.0 | Simulation-based expressibility, entanglement capability, and kernel alignment scores; `use_metrics=True` in `recommend()` for data-driven re-ranking |
+| **Class imbalance** | v0.9.0 | `ImbalanceHandler` — random oversample/undersample, SMOTE, ADASYN as a `clean/` stage |
+| **Barren plateau detection** | v0.9.0 | `detect_barren_plateau()` — analytical gradient variance bound before training; risk levels + mitigation suggestions |
+| **Streaming ingestion** | v0.9.0 | `CSVIngester.stream()`, `NumpyIngester.stream()`, `Pipeline.stream()` — process datasets larger than RAM in chunks |
 
 ---
 

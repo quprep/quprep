@@ -272,6 +272,68 @@ class Pipeline:
         self._fitted = True
         return self._encode_export(dataset)
 
+    def stream(self, source, chunksize: int = 1000):
+        """
+        Apply a fitted pipeline to a large source in chunks without loading
+        it fully into RAM.
+
+        The pipeline **must be fitted first** (via :meth:`fit` or
+        :meth:`fit_transform`).  Normaliser statistics and all other fitted
+        parameters are reused for every chunk — only ``transform`` is called
+        per chunk, not ``fit``.
+
+        Parameters
+        ----------
+        source : str, Path, or np.ndarray
+            - A file path is read in CSV chunks via
+              :class:`~quprep.ingest.csv_ingester.CSVIngester`.
+            - A NumPy array is sliced in row chunks via
+              :class:`~quprep.ingest.numpy_ingester.NumpyIngester`.
+        chunksize : int
+            Rows per chunk.
+
+        Yields
+        ------
+        PipelineResult
+            One result per chunk.
+
+        Raises
+        ------
+        RuntimeError
+            If the pipeline has not been fitted.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> import quprep as qd
+        >>> X = np.random.default_rng(0).uniform(0, 1, (1000, 4))
+        >>> pipeline = qd.Pipeline(encoder=qd.AngleEncoder(), exporter=qd.QASMExporter())
+        >>> _ = pipeline.fit(X[:100])
+        >>> for result in pipeline.stream(X, chunksize=200):
+        ...     print(len(result.circuits))
+        """
+        if not self._fitted:
+            raise RuntimeError(
+                "Pipeline has not been fitted. Call fit() or fit_transform() first."
+            )
+        from pathlib import Path
+
+        import numpy as np
+
+        if isinstance(source, (str, Path)):
+            from quprep.ingest.csv_ingester import CSVIngester
+            chunk_gen = CSVIngester().stream(source, chunksize=chunksize)
+        elif isinstance(source, np.ndarray):
+            from quprep.ingest.numpy_ingester import NumpyIngester
+            chunk_gen = NumpyIngester().stream(source, chunksize=chunksize)
+        else:
+            raise TypeError(
+                f"source must be a file path or np.ndarray, got {type(source).__name__}"
+            )
+
+        for chunk in chunk_gen:
+            yield self._apply_stages(chunk)
+
     # ------------------------------------------------------------------
     # sklearn estimator interface
     # ------------------------------------------------------------------

@@ -28,6 +28,7 @@ score_encoding(encoder, dataset)
 from __future__ import annotations
 
 from quprep.metrics._simulate import MAX_QUBITS
+from quprep.metrics.barren_plateau import BarrenPlateauReport, detect_barren_plateau
 from quprep.metrics.expressibility import entanglement_capability, expressibility
 from quprep.metrics.kernel import EncoderMetrics, kernel_alignment, score_encoding
 
@@ -38,4 +39,6 @@ __all__ = [
     "kernel_alignment",
     "EncoderMetrics",
     "score_encoding",
+    "detect_barren_plateau",
+    "BarrenPlateauReport",
 ]

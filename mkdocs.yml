@@ -111,6 +111,9 @@ nav:
     - Data Modalities: guides/modalities.md
     - Noise-Aware Preprocessing: guides/noise_aware.md
     - Encoding Quality Metrics: guides/quality_metrics.md
+    - Class Imbalance: guides/imbalance.md
+    - Barren Plateau Detection: guides/barren_plateau.md
+    - Streaming Ingestion: guides/streaming.md
   - API Reference:
     - Overview: api/index.md
     - Pipeline: api/pipeline.md
@@ -125,4 +128,6 @@ nav:
     - Plugin Registry: api/plugins.md
     - Noise-Aware Preprocessing: api/noise_aware.md
     - Quality Metrics: api/metrics.md
+    - Class Imbalance: api/imbalance.md
+    - Barren Plateau: api/barren_plateau.md
   - Contributing: contributing.md

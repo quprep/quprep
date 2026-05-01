@@ -91,3 +91,37 @@ class NumpyIngester:
             feature_types=feature_types,
             labels=labels,
         )
+
+    def stream(self, data, y=None, chunksize: int = 1000):
+        """
+        Yield Dataset chunks from a NumPy array without duplicating it in RAM.
+
+        Parameters
+        ----------
+        data : np.ndarray or pd.DataFrame
+            2-D array.  Processed identically to :meth:`load`.
+        y : np.ndarray or array-like, optional
+            Target labels.
+        chunksize : int
+            Rows per chunk.
+
+        Yields
+        ------
+        Dataset
+        """
+        # Normalise to ndarray first (reuse load() logic for type handling)
+        base = self.load(data, y=y)
+        X = base.data
+        labels = base.labels
+        n = len(X)
+
+        for chunk_idx, start in enumerate(range(0, n, chunksize)):
+            end = min(start + chunksize, n)
+            chunk_labels = labels[start:end] if labels is not None else None
+            yield Dataset(
+                data=X[start:end].copy(),
+                feature_names=list(base.feature_names),
+                feature_types=list(base.feature_types),
+                metadata={"chunk": chunk_idx},
+                labels=chunk_labels,
+            )

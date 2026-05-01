@@ -50,6 +50,11 @@ qd.entanglement_capability(...)
 qd.kernel_alignment(...)
 qd.score_encoding(...)
 qd.EncoderMetrics
+qd.detect_barren_plateau(...)
+qd.BarrenPlateauReport
+
+# Class imbalance (v0.9.0)
+qd.ImbalanceHandler()
 ```
 
 ---
@@ -82,6 +87,7 @@ qd.EncoderMetrics
 | `quprep.clean.outlier` | `OutlierHandler` |
 | `quprep.clean.categorical` | `CategoricalEncoder` |
 | `quprep.clean.selector` | `FeatureSelector` |
+| `quprep.clean.imbalance` | `ImbalanceHandler` |
 | `quprep.ingest.csv_ingester` | `CSVIngester` |
 | `quprep.ingest.numpy_ingester` | `NumpyIngester` |
 | `quprep.ingest.huggingface_ingester` | `HuggingFaceIngester` |
@@ -89,7 +95,7 @@ qd.EncoderMetrics
 | `quprep.ingest.openml_ingester` | `OpenMLIngester` |
 | `quprep.ingest.profiler` | `profile`, `DatasetProfile` |
 | `quprep.preprocess.noise_aware` | `NoiseProfile`, `NoiseAwarePreprocessor` |
-| `quprep.metrics` | `expressibility`, `entanglement_capability`, `kernel_alignment`, `EncoderMetrics`, `score_encoding` |
+| `quprep.metrics` | `expressibility`, `entanglement_capability`, `kernel_alignment`, `EncoderMetrics`, `score_encoding`, `detect_barren_plateau`, `BarrenPlateauReport` |
 | `quprep.preprocess.window` | `WindowTransformer` |
 | `quprep.core.dataset` | `Dataset` |
 | `quprep.core.fingerprint` | `fingerprint_pipeline`, `FingerprintResult` |
@@ -123,3 +129,6 @@ qd.EncoderMetrics
         - kernel_alignment
         - score_encoding
         - EncoderMetrics
+        - detect_barren_plateau
+        - BarrenPlateauReport
+        - ImbalanceHandler

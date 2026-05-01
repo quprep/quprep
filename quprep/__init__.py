@@ -43,6 +43,7 @@ __license__ = "Apache-2.0"
 # Core
 # Cleaners
 from quprep.clean.categorical import CategoricalEncoder
+from quprep.clean.imbalance import ImbalanceHandler
 from quprep.clean.imputer import Imputer
 from quprep.clean.outlier import OutlierHandler
 from quprep.clean.selector import FeatureSelector
@@ -87,7 +88,9 @@ from quprep.ingest.timeseries_ingester import TimeSeriesIngester
 
 # Metrics
 from quprep.metrics import (
+    BarrenPlateauReport,
     EncoderMetrics,
+    detect_barren_plateau,
     entanglement_capability,
     expressibility,
     kernel_alignment,
@@ -177,6 +180,7 @@ __all__ = [
     "OutlierHandler",
     "CategoricalEncoder",
     "FeatureSelector",
+    "ImbalanceHandler",
     # Normalizer
     "Scaler",
     # Reducers
@@ -220,6 +224,8 @@ __all__ = [
     "kernel_alignment",
     "EncoderMetrics",
     "score_encoding",
+    "detect_barren_plateau",
+    "BarrenPlateauReport",
     # Preprocessors
     "WindowTransformer",
     "NoiseProfile",
