@@ -121,3 +121,33 @@ class TestImbalanceHandlerGeneral:
         ds_bal = h.fit_transform(ds)
         counts = Counter(ds_bal.labels)
         assert counts[0] == counts[1] == counts[2] == 40
+
+    def test_numeric_sampling_strategy_oversample(self, imbalanced_ds):
+        h = ImbalanceHandler(strategy="oversample", sampling_strategy=0.5)
+        h.fit(imbalanced_ds)
+        assert h._target_count == 50  # 100 * 0.5
+
+    def test_numeric_sampling_strategy_undersample(self, imbalanced_ds):
+        h = ImbalanceHandler(strategy="undersample", sampling_strategy=2.0)
+        h.fit(imbalanced_ds)
+        assert h._target_count == 5  # int(10 / 2.0)
+
+    def test_transform_labels_none_raises(self, imbalanced_ds):
+        h = ImbalanceHandler(strategy="oversample")
+        h.fit(imbalanced_ds)
+        ds_no_labels = Dataset(data=imbalanced_ds.data)
+        with pytest.raises(ValueError, match="labels"):
+            h.transform(ds_no_labels)
+
+    def test_smote_single_sample_fallback(self):
+        rng = np.random.default_rng(0)
+        X = rng.uniform(0, 1, (101, 4))
+        y = np.array([0] * 100 + [1] * 1)
+        ds = Dataset(data=X, labels=y)
+        h = ImbalanceHandler(strategy="smote")
+        import warnings
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            ds_bal = h.fit_transform(ds)
+        assert any("SMOTE" in str(warning.message) for warning in w)
+        assert Counter(ds_bal.labels)[1] == 100

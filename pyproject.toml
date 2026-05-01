@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "quprep"
-version = "0.8.0"
+version = "0.9.0"
 description = "Quantum data preparation — the missing preprocessing layer between classical datasets and quantum computing frameworks"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -55,6 +55,7 @@ umap = ["umap-learn>=0.5"]
 huggingface = ["datasets>=2.0"]
 kaggle = ["kaggle>=1.6"]
 openml = ["openml>=0.14"]
+imbalanced = ["imbalanced-learn>=0.11"]
 # Convenience groups
 frameworks = [
   "qiskit>=1.0",
@@ -84,6 +85,7 @@ all = [
   "datasets>=2.0",
   "kaggle>=1.6",
   "openml>=0.14",
+  "imbalanced-learn>=0.11",
 ]
 dev = [
   "pytest>=7.0",

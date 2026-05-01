@@ -12,6 +12,29 @@ QuPrep uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.9.0] — 2026-05-01
+
+### Added
+
+**Class imbalance handling** (`quprep.clean.imbalance`)
+- `ImbalanceHandler` — four resampling strategies: `oversample` (random), `undersample` (random), `smote` (SMOTE via sklearn k-NN), `adasyn` (adaptive density; requires `pip install quprep[imbalanced]`); multiclass-aware; sklearn-compatible `fit` / `transform` / `fit_transform`
+- Exported: `qd.ImbalanceHandler`
+
+**Barren plateau risk estimation** (`quprep.metrics.barren_plateau`)
+- `detect_barren_plateau(encoder, dataset, *, cost_type)` — analytical upper bound on gradient variance using McClean et al. 2018 (global cost: `2^(1−n)`) and Cerezo et al. 2021 (local cost: `1/n²`); no circuit simulation required
+- `BarrenPlateauReport` — dataclass: `encoding`, `n_qubits`, `circuit_depth`, `gradient_variance`, `risk_level` (`"none"` / `"mild"` / `"high"` / `"severe"`), `mitigations`
+- Exported: `qd.detect_barren_plateau`, `qd.BarrenPlateauReport`
+
+**Streaming / chunked ingestion**
+- `CSVIngester.stream(path, chunksize=1000)` — generator that yields `Dataset` chunks; each chunk carries `metadata["chunk"]`, `metadata["chunk_size"]`, `metadata["source"]`
+- `NumpyIngester.stream(data, y=None, chunksize=1000)` — yields `Dataset` chunks from any array-like
+- `Pipeline.stream(source, chunksize=1000)` — requires a fitted pipeline; yields preprocessed `Dataset` chunks; accepts CSV path or NumPy array; uses lazy ingestion
+
+**New extras**
+- `quprep[imbalanced]` — `imbalanced-learn>=0.11` for ADASYN strategy in `ImbalanceHandler`
+
+---
+
 ## [0.8.0] — 2026-04-14
 
 ### Added
@@ -330,7 +353,8 @@ First public release. Covers the full ingest → clean → normalize → encode 
 
 ---
 
-[Unreleased]: https://github.com/quprep/quprep/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/quprep/quprep/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/quprep/quprep/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/quprep/quprep/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/quprep/quprep/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/quprep/quprep/compare/v0.5.0...v0.6.0

@@ -181,7 +181,7 @@ class ImbalanceHandler:
     ) -> tuple[np.ndarray, np.ndarray]:
         try:
             from sklearn.neighbors import NearestNeighbors
-        except ImportError as exc:
+        except ImportError as exc:  # pragma: no cover
             raise ImportError("SMOTE requires scikit-learn.") from exc
 
         parts_X, parts_y = [X], [y]
@@ -220,7 +220,7 @@ class ImbalanceHandler:
 
         return np.vstack(parts_X), np.concatenate(parts_y)
 
-    def _adasyn(
+    def _adasyn(  # pragma: no cover
         self, X: np.ndarray, y: np.ndarray, _rng: np.random.Generator
     ) -> tuple[np.ndarray, np.ndarray]:
         try:

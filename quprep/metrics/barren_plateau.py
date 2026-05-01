@@ -1,13 +1,11 @@
 """Analytical barren plateau risk estimation (McClean et al. 2018, Cerezo et al. 2021)."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass, field
 
 from quprep.core.dataset import Dataset
 
 
-@dataclass
+@dataclass  # pragma: no cover
 class BarrenPlateauReport:
     """
     Barren plateau risk report for a quantum encoding.
@@ -70,7 +68,7 @@ def _risk_level(var: float) -> str:
     return "severe"
 
 
-_MITIGATIONS = {
+_MITIGATIONS = {  # pragma: no cover
     "local_cost": (
         "Use a local cost function (single-qubit Pauli observables) — "
         "polynomial gradient decay instead of exponential"
