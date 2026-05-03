@@ -563,6 +563,11 @@ class Pipeline:
 
         if self.reducer is not None:
             n_s_in, n_f_in = dataset.n_samples, dataset.n_features
+            from quprep.reduce.lda import LDAReducer
+            if isinstance(self.reducer, LDAReducer) and dataset.labels is None:
+                raise ValueError(
+                    "Pipeline with LDAReducer requires Dataset.labels to be set."
+                )
             self.reducer.fit(dataset)
             dataset = self.reducer.transform(dataset)
             audit.append({
@@ -762,8 +767,8 @@ class Pipeline:
 
         if isinstance(self.encoder, (PauliFeatureMapEncoder, QAOAProblemEncoder)):
             return "iqp"
-        if isinstance(
-            self.encoder, (ZZFeatureMapEncoder, TensorProductEncoder, RandomFourierEncoder)
-        ):
+        if isinstance(self.encoder, ZZFeatureMapEncoder):
+            return "zz_feature_map"
+        if isinstance(self.encoder, (TensorProductEncoder, RandomFourierEncoder)):
             return "angle_ry"
         return None

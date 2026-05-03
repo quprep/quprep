@@ -182,11 +182,10 @@ def estimate_cost(encoder, n_features: int) -> CostEstimate:
 
     if isinstance(encoder, HamiltonianEncoder):
         steps = encoder.trotter_steps
-        pairs = d * (d - 1) // 2
-        cnots = pairs * steps * 2  # each ZZ interaction ~ 2 CNOTs
-        gates = d * steps + cnots
+        cnots = 0  # H = Σ x_i Z_i — Trotterized as ⊗ Rz(x_i·dt), all single-qubit
+        gates = d * steps
         depth = d * steps
-        nisq_safe = depth < _NISQ_DEPTH_LIMIT and cnots < _NISQ_CNOT_LIMIT
+        nisq_safe = depth < _NISQ_DEPTH_LIMIT
         warning = (
             f"HamiltonianEncoder depth ~{depth} may be infeasible on NISQ hardware. "
             "Reduce trotter_steps or features."

@@ -66,6 +66,8 @@ class RandomFourierEncoder(BaseEncoder):
         self.random_state = random_state
         self._W: np.ndarray | None = None
         self._b: np.ndarray | None = None
+        self._z_min: float = 0.0
+        self._z_max: float = 0.0
 
     @property
     def n_qubits(self):
@@ -95,6 +97,11 @@ class RandomFourierEncoder(BaseEncoder):
         rng = np.random.default_rng(self.random_state)
         self._W = rng.normal(0, np.sqrt(2.0 * self.gamma), size=(self.n_components, d))
         self._b = rng.uniform(0, 2 * np.pi, size=(self.n_components,))
+        # Compute global z range from training data so all samples use the same
+        # affine scaling — preserving the RBF kernel approximation property.
+        Z = np.sqrt(2.0 / self.n_components) * np.cos(self._W @ X.T + self._b[:, None])
+        self._z_min = float(Z.min())
+        self._z_max = float(Z.max())
         self._is_fitted = True
         return self
 
@@ -128,10 +135,11 @@ class RandomFourierEncoder(BaseEncoder):
             raise ValueError("RandomFourierEncoder.encode() expects a non-empty 1-D array.")
 
         z = np.sqrt(2.0 / self.n_components) * np.cos(self._W @ x + self._b)
-        # z ∈ [-sqrt(2/D), sqrt(2/D)] approximately.  Scale to [0, π].
-        z_min, z_max = z.min(), z.max()
-        if z_max > z_min:
-            angles = (z - z_min) / (z_max - z_min) * np.pi
+        # Scale to [0, π] using training-data range so all samples receive the
+        # same affine transform, preserving the kernel approximation property.
+        z_range = self._z_max - self._z_min
+        if z_range > 1e-12:
+            angles = (z - self._z_min) / z_range * np.pi
         else:
             angles = np.zeros_like(z)
 

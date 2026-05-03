@@ -185,11 +185,13 @@ def statevector_from_encoded(encoded) -> np.ndarray | None:
             for i in range(n):
                 sv.h(i)
             for i in range(n):
-                sv.rz(float(x[i]), i)
+                # Havlíček 2019: exp(i·x_i·Z_i); Rz(θ)=exp(-i·θ/2·Z) → θ = -2·x_i
+                sv.rz(-2.0 * float(x[i]), i)
             k = 0
             for i in range(n):
                 for j in range(i + 1, n):
-                    sv.ising_zz(float(pair_angles[k]), i, j)
+                    # exp(i·x_i·x_j·Z⊗Z); IsingZZ(θ)=exp(-i·θ/2·Z⊗Z) → θ = -2·x_i·x_j
+                    sv.ising_zz(-2.0 * float(pair_angles[k]), i, j)
                     k += 1
         return sv.state
 
@@ -223,21 +225,51 @@ def statevector_from_encoded(encoded) -> np.ndarray | None:
                     gfn(float(angle), i)
             for pauli, entries in pair_terms.items():
                 for i, j, angle in entries:
+                    # Basis-change rotations to ZZ frame before CNOT-Rz-CNOT block.
+                    # X basis: H; Y basis: Rz(-π/2) (S†, maps Y→Z up to global phase)
                     if pauli == "XX":
                         sv.h(i)
                         sv.h(j)
                     elif pauli == "YY":
-                        # S† = Rz(-π/2) up to global phase
                         sv.rz(-np.pi / 2.0, i)
+                        sv.rz(-np.pi / 2.0, j)
+                    elif pauli == "XZ":
+                        sv.h(i)
+                    elif pauli == "ZX":
+                        sv.h(j)
+                    elif pauli == "XY":
+                        sv.h(i)
+                        sv.rz(-np.pi / 2.0, j)
+                    elif pauli == "YX":
+                        sv.rz(-np.pi / 2.0, i)
+                        sv.h(j)
+                    elif pauli == "YZ":
+                        sv.rz(-np.pi / 2.0, i)
+                    elif pauli == "ZY":
                         sv.rz(-np.pi / 2.0, j)
                     sv.cnot(i, j)
                     sv.rz(float(angle), j)
                     sv.cnot(i, j)
+                    # Undo basis-change rotations.
                     if pauli == "XX":
                         sv.h(i)
                         sv.h(j)
                     elif pauli == "YY":
                         sv.rz(np.pi / 2.0, i)
+                        sv.rz(np.pi / 2.0, j)
+                    elif pauli == "XZ":
+                        sv.h(i)
+                    elif pauli == "ZX":
+                        sv.h(j)
+                    elif pauli == "XY":
+                        sv.h(i)
+                        sv.rz(np.pi / 2.0, j)
+                    elif pauli == "YX":
+                        sv.rz(np.pi / 2.0, i)
+                        sv.h(j)
+                    elif pauli == "YZ":
+                        sv.rz(np.pi / 2.0, i)
+                    elif pauli == "ZY":
                         sv.rz(np.pi / 2.0, j)
         return sv.state
 

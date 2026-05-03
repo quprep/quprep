@@ -24,6 +24,7 @@ _VALID_STRATEGIES = (
     "l2",
     "minmax",
     "minmax_pi",
+    "minmax_2pi",
     "minmax_pm_pi",
     "zscore",
     "binary",
@@ -37,6 +38,7 @@ ENCODING_NORMALIZER_MAP: dict[str, str] = {
     "angle_rz": "minmax_pm_pi",
     "basis": "binary",
     "iqp": "minmax_pm_pi",
+    "zz_feature_map": "minmax_2pi",
     "qubo": "binary",
     "ising": "pm_one",
     "hamiltonian": "zscore",
@@ -83,6 +85,7 @@ class Scaler:
                          Zero-norm rows are left as-is (all-zero vector).
         'minmax'       — scale each feature to $[0, 1]$.
         'minmax_pi'    — scale each feature to $[0, \pi]$.  (angle Ry)
+        'minmax_2pi'   — scale each feature to $[0, 2\pi]$. (ZZFeatureMap)
         'minmax_pm_pi' — scale each feature to $[-\pi, \pi]$. (angle Rx/Rz, IQP)
         'zscore'       — zero mean, unit std per feature.
                          Constant features (std = 0) are left as zero.
@@ -127,10 +130,10 @@ class Scaler:
             Returns ``self`` for chaining.
         """
         data = dataset.data
-        if self.strategy in ("minmax", "minmax_pi", "minmax_pm_pi", "pm_one"):
+        if self.strategy in ("minmax", "minmax_pi", "minmax_2pi", "minmax_pm_pi", "pm_one"):
             self._col_min = np.nanmin(data, axis=0)
             self._col_max = np.nanmax(data, axis=0)
-            if self.strategy in ("minmax", "minmax_pi", "minmax_pm_pi"):
+            if self.strategy in ("minmax", "minmax_pi", "minmax_2pi", "minmax_pm_pi"):
                 zero_var = self._col_max == self._col_min
                 if np.any(zero_var):
                     from quprep.validation.input_validator import QuPrepWarning
@@ -216,6 +219,9 @@ class Scaler:
 
         if self.strategy == "minmax_pi":
             return _apply_minmax(data, self._col_min, self._col_max, low=0.0, high=np.pi)
+
+        if self.strategy == "minmax_2pi":
+            return _apply_minmax(data, self._col_min, self._col_max, low=0.0, high=2.0 * np.pi)
 
         if self.strategy == "minmax_pm_pi":
             return _apply_minmax(data, self._col_min, self._col_max, low=-np.pi, high=np.pi)

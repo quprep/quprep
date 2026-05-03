@@ -176,7 +176,7 @@ class DriftDetector:
 
             # Std ratio (avoid div-by-zero)
             if t_std > 0:
-                std_ratio = n_std / t_std if t_std > 0 else 1.0
+                std_ratio = n_std / t_std
             else:
                 std_ratio = 1.0
 
