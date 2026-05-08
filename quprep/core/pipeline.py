@@ -24,15 +24,23 @@ class PipelineResult:
         One entry per preprocessing stage that ran, in order. Each dict has keys:
         ``stage``, ``n_samples_in``, ``n_features_in``, ``n_samples_out``,
         ``n_features_out``. None if no preprocessing stages ran.
+    stages : dict[str, Dataset]
+        Intermediate datasets keyed by stage: ``'input'``, ``'after_cleaner'``,
+        ``'after_reducer'``, ``'after_normalizer'``. Only stages that ran are
+        included. Useful for debugging individual pipeline steps.
     """
 
-    def __init__(self, dataset, encoded, circuits, cost=None, audit_log=None, drift_report=None):
+    def __init__(
+        self, dataset, encoded, circuits,
+        cost=None, audit_log=None, drift_report=None, stages=None,
+    ):
         self.dataset = dataset
         self.encoded = encoded
         self.circuits = circuits
         self.cost = cost
         self.audit_log = audit_log
         self.drift_report = drift_report
+        self.stages = stages or {}
 
     @property
     def circuit(self):
@@ -616,6 +624,7 @@ class Pipeline:
     def _apply_stages(self, dataset) -> PipelineResult:
         """Apply fitted stages to dataset and return PipelineResult."""
         audit: list[dict] = []
+        stages: dict = {"input": dataset}
 
         if self.preprocessor is not None:
             _preprocessors = (
@@ -632,6 +641,7 @@ class Pipeline:
                     "n_samples_in": n_s_in, "n_features_in": n_f_in,
                     "n_samples_out": dataset.n_samples, "n_features_out": dataset.n_features,
                 })
+                stages[f"after_{label}"] = dataset
 
         if self.cleaner is not None:
             n_s_in, n_f_in = dataset.n_samples, dataset.n_features
@@ -641,6 +651,7 @@ class Pipeline:
                 "n_samples_in": n_s_in, "n_features_in": n_f_in,
                 "n_samples_out": dataset.n_samples, "n_features_out": dataset.n_features,
             })
+            stages["after_cleaner"] = dataset
 
         if self.reducer is not None:
             n_s_in, n_f_in = dataset.n_samples, dataset.n_features
@@ -650,6 +661,7 @@ class Pipeline:
                 "n_samples_in": n_s_in, "n_features_in": n_f_in,
                 "n_samples_out": dataset.n_samples, "n_features_out": dataset.n_features,
             })
+            stages["after_reducer"] = dataset
 
         # Check drift against training distribution (post-reduction, pre-normalization —
         # same point in the pipeline where the detector was fitted)
@@ -666,18 +678,21 @@ class Pipeline:
                 "n_samples_in": n_s_in, "n_features_in": n_f_in,
                 "n_samples_out": dataset.n_samples, "n_features_out": dataset.n_features,
             })
+            stages["after_normalizer"] = dataset
 
         self._last_audit_log = audit if audit else None
+        self._last_stages = stages
         return self._encode_export(dataset)
 
     def _encode_export(self, dataset) -> PipelineResult:
         """Run encoder + exporter on an already-transformed dataset."""
         drift = self._last_drift_report
+        stages = getattr(self, "_last_stages", {})
 
         if self.encoder is None:
             return PipelineResult(
                 dataset=dataset, encoded=None, circuits=None,
-                cost=None, audit_log=self._last_audit_log, drift_report=drift,
+                cost=None, audit_log=self._last_audit_log, drift_report=drift, stages=stages,
             )
 
         if hasattr(self.encoder, "fit") and not getattr(self.encoder, "_is_fitted", False):
@@ -688,13 +703,15 @@ class Pipeline:
         if self.exporter is None:
             return PipelineResult(
                 dataset=dataset, encoded=encoded, circuits=None,
-                cost=self._last_cost, audit_log=self._last_audit_log, drift_report=drift,
+                cost=self._last_cost, audit_log=self._last_audit_log,
+                drift_report=drift, stages=stages,
             )
 
         circuits = self.exporter.export_batch(encoded)
         return PipelineResult(
             dataset=dataset, encoded=encoded, circuits=circuits,
-            cost=self._last_cost, audit_log=self._last_audit_log, drift_report=drift,
+            cost=self._last_cost, audit_log=self._last_audit_log,
+            drift_report=drift, stages=stages,
         )
 
     def _ingest(self, source):

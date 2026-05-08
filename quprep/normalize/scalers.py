@@ -209,6 +209,71 @@ class Scaler:
         """
         return self.fit(dataset).transform(dataset)
 
+    def inverse_transform(self, dataset: Dataset) -> Dataset:
+        """
+        Reverse the normalization applied by :meth:`transform`.
+
+        Supported strategies: ``'minmax'``, ``'minmax_pi'``, ``'minmax_2pi'``,
+        ``'minmax_pm_pi'``, ``'zscore'``.
+
+        Parameters
+        ----------
+        dataset : Dataset
+            Normalized dataset (output of :meth:`transform`).
+
+        Returns
+        -------
+        Dataset
+            Dataset with values mapped back to the original feature scale.
+
+        Raises
+        ------
+        sklearn.exceptions.NotFittedError
+            If ``fit()`` has not been called yet.
+        ValueError
+            If the strategy is not invertible (``'l2'``, ``'binary'``, ``'pm_one'``).
+        """
+        from sklearn.exceptions import NotFittedError
+
+        if not self._fitted:
+            raise NotFittedError(
+                f"This {type(self).__name__} instance is not fitted yet. "
+                "Call 'fit()' before 'inverse_transform()'."
+            )
+        if self.strategy in ("l2", "binary", "pm_one"):
+            raise ValueError(
+                f"Scaler strategy '{self.strategy}' is not invertible."
+            )
+        data = dataset.data.copy()
+        data = self._invert(data)
+        return Dataset(
+            data=data,
+            feature_names=list(dataset.feature_names),
+            feature_types=list(dataset.feature_types),
+            categorical_data=dict(dataset.categorical_data),
+            metadata=dict(dataset.metadata),
+            labels=dataset.labels,
+        )
+
+    def _invert(self, data: np.ndarray) -> np.ndarray:
+        """Reverse the fitted normalization."""
+        if self.strategy == "zscore":
+            std = np.where(self._std == 0, 1.0, self._std)
+            return data * std + self._mean
+
+        _ranges = {
+            "minmax": (0.0, 1.0),
+            "minmax_pi": (0.0, np.pi),
+            "minmax_2pi": (0.0, 2.0 * np.pi),
+            "minmax_pm_pi": (-np.pi, np.pi),
+        }
+        low, high = _ranges[self.strategy]
+        col_range = self._col_max - self._col_min
+        is_constant = col_range == 0
+        col_range_safe = np.where(is_constant, 1.0, col_range)
+        result = (data - low) / (high - low) * col_range_safe + self._col_min
+        return np.where(is_constant, self._col_min, result)
+
     def _apply(self, data: np.ndarray) -> np.ndarray:
         """Apply fitted parameters (or stateless transform) to data."""
         if self.strategy == "l2":

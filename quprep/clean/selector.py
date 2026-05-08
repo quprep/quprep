@@ -41,6 +41,7 @@ class FeatureSelector:
         self.max_features = max_features
         self._fitted = False
         self._keep_mask: np.ndarray | None = None
+        self._feature_names_in: list[str] | None = None
 
     def fit(self, dataset: Dataset, labels: np.ndarray | None = None) -> FeatureSelector:
         """
@@ -70,6 +71,9 @@ class FeatureSelector:
             keep[kept_indices] = True
 
         self._keep_mask = keep
+        self._feature_names_in = list(dataset.feature_names) if dataset.feature_names else [
+            f"feature[{i}]" for i in range(dataset.n_features)
+        ]
         self._fitted = True
         return self
 
@@ -127,6 +131,28 @@ class FeatureSelector:
         Dataset
         """
         return self.fit(dataset, labels).transform(dataset)
+
+    def get_feature_names_out(self) -> list[str]:
+        """
+        Return names of features retained after selection.
+
+        Returns
+        -------
+        list[str]
+
+        Raises
+        ------
+        sklearn.exceptions.NotFittedError
+            If ``fit()`` has not been called yet.
+        """
+        from sklearn.exceptions import NotFittedError
+
+        if not self._fitted:
+            raise NotFittedError(
+                f"This {type(self).__name__} instance is not fitted yet. "
+                "Call 'fit()' before 'get_feature_names_out()'."
+            )
+        return [n for n, k in zip(self._feature_names_in, self._keep_mask) if k]
 
     def _correlation_mask(self, data: np.ndarray) -> np.ndarray:
         n = data.shape[1]

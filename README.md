@@ -2,17 +2,7 @@
 
 **The missing preprocessing layer between classical datasets and quantum computing frameworks.**
 
-[![PyPI version](https://img.shields.io/pypi/v/quprep.svg)](https://pypi.org/project/quprep/)
-[![Python 3.10+](https://img.shields.io/pypi/pyversions/quprep.svg)](https://pypi.org/project/quprep/)
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
-[![DOI](https://zenodo.org/badge/1185611576.svg)](https://doi.org/10.5281/zenodo.19286258)
-[![Documentation](https://readthedocs.org/projects/quprep/badge/?version=latest)](https://docs.quprep.org)
-[![CI](https://github.com/quprep/quprep/actions/workflows/ci.yml/badge.svg)](https://github.com/quprep/quprep/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/github/quprep/quprep/graph/badge.svg?token=I26OBPRZ86)](https://codecov.io/github/quprep/quprep)
-[![CodeQL](https://github.com/quprep/quprep/actions/workflows/codeql.yml/badge.svg)](https://github.com/quprep/quprep/actions/workflows/codeql.yml)
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/quprep/quprep/badge)](https://scorecard.dev/viewer/?uri=github.com/quprep/quprep)
-[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/12341/badge)](https://www.bestpractices.dev/projects/12341)
-[![Hugging Face Demo](https://img.shields.io/badge/🤗%20Spaces-Demo-blue)](https://huggingface.co/spaces/quprep/demo)
+[![PyPI version](https://img.shields.io/pypi/v/quprep.svg)](https://pypi.org/project/quprep/) [![Python 3.10+](https://img.shields.io/pypi/pyversions/quprep.svg)](https://pypi.org/project/quprep/) [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE) [![DOI](https://zenodo.org/badge/1185611576.svg)](https://doi.org/10.5281/zenodo.19286258) [![Documentation](https://readthedocs.org/projects/quprep/badge/?version=latest)](https://docs.quprep.org) [![CI](https://github.com/quprep/quprep/actions/workflows/ci.yml/badge.svg)](https://github.com/quprep/quprep/actions/workflows/ci.yml) [![codecov](https://codecov.io/github/quprep/quprep/graph/badge.svg?token=I26OBPRZ86)](https://codecov.io/github/quprep/quprep) [![CodeQL](https://github.com/quprep/quprep/actions/workflows/codeql.yml/badge.svg)](https://github.com/quprep/quprep/actions/workflows/codeql.yml) [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/quprep/quprep/badge)](https://scorecard.dev/viewer/?uri=github.com/quprep/quprep) [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/12341/badge)](https://www.bestpractices.dev/projects/12341) [![Hugging Face Demo](https://img.shields.io/badge/🤗%20Spaces-Demo-blue)](https://huggingface.co/spaces/quprep/demo) [![Qiskit Ecosystem](https://qisk.it/e-e993c3c7)](https://qisk.it/e)
 
 ---
 

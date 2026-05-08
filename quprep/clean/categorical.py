@@ -26,17 +26,35 @@ class CategoricalEncoder:
         'ignore' — unknown categories at transform time become NaN (onehot)
                    or -1 (label/ordinal).
         'error'  — raise ValueError on unknown categories.
+    cardinality_threshold : int or None
+        If set, issues a ``QuPrepWarning`` when a column has more unique
+        categories than this value. Useful for catching accidental qubit
+        explosion before encoding. Default None (no check).
+    min_frequency : int or None
+        If set, categories appearing fewer than this many times in training
+        data are grouped into a single ``"_other"`` category. Applied during
+        ``fit()``. Default None (no grouping).
     """
 
-    def __init__(self, strategy: str = "onehot", handle_unknown: str = "ignore"):
+    def __init__(
+        self,
+        strategy: str = "onehot",
+        handle_unknown: str = "ignore",
+        cardinality_threshold: int | None = None,
+        min_frequency: int | None = None,
+    ):
         if strategy not in _VALID_STRATEGIES:
             raise ValueError(f"strategy must be one of {_VALID_STRATEGIES}, got '{strategy}'")
         if handle_unknown not in ("ignore", "error"):
             raise ValueError(f"handle_unknown must be 'ignore' or 'error', got '{handle_unknown}'")
         self.strategy = strategy
         self.handle_unknown = handle_unknown
+        self.cardinality_threshold = cardinality_threshold
+        self.min_frequency = min_frequency
         self._fitted = False
         self._categories: dict[str, list] = {}  # col_name → ordered category list
+        # col_name → set of rare values grouped as "_other"
+        self._rare_categories: dict[str, set] = {}
 
     def fit(self, dataset: Dataset) -> CategoricalEncoder:
         """
@@ -51,12 +69,39 @@ class CategoricalEncoder:
         CategoricalEncoder
             Returns ``self`` for chaining.
         """
+        import warnings
+
         import pandas as pd
 
+        from quprep.validation.input_validator import QuPrepWarning
+
         self._categories = {}
+        self._rare_categories = {}
         for col_name, values in dataset.categorical_data.items():
             s = pd.Series(values, dtype="category")
-            self._categories[col_name] = s.cat.categories.tolist()
+            categories = s.cat.categories.tolist()
+
+            over_threshold = (
+                self.cardinality_threshold is not None
+                and len(categories) > self.cardinality_threshold
+            )
+            if over_threshold:
+                warnings.warn(
+                    f"Column '{col_name}' has {len(categories)} unique categories "
+                    f"(cardinality_threshold={self.cardinality_threshold}). "
+                    "Consider using a reducer after encoding to control qubit count.",
+                    QuPrepWarning,
+                    stacklevel=2,
+                )
+
+            if self.min_frequency is not None:
+                counts = s.value_counts()
+                rare = set(counts[counts < self.min_frequency].index.tolist())
+                if rare:
+                    self._rare_categories[col_name] = rare
+                    categories = [c for c in categories if c not in rare] + ["_other"]
+
+            self._categories[col_name] = categories
         self._fitted = True
         return self
 
@@ -97,6 +142,9 @@ class CategoricalEncoder:
 
         for col_name, values in dataset.categorical_data.items():
             categories = self._categories.get(col_name, [])
+            rare = self._rare_categories.get(col_name)
+            if rare:
+                values = ["_other" if v in rare else v for v in values]
             encoded, new_names, new_types = self._encode_with_categories(
                 col_name, values, categories
             )

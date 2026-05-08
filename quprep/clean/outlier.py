@@ -53,6 +53,7 @@ class OutlierHandler:
         self._lower: np.ndarray | None = None
         self._upper: np.ndarray | None = None
         self._iso_forest = None
+        self.outlier_mask_: np.ndarray | None = None
 
     def fit(self, dataset: Dataset) -> OutlierHandler:
         """
@@ -125,6 +126,7 @@ class OutlierHandler:
             data, keep_rows = self._apply_iso(data)
         else:
             data, keep_rows = self._apply(data, self._lower, self._upper)
+        self.outlier_mask_ = ~keep_rows
 
         cat_data = {
             col: [v for v, k in zip(vals, keep_rows) if k]

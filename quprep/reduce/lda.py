@@ -117,6 +117,29 @@ class LDAReducer:
             labels=dataset.labels,
         )
 
+    @property
+    def explained_variance_ratio_(self) -> np.ndarray:
+        """
+        Percentage of variance explained by each discriminant component.
+
+        Returns
+        -------
+        np.ndarray of shape (n_components,)
+
+        Raises
+        ------
+        sklearn.exceptions.NotFittedError
+            If ``fit()`` has not been called yet.
+        """
+        from sklearn.exceptions import NotFittedError
+
+        if not self._fitted:
+            raise NotFittedError(
+                f"This {type(self).__name__} instance is not fitted yet. "
+                "Call 'fit()' before accessing 'explained_variance_ratio_'."
+            )
+        return self._lda.explained_variance_ratio_
+
     def fit_transform(self, dataset, labels=None):
         """
         Fit LDA on dataset and return dimensionality-reduced Dataset.
