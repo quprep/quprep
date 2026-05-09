@@ -83,6 +83,31 @@ class TestCheckCompatibility:
         assert report.is_compatible
         assert any("minmax_2pi" in w for w in report.warnings)
 
+    def test_iqp_out_of_range_warns(self):
+        ds = _ds(np.random.default_rng(0).uniform(5, 10, (10, 3)))
+        report = qd.check_compatibility(qd.IQPEncoder(), ds)
+        assert report.is_compatible
+        assert any("minmax_pm_pi" in w for w in report.warnings)
+
+    def test_tensor_product_out_of_range_warns(self):
+        ds = _ds(np.random.default_rng(0).uniform(5, 10, (10, 3)))
+        report = qd.check_compatibility(qd.TensorProductEncoder(), ds)
+        assert report.is_compatible
+        assert any("minmax_pi" in w for w in report.warnings)
+
+    def test_hamiltonian_out_of_range_warns(self):
+        data = np.random.default_rng(0).uniform(50, 100, (10, 3))
+        ds = _ds(data)
+        report = qd.check_compatibility(qd.HamiltonianEncoder(), ds)
+        assert report.is_compatible
+        assert any("zscore" in w for w in report.warnings)
+
+    def test_random_fourier_not_fitted_warns(self):
+        ds = _ds(np.random.default_rng(0).uniform(0, 1, (10, 3)))
+        report = qd.check_compatibility(qd.RandomFourierEncoder(), ds)
+        assert report.is_compatible
+        assert any("fitted" in w for w in report.warnings)
+
     def test_str_repr(self):
         ds = _ds(np.ones((5, 3)))
         report = qd.check_compatibility(qd.AngleEncoder(), ds)
@@ -136,6 +161,33 @@ class TestVerifyEncoding:
         encoded = enc.encode_batch(ds)
         report = qd.verify_encoding(encoded, enc)
         assert report.passed
+
+    def test_angle_rx_in_range_pass(self):
+        data = np.random.default_rng(0).uniform(-np.pi, np.pi, (5, 3))
+        ds = _ds(data)
+        enc = qd.AngleEncoder(rotation="rx")
+        encoded = enc.encode_batch(ds)
+        report = qd.verify_encoding(encoded, enc)
+        assert report.passed
+
+    def test_iqp_check_name(self):
+        # IQP includes pairwise products; use small values so products stay in [-π, π]
+        data = np.random.default_rng(0).uniform(-0.5, 0.5, (5, 3))
+        ds = _ds(data)
+        enc = qd.IQPEncoder()
+        encoded = enc.encode_batch(ds)
+        report = qd.verify_encoding(encoded, enc)
+        assert report.passed
+        assert report.checks[0]["name"] == "angle_range"
+
+    def test_zz_in_range_pass(self):
+        data = np.random.default_rng(0).uniform(0, 2 * np.pi, (5, 3))
+        ds = _ds(data)
+        enc = qd.ZZFeatureMapEncoder()
+        encoded = enc.encode_batch(ds)
+        report = qd.verify_encoding(encoded, enc)
+        assert report.passed
+        assert report.checks[0]["name"] == "angle_range"
 
     def test_str_repr(self):
         report = qd.verify_encoding([], qd.AngleEncoder())
