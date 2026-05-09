@@ -47,6 +47,10 @@ pipeline = qd.Pipeline(
     reducer=qd.LDAReducer(n_components=4, labels=y),
     encoder=qd.AngleEncoder(),
 )
+result = pipeline.fit_transform("data.csv")
+
+# Access explained variance after fit
+print(pipeline.reducer.explained_variance_ratio_)
 ```
 
 ---

@@ -1,4 +1,4 @@
-# Validation & Cost
+# Validation & Compatibility
 
 ---
 
@@ -58,7 +58,65 @@
 
 ---
 
+## check_compatibility
+
+::: quprep.validation.compatibility.check_compatibility
+    options:
+      show_source: false
+
+---
+
+## CompatibilityReport
+
+::: quprep.validation.compatibility.CompatibilityReport
+    options:
+      show_source: false
+
+---
+
+## verify_encoding
+
+::: quprep.validation.compatibility.verify_encoding
+    options:
+      show_source: false
+
+---
+
+## VerificationReport
+
+::: quprep.validation.compatibility.VerificationReport
+    options:
+      show_source: false
+
+---
+
 ## Examples
+
+### Check encoder compatibility before encoding
+
+```python
+import quprep as qd
+
+report = qd.check_compatibility(qd.AngleEncoder(rotation="ry"), dataset)
+if not report.is_compatible:
+    print("Errors:", report.errors)        # e.g. ["NaN values detected"]
+print("Warnings:", report.warnings)       # e.g. ["suggest minmax_pi normalizer"]
+```
+
+### Verify encoding invariants after encoding
+
+```python
+import quprep as qd
+
+enc = qd.AmplitudeEncoder()
+encoded = enc.encode_batch(dataset)
+report = qd.verify_encoding(encoded, enc)
+if not report.passed:
+    for check in report.checks:
+        print(check["name"], check["detail"])
+```
+
+---
 
 ### Define and validate a schema
 

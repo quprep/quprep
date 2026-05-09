@@ -755,3 +755,257 @@ def _compute_metric_bonuses(
         return {}, False
 
     return bonuses, bool(bonuses)
+
+
+# ---------------------------------------------------------------------------
+# Pipeline suggestion
+# ---------------------------------------------------------------------------
+
+@dataclass
+class PipelineSuggestion:
+    """
+    Auto-suggested full pipeline configuration for a dataset and task.
+
+    Attributes
+    ----------
+    imputer : str or None
+        Suggested imputation strategy (``'mean'``, ``'median'``, ``None``).
+    outlier_handler : str or None
+        Suggested outlier method (``'iqr'``, ``None``).
+    reducer : str or None
+        Suggested reducer type (``'pca'``, ``'lda'``, ``None``).
+    reducer_n_components : int or None
+        Suggested component count for the reducer.
+    normalizer : str
+        Suggested :class:`~quprep.normalize.scalers.Scaler` strategy.
+    encoder : str
+        Suggested encoding method (matches :attr:`EncodingRecommendation.method`).
+    reason : str
+        Human-readable explanation of the choices made.
+    """
+
+    imputer: str | None
+    outlier_handler: str | None
+    reducer: str | None
+    reducer_n_components: int | None
+    normalizer: str
+    encoder: str
+    reason: str
+
+    def build(self):
+        """
+        Instantiate a :class:`~quprep.core.pipeline.Pipeline` from this suggestion.
+
+        Returns
+        -------
+        Pipeline
+        """
+        from quprep.clean.imputer import Imputer
+        from quprep.clean.outlier import OutlierHandler
+        from quprep.core.pipeline import Pipeline
+        from quprep.encode.amplitude import AmplitudeEncoder
+        from quprep.encode.angle import AngleEncoder
+        from quprep.encode.basis import BasisEncoder
+        from quprep.encode.entangled_angle import EntangledAngleEncoder
+        from quprep.encode.hamiltonian import HamiltonianEncoder
+        from quprep.encode.iqp import IQPEncoder
+        from quprep.encode.pauli_feature_map import PauliFeatureMapEncoder
+        from quprep.encode.qaoa_problem import QAOAProblemEncoder
+        from quprep.encode.random_fourier import RandomFourierEncoder
+        from quprep.encode.reupload import ReUploadEncoder
+        from quprep.encode.tensor_product import TensorProductEncoder
+        from quprep.encode.zz_feature_map import ZZFeatureMapEncoder
+        from quprep.normalize.scalers import Scaler
+        from quprep.reduce.lda import LDAReducer
+        from quprep.reduce.pca import PCAReducer
+
+        _ENCODER_CLS = {
+            "angle": AngleEncoder,
+            "amplitude": AmplitudeEncoder,
+            "basis": BasisEncoder,
+            "iqp": IQPEncoder,
+            "reupload": ReUploadEncoder,
+            "entangled_angle": EntangledAngleEncoder,
+            "hamiltonian": HamiltonianEncoder,
+            "zz_feature_map": ZZFeatureMapEncoder,
+            "pauli_feature_map": PauliFeatureMapEncoder,
+            "random_fourier": RandomFourierEncoder,
+            "tensor_product": TensorProductEncoder,
+            "qaoa_problem": QAOAProblemEncoder,
+        }
+
+        pre_list = []
+        if self.imputer is not None:
+            pre_list.append(Imputer(strategy=self.imputer))
+        if self.outlier_handler is not None:
+            pre_list.append(OutlierHandler(method=self.outlier_handler))
+
+        kwargs: dict = {}
+        if pre_list:
+            kwargs["preprocessor"] = pre_list if len(pre_list) > 1 else pre_list[0]
+
+        if self.reducer == "pca":
+            kwargs["reducer"] = PCAReducer(n_components=self.reducer_n_components)
+        elif self.reducer == "lda":
+            kwargs["reducer"] = LDAReducer(n_components=self.reducer_n_components)
+
+        kwargs["normalizer"] = Scaler(self.normalizer)
+        kwargs["encoder"] = _ENCODER_CLS.get(self.encoder, AngleEncoder)()
+        return Pipeline(**kwargs)
+
+    def __str__(self) -> str:
+        lines = ["PipelineSuggestion"]
+        lines.append(f"  imputer         : {self.imputer or '—'}")
+        lines.append(f"  outlier_handler : {self.outlier_handler or '—'}")
+        if self.reducer:
+            lines.append(
+                f"  reducer         : {self.reducer}(n_components={self.reducer_n_components})"
+            )
+        else:
+            lines.append("  reducer         : —")
+        lines.append(f"  normalizer      : {self.normalizer}")
+        lines.append(f"  encoder         : {self.encoder}")
+        lines.append(f"  reason          : {self.reason}")
+        return "\n".join(lines)
+
+    def __repr__(self) -> str:
+        return (
+            f"PipelineSuggestion(encoder='{self.encoder}', "
+            f"reducer={self.reducer!r}, imputer={self.imputer!r})"
+        )
+
+
+def suggest_pipeline(
+    source,
+    *,
+    task: str = "classification",
+    qubits: int | None = None,
+) -> PipelineSuggestion:
+    """
+    Suggest a full pipeline configuration for a dataset and task.
+
+    Analyses the dataset to recommend which preprocessing stages to include
+    and which encoder to use. Extends :func:`recommend` from encoder-only
+    recommendation to a complete pipeline suggestion.
+
+    Parameters
+    ----------
+    source : str, Path, np.ndarray, pd.DataFrame, or Dataset
+        Input data. Accepts anything the pipeline ingester accepts.
+    task : str
+        Target task: ``'classification'``, ``'regression'``, ``'qaoa'``,
+        ``'kernel'``, or ``'simulation'``. Default ``'classification'``.
+    qubits : int, optional
+        Maximum qubit budget. Influences reducer component count and
+        encoder scoring.
+
+    Returns
+    -------
+    PipelineSuggestion
+        Fully specified suggestion with a :meth:`PipelineSuggestion.build`
+        method to instantiate the recommended Pipeline.
+
+    Raises
+    ------
+    ValueError
+        If ``task`` is not one of the supported values.
+    """
+    if task not in _VALID_TASKS:
+        raise ValueError(f"Unknown task '{task}'. Choose from: {sorted(_VALID_TASKS)}")
+
+    dataset = _ingest_source(source)
+    profile = _build_profile(dataset)
+    enc_rec = recommend(dataset, task=task, qubits=qubits)
+
+    reasons: list[str] = []
+
+    # ── Imputer ───────────────────────────────────────────────────────────────
+    imputer_strategy = None
+    if profile["missing_rate"] > 0:
+        data = dataset.data
+        with np.errstate(invalid="ignore"):
+            col_means = np.nanmean(data, axis=0)
+            col_stds = np.nanstd(data, axis=0)
+            # Simple skewness proxy: mean vs median gap normalised by std
+            col_medians = np.nanmedian(data, axis=0)
+            skew_proxy = np.nanmean(
+                np.abs(col_means - col_medians) / np.where(col_stds > 0, col_stds, 1.0)
+            )
+        imputer_strategy = "median" if float(skew_proxy) > 0.2 else "mean"
+        reasons.append(
+            f"imputer='{imputer_strategy}' ({profile['missing_rate']:.1%} missing values)"
+        )
+
+    # ── Outlier handler ───────────────────────────────────────────────────────
+    outlier_handler = None
+    data = dataset.data
+    with np.errstate(invalid="ignore"):
+        q1 = np.nanpercentile(data, 25, axis=0)
+        q3 = np.nanpercentile(data, 75, axis=0)
+        iqr = q3 - q1
+        d_range = np.nanmax(data, axis=0) - np.nanmin(data, axis=0)
+        outlier_prone = int(
+            np.sum((iqr > 0) & (d_range / np.where(iqr > 0, iqr, 1.0) > 10))
+        )
+    if outlier_prone > 0:
+        outlier_handler = "iqr"
+        reasons.append(
+            f"outlier_handler='iqr' ({outlier_prone} outlier-prone feature(s))"
+        )
+
+    # ── Reducer ───────────────────────────────────────────────────────────────
+    reducer = None
+    reducer_n_components = None
+    effective_budget = qubits or 8
+    if profile["n_features"] > effective_budget:
+        reducer = "pca"
+        reducer_n_components = effective_budget
+        reasons.append(
+            f"pca(n_components={effective_budget}) "
+            f"({profile['n_features']} features → {effective_budget} qubits)"
+        )
+    elif (
+        task == "classification"
+        and dataset.labels is not None
+        and profile["n_features"] > 2
+    ):
+        n_classes = int(len(np.unique(dataset.labels)))
+        lda_components = min(n_classes - 1, profile["n_features"])
+        if lda_components < profile["n_features"] and lda_components > 0:
+            reducer = "lda"
+            reducer_n_components = lda_components
+            reasons.append(
+                f"lda(n_components={lda_components}) for class separability "
+                f"({n_classes} classes)"
+            )
+
+    # ── Normalizer ────────────────────────────────────────────────────────────
+    from quprep.normalize.scalers import ENCODING_NORMALIZER_MAP
+
+    _enc_key_map = {
+        "angle": "angle_ry",
+        "reupload": "angle_ry",
+        "entangled_angle": "angle_ry",
+        "tensor_product": "angle_ry",
+        "random_fourier": "angle_ry",
+        "amplitude": "amplitude",
+        "basis": "basis",
+        "iqp": "iqp",
+        "zz_feature_map": "zz_feature_map",
+        "hamiltonian": "hamiltonian",
+    }
+    enc_key = _enc_key_map.get(enc_rec.method, "angle_ry")
+    normalizer = ENCODING_NORMALIZER_MAP.get(enc_key, "minmax_pi")
+
+    reason = "; ".join(reasons) if reasons else "no preprocessing issues detected"
+    reason += f"; encoder='{enc_rec.method}' (score={enc_rec.score})"
+
+    return PipelineSuggestion(
+        imputer=imputer_strategy,
+        outlier_handler=outlier_handler,
+        reducer=reducer,
+        reducer_n_components=reducer_n_components,
+        normalizer=normalizer,
+        encoder=enc_rec.method,
+        reason=reason,
+    )

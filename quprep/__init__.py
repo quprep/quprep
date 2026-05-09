@@ -54,7 +54,7 @@ from quprep.core.drift import DriftDetector, DriftReport
 from quprep.core.fingerprint import FingerprintResult, fingerprint_pipeline
 from quprep.core.pipeline import Pipeline, PipelineResult
 from quprep.core.qubit_suggestion import QubitSuggestion, suggest_qubits
-from quprep.core.recommender import recommend
+from quprep.core.recommender import PipelineSuggestion, recommend, suggest_pipeline
 
 # Encoders
 from quprep.encode.amplitude import AmplitudeEncoder
@@ -83,6 +83,7 @@ from quprep.ingest.image_ingester import ImageIngester
 from quprep.ingest.kaggle_ingester import KaggleIngester
 from quprep.ingest.numpy_ingester import NumpyIngester
 from quprep.ingest.openml_ingester import OpenMLIngester
+from quprep.ingest.profiler import PreprocessingReport, preprocessing_report
 from quprep.ingest.text_ingester import TextIngester
 from quprep.ingest.timeseries_ingester import TimeSeriesIngester
 
@@ -90,7 +91,9 @@ from quprep.ingest.timeseries_ingester import TimeSeriesIngester
 from quprep.metrics import (
     BarrenPlateauReport,
     EncoderMetrics,
+    SensitivityResult,
     detect_barren_plateau,
+    encoding_sensitivity,
     entanglement_capability,
     expressibility,
     kernel_alignment,
@@ -146,12 +149,16 @@ from quprep.reduce.spectral import SpectralReducer, TSNEReducer, UMAPReducer
 
 # Validation
 from quprep.validation import (
+    CompatibilityReport,
     CostEstimate,
     DataSchema,
     FeatureSpec,
     QuPrepWarning,
     SchemaViolationError,
+    VerificationReport,
+    check_compatibility,
     estimate_cost,
+    verify_encoding,
 )
 
 __all__ = [
@@ -160,6 +167,8 @@ __all__ = [
     "Pipeline",
     "PipelineResult",
     "recommend",
+    "suggest_pipeline",
+    "PipelineSuggestion",
     "prepare",
     # Encoders
     "AngleEncoder",
@@ -226,6 +235,8 @@ __all__ = [
     "score_encoding",
     "detect_barren_plateau",
     "BarrenPlateauReport",
+    "encoding_sensitivity",
+    "SensitivityResult",
     # Preprocessors
     "WindowTransformer",
     "NoiseProfile",
@@ -265,6 +276,13 @@ __all__ = [
     "CostEstimate",
     "estimate_cost",
     "QuPrepWarning",
+    "check_compatibility",
+    "CompatibilityReport",
+    "verify_encoding",
+    "VerificationReport",
+    # Preprocessing report
+    "preprocessing_report",
+    "PreprocessingReport",
 ]
 
 

@@ -1,10 +1,87 @@
-# Qubit Suggestion
+# Pipeline & Qubit Suggestion
 
-QuPrep can recommend a qubit count and encoding for your dataset before you build a pipeline. This is useful when you don't know how many qubits your hardware supports or which encoding fits your task.
+QuPrep can recommend a full preprocessing pipeline — or just a qubit count — for your dataset before you write any pipeline code.
 
 ---
 
-## Basic usage
+## Auto-suggest a full pipeline
+
+`suggest_pipeline` analyses your dataset and returns a `PipelineSuggestion` with recommended imputer, outlier handler, reducer, normalizer, and encoder. Call `.build()` to get a ready-to-use `Pipeline`:
+
+```python
+import quprep as qd
+
+suggestion = qd.suggest_pipeline(dataset, task="classification", qubits=8)
+print(suggestion)
+# PipelineSuggestion(encoder='iqp', normalizer='minmax_2pi',
+#                    reducer='pca', reducer_n_components=8,
+#                    imputer='median', outlier_handler=None)
+
+pipeline = suggestion.build()
+result = pipeline.fit_transform(dataset)
+```
+
+### What `suggest_pipeline` checks
+
+| Dataset property | Suggestion |
+|---|---|
+| Any NaN values | `imputer='mean'` or `'median'` (based on skewness) |
+| Feature IQR ratio > 10 | `outlier_handler='iqr'` |
+| `n_features > qubits` | `reducer='pca'`, `reducer_n_components=qubits` |
+| Chosen encoder | Matching `normalizer` from built-in map |
+
+### `PipelineSuggestion` attributes
+
+```python
+suggestion.encoder            # str, e.g. "iqp"
+suggestion.normalizer         # str, e.g. "minmax_2pi"
+suggestion.reducer            # str or None, e.g. "pca"
+suggestion.reducer_n_components  # int or None
+suggestion.imputer            # str or None, e.g. "median"
+suggestion.outlier_handler    # str or None, e.g. "iqr"
+```
+
+---
+
+## Preprocessing report
+
+`preprocessing_report` gives you a structured, human-readable audit of your dataset before encoding — identifying issues and recommending specific QuPrep components:
+
+```python
+import quprep as qd
+
+report = qd.preprocessing_report(dataset, encoder=qd.AngleEncoder(), qubit_budget=8)
+print(f"{report.n_issues} issues found")
+for rec in report.recommendations:
+    print(" •", rec)
+```
+
+Example output:
+```
+3 issues found
+ • Missing values detected — consider Imputer(strategy='median')
+ • Outliers detected in 2 features — consider OutlierHandler(method='iqr')
+ • 15 features exceed qubit budget of 8 — consider PCAReducer(n_components=8)
+```
+
+What the report checks:
+
+| Check | Recommendation |
+|---|---|
+| NaN values | `Imputer` |
+| Large IQR outliers | `OutlierHandler` |
+| `n_features > qubit_budget` | `PCAReducer` |
+| `n_features > 20` (no budget) | `PCAReducer` or `HardwareAwareReducer` |
+| Class imbalance ratio > 3:1 | `ImbalanceHandler` |
+| Encoder-specific range issues | From `check_compatibility` |
+
+---
+
+## Qubit suggestion (simple)
+
+---
+
+## Basic usage (suggest_qubits)
 
 ```python
 import quprep as qd

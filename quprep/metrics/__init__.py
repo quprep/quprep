@@ -31,6 +31,7 @@ from quprep.metrics._simulate import MAX_QUBITS
 from quprep.metrics.barren_plateau import BarrenPlateauReport, detect_barren_plateau
 from quprep.metrics.expressibility import entanglement_capability, expressibility
 from quprep.metrics.kernel import EncoderMetrics, kernel_alignment, score_encoding
+from quprep.metrics.sensitivity import SensitivityResult, encoding_sensitivity
 
 __all__ = [
     "MAX_QUBITS",
@@ -41,4 +42,6 @@ __all__ = [
     "score_encoding",
     "detect_barren_plateau",
     "BarrenPlateauReport",
+    "encoding_sensitivity",
+    "SensitivityResult",
 ]

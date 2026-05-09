@@ -224,6 +224,32 @@ for entry in result.audit_log:
 
 ---
 
+## Intermediate stage datasets
+
+`PipelineResult.stages` gives you the actual `Dataset` after each pipeline step — useful for debugging transforms or inspecting what the data looks like before encoding:
+
+```python
+result = qd.Pipeline(
+    cleaner=qd.OutlierHandler(),
+    reducer=qd.PCAReducer(n_components=4),
+    encoder=qd.AngleEncoder(),
+).fit_transform(df)
+
+# Keys present for every stage that ran
+print(result.stages.keys())
+# dict_keys(['input', 'after_cleaner', 'after_reducer', 'after_normalizer'])
+
+# Inspect data shape at each step
+print(result.stages["input"].data.shape)          # (150, 10)
+print(result.stages["after_cleaner"].data.shape)  # (148, 10)
+print(result.stages["after_reducer"].data.shape)  # (148, 4)
+print(result.stages["after_normalizer"].data.shape)  # (148, 4)
+```
+
+Only stages that actually ran appear as keys — an encoder-only pipeline will have just `'input'`.
+
+---
+
 ## Summary output
 
 Both `Pipeline` and `PipelineResult` have a `.summary()` method useful in notebooks and scripts:
@@ -261,3 +287,70 @@ from sklearn.model_selection import GridSearchCV
 pipeline.set_params(encoder=qd.BasisEncoder())
 params = pipeline.get_params()
 ```
+
+---
+
+## Encoding compatibility check
+
+`check_compatibility` catches problems *before* encoding — NaN values, out-of-range data, and wrong binary assumptions — with clear, actionable messages:
+
+```python
+import quprep as qd
+
+report = qd.check_compatibility(qd.AngleEncoder(rotation="ry"), dataset)
+
+if not report.is_compatible:
+    print("Errors (must fix):")
+    for e in report.errors:
+        print(" •", e)
+else:
+    print("Compatible")
+
+if report.warnings:
+    print("Warnings (consider fixing):")
+    for w in report.warnings:
+        print(" •", w)
+```
+
+Typical output with out-of-range angles:
+```
+Compatible
+Warnings (consider fixing):
+ • Values outside [0, π] for AngleEncoder(ry); suggest minmax_pi normalizer
+```
+
+Errors are raised as hard incompatibilities (`is_compatible = False`):
+```
+Errors (must fix):
+ • NaN values detected in dataset; use Imputer before encoding
+```
+
+### What each encoder checks
+
+| Encoder | Warnings | Errors |
+|---|---|---|
+| `AngleEncoder(rotation="ry")` | values outside `[0, π]` | NaN |
+| `AngleEncoder(rotation="rx")` | values outside `[-π, π]` | NaN |
+| `AmplitudeEncoder` | features not power-of-two | NaN |
+| `BasisEncoder` | non-binary values | NaN |
+| `ZZFeatureMapEncoder` | values outside `[0, 2π]` | NaN |
+
+---
+
+## Encoding verification (post-encode)
+
+`verify_encoding` checks that the *output* of an encoder satisfies the expected mathematical invariants — unit norm for amplitude encoding, angle ranges for angle encoding:
+
+```python
+import quprep as qd
+
+enc = qd.AmplitudeEncoder()
+encoded = enc.encode_batch(dataset)   # must pass L2-normalised input
+
+report = qd.verify_encoding(encoded, enc)
+print(report.passed)              # True / False
+for check in report.checks:
+    print(check["name"], check["passed"], check.get("detail", ""))
+```
+
+For an empty list of encoded samples, `verify_encoding` returns `passed=True` with an empty `checks` list.

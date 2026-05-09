@@ -483,7 +483,6 @@ class TestCoverageGaps:
     def test_profile_no_pandas_fallback(self, monkeypatch):
         # lines 474-475: pandas ImportError fallback in _profile_source
         import builtins
-        import importlib
 
         real_import = builtins.__import__
 
@@ -494,7 +493,6 @@ class TestCoverageGaps:
 
         monkeypatch.setattr(builtins, "__import__", mock_import)
         import quprep.core.recommender as rec_mod
-        importlib.reload(rec_mod)
         rng = np.random.default_rng(0)
         data = rng.random((20, 3))
         profile = rec_mod._profile_source(data)

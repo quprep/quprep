@@ -197,6 +197,72 @@ print(result.dataset.labels.shape)   # (n_samples,)
 
 For `FeatureSelector(method="mutual_info")`, labels in `dataset.labels` are used automatically — no separate `labels=` argument needed.
 
+### Inspecting intermediate stages (v0.10.0)
+
+`PipelineResult.stages` gives access to the `Dataset` after each pipeline step:
+
+```python
+result = qd.Pipeline(
+    cleaner=qd.OutlierHandler(),
+    reducer=qd.PCAReducer(n_components=4),
+    encoder=qd.AngleEncoder(),
+).fit_transform(df)
+
+print(result.stages["input"].data.shape)           # raw input
+print(result.stages["after_cleaner"].data.shape)   # post outlier removal
+print(result.stages["after_reducer"].data.shape)   # post PCA
+print(result.stages["after_normalizer"].data.shape) # pre-encoding
+```
+
+### API consistency additions (v0.10.0)
+
+**Feature names after selection:**
+
+```python
+selector = qd.FeatureSelector(method="variance", threshold=0.01)
+selector.fit(dataset)
+print(selector.get_feature_names_out())  # ['age', 'income', ...]
+```
+
+**Outlier mask:**
+
+```python
+handler = qd.OutlierHandler(method="iqr", action="remove")
+handler.fit_transform(dataset)
+print(handler.outlier_mask_)  # bool array, True = outlier row
+```
+
+**Reverse normalisation:**
+
+```python
+scaler = qd.Scaler("zscore")
+scaled = scaler.fit_transform(dataset)
+original = scaler.inverse_transform(scaled)  # back to original scale
+# Supported: minmax, minmax_pi, minmax_2pi, minmax_pm_pi, zscore
+# Not supported: l2, binary, pm_one (not invertible)
+```
+
+**Categorical cardinality control:**
+
+```python
+# Warn when a column has > 20 unique categories
+# Group categories appearing fewer than 5 times as "_other"
+encoder = qd.CategoricalEncoder(
+    strategy="onehot",
+    cardinality_threshold=20,
+    min_frequency=5,
+)
+encoder.fit_transform(dataset)
+```
+
+**Explained variance (LDA):**
+
+```python
+pipeline = qd.Pipeline(reducer=qd.LDAReducer(n_components=3, labels=y))
+pipeline.fit(dataset)
+print(pipeline.reducer.explained_variance_ratio_)  # also available on PCAReducer
+```
+
 ### Reproducibility fingerprinting (v0.8.0)
 
 ```python

@@ -94,6 +94,35 @@ $$A(K, K_y) = \frac{\langle K, K_y \rangle_F}{\|K\|_F \|K_y\|_F}$$
 
 ---
 
+---
+
+## Encoding sensitivity
+
+`encoding_sensitivity` identifies which input features cause the largest changes in the encoded quantum state. It perturbs each feature independently by a small epsilon and measures the infidelity:
+
+$$s_j = 1 - |\langle\psi(x)|\psi(x + \epsilon e_j)\rangle|^2$$
+
+Higher score → that feature has stronger influence on the encoded state → more information is carried through the encoding for that feature.
+
+```python
+import quprep as qd
+
+enc = qd.AngleEncoder(rotation="ry")
+result = qd.encoding_sensitivity(enc, dataset, epsilon=0.01, n_samples=20, seed=42)
+
+print(result.scores)                  # array shape (n_features,)
+print(result.feature_names)           # ["f0", "f1", ...]
+print(result.epsilon)                 # 0.01
+
+# Top 3 most influential features
+for name, score in result.most_sensitive(n=3):
+    print(f"  {name}: {score:.4f}")
+```
+
+Sensitivity analysis is limited to circuits with ≤ 12 qubits (same numpy statevector simulator as other metrics). For encoders with more qubits, all scores are returned as zero.
+
+---
+
 ## Reference
 
 Sim S. et al. "Expressibility and Entangling Capability of Parameterized Quantum Circuits for Hybrid Quantum-Classical Algorithms." *Advanced Quantum Technologies* 2(12), 1900070, 2019. [doi:10.1002/qute.201900070](https://doi.org/10.1002/qute.201900070)
