@@ -89,6 +89,54 @@ class TestSuggestPipeline:
         result = pipeline.fit_transform(ds)
         assert result.encoded is not None or result.dataset is not None
 
+    def test_outlier_suggested_when_extreme_values(self):
+        rng = np.random.default_rng(0)
+        data = rng.uniform(0, 1, (40, 4))
+        data[0, 0] = 1000.0  # extreme outlier → IQR ratio > 10
+        ds = _ds(data)
+        suggestion = qd.suggest_pipeline(ds)
+        assert suggestion.outlier_handler == "iqr"
+
+    def test_lda_reducer_for_classification(self):
+        rng = np.random.default_rng(0)
+        data = rng.uniform(0, 1, (60, 4))
+        labels = np.array([0] * 20 + [1] * 20 + [2] * 20)
+        ds = _ds(data, labels=labels)
+        # 4 features, 3 classes, qubit budget 8 → no PCA, LDA suggested
+        suggestion = qd.suggest_pipeline(ds, task="classification", qubits=8)
+        assert suggestion.reducer == "lda"
+        assert suggestion.reducer_n_components == 2
+
+    def test_build_with_imputer_and_outlier_handler(self):
+        from quprep.core.recommender import PipelineSuggestion
+        s = PipelineSuggestion(
+            encoder="angle", normalizer="minmax_pi",
+            imputer="mean", outlier_handler="iqr",
+            reducer=None, reducer_n_components=None, reason="test",
+        )
+        pipeline = s.build()
+        assert isinstance(pipeline, qd.Pipeline)
+
+    def test_build_with_lda_reducer(self):
+        from quprep.core.recommender import PipelineSuggestion
+        s = PipelineSuggestion(
+            encoder="angle", normalizer="minmax_pi",
+            imputer=None, outlier_handler=None,
+            reducer="lda", reducer_n_components=2, reason="test",
+        )
+        pipeline = s.build()
+        assert isinstance(pipeline, qd.Pipeline)
+
+    def test_build_with_pca_reducer(self):
+        from quprep.core.recommender import PipelineSuggestion
+        s = PipelineSuggestion(
+            encoder="angle", normalizer="minmax_pi",
+            imputer=None, outlier_handler=None,
+            reducer="pca", reducer_n_components=4, reason="test",
+        )
+        pipeline = s.build()
+        assert isinstance(pipeline, qd.Pipeline)
+
 
 # ---------------------------------------------------------------------------
 # preprocessing_report
@@ -109,6 +157,7 @@ class TestPreprocessingReport:
         report = qd.preprocessing_report(ds)
         assert report.n_issues >= 1
         assert any("imputation" in r for r in report.recommendations)
+        assert str(report.n_issues) in str(report)
 
     def test_outliers_detected(self):
         rng = np.random.default_rng(0)
@@ -146,6 +195,14 @@ class TestPreprocessingReport:
         enc = qd.AngleEncoder()
         report = qd.preprocessing_report(ds, encoder=enc)
         assert any("NaN" in r or "imputation" in r for r in report.recommendations)
+
+    def test_encoder_warning_included(self):
+        rng = np.random.default_rng(0)
+        data = rng.uniform(5, 10, (10, 3))  # out of [0,π] for AngleEncoder ry
+        ds = _ds(data)
+        enc = qd.AngleEncoder(rotation="ry")
+        report = qd.preprocessing_report(ds, encoder=enc)
+        assert any("encoder warning" in r for r in report.recommendations)
 
     def test_str_repr(self):
         rng = np.random.default_rng(0)

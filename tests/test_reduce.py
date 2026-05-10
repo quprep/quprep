@@ -168,6 +168,24 @@ class TestLDAReducer:
         result = LDAReducer(n_components=2).fit_transform(ds, labels=_make_labels())
         assert result.data.dtype == np.float64
 
+    def test_transform_not_fitted_raises(self):
+        from sklearn.exceptions import NotFittedError
+        with pytest.raises(NotFittedError):
+            LDAReducer(n_components=2).transform(_make_dataset())
+
+    def test_explained_variance_ratio_after_fit(self):
+        ds = _make_dataset()
+        labels = _make_labels()
+        reducer = LDAReducer(n_components=2).fit(ds, labels=labels)
+        evr = reducer.explained_variance_ratio_
+        assert len(evr) > 0
+        assert (evr >= 0).all()
+
+    def test_explained_variance_ratio_not_fitted_raises(self):
+        from sklearn.exceptions import NotFittedError
+        with pytest.raises(NotFittedError):
+            _ = LDAReducer(n_components=2).explained_variance_ratio_
+
 
 # ---------------------------------------------------------------------------
 # SpectralReducer

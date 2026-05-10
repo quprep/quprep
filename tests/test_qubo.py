@@ -78,6 +78,31 @@ class TestToQubo:
         x_bad = np.array([1.0, 1.0, 0.0])
         assert _eval_qubo(r.Q, x_good) < _eval_qubo(r.Q, x_bad)
 
+    def test_equality_constraint_1d_A(self):
+        # Pass A as a 1-D array (shape (n,)) — hits the A.reshape(1,-1) branch
+        M = np.zeros((3, 3))
+        A_1d = np.array([1.0, 1.0, 1.0])   # ndim == 1
+        b = np.array([1.0])
+        r = to_qubo(M, constraints=[{"A": A_1d, "b": b, "penalty": 5.0}])
+        x_good = np.array([1.0, 0.0, 0.0])
+        x_bad = np.array([1.0, 1.0, 0.0])
+        assert _eval_qubo(r.Q, x_good) < _eval_qubo(r.Q, x_bad)
+
+    def test_equality_after_inequality_pads_A(self):
+        # Inequality constraint first (expands Q with slack vars), then equality
+        # constraint with original-width A — hits the A padding branch (lines 243-244)
+        M = np.zeros((3, 3))
+        A_ineq = np.array([[1.0, 1.0, 1.0]])
+        b_ineq = np.array([2.0])
+        A_eq = np.array([[1.0, 0.0, 0.0]])  # width 3, but Q is now wider
+        b_eq = np.array([1.0])
+        r = to_qubo(M, constraints=[
+            {"type": "ineq", "A": A_ineq, "b": b_ineq, "penalty": 5.0},
+            {"A": A_eq, "b": b_eq, "penalty": 5.0},
+        ])
+        assert r.Q.shape[0] > 3   # slack vars were added
+        assert r.n_original == 3
+
     def test_repr(self):
         r = to_qubo(np.eye(3))
         assert "n_variables=3" in repr(r)

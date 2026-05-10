@@ -154,6 +154,43 @@ class TestStatevectorFromEncoded:
         assert sv is not None
         assert np.linalg.norm(sv) == pytest.approx(1.0, abs=1e-10)
 
+    def test_pauli_feature_map_encoder_returns_statevector(self):
+        from quprep.encode.pauli_feature_map import PauliFeatureMapEncoder
+        enc = PauliFeatureMapEncoder(paulis=["Z", "ZZ"], reps=1)
+        row = np.array([0.5, 1.0])
+        result = enc.encode(row)
+        sv = statevector_from_encoded(result)
+        assert sv is not None
+        assert np.linalg.norm(sv) == pytest.approx(1.0, abs=1e-10)
+
+    def test_pauli_feature_map_encoder_xx_terms(self):
+        from quprep.encode.pauli_feature_map import PauliFeatureMapEncoder
+        paulis = ["XX", "YY", "XZ", "ZX", "XY", "YX", "YZ", "ZY"]
+        enc = PauliFeatureMapEncoder(paulis=paulis, reps=1)
+        row = np.array([0.3, 0.7])
+        result = enc.encode(row)
+        sv = statevector_from_encoded(result)
+        assert sv is not None
+        assert np.linalg.norm(sv) == pytest.approx(1.0, abs=1e-10)
+
+    def test_qaoa_problem_encoder_returns_statevector(self):
+        from quprep.encode.qaoa_problem import QAOAProblemEncoder
+        enc = QAOAProblemEncoder(p=1)
+        row = np.array([0.5, 1.0])
+        result = enc.encode(row)
+        sv = statevector_from_encoded(result)
+        assert sv is not None
+        assert np.linalg.norm(sv) == pytest.approx(1.0, abs=1e-10)
+
+    def test_unsupported_encoding_returns_none(self):
+        from quprep.encode.base import EncodedResult
+        enc_result = EncodedResult(
+            parameters=np.array([]),
+            metadata={"encoding": "unsupported_xyz", "n_qubits": 1},
+        )
+        sv = statevector_from_encoded(enc_result)
+        assert sv is None
+
 
 # ---------------------------------------------------------------------------
 # Expressibility
@@ -269,6 +306,62 @@ class TestKernelAlignment:
         if result is not None:
             assert result > 0.0
 
+    def test_returns_none_when_too_few_samples(self):
+        # n < 4 branch
+        from quprep.encode.angle import AngleEncoder
+        rng = np.random.default_rng(0)
+        data = rng.uniform(0, np.pi, (3, 2))
+        labels = np.array([-1.0, 1.0, -1.0])
+        ds = Dataset(data=data, feature_names=["a", "b"], labels=labels)
+        result = kernel_alignment(AngleEncoder(), ds, seed=0)
+        assert result is None
+
+    def test_subsamples_when_n_exceeds_max(self):
+        # n > max_samples triggers subsampling
+        from quprep.encode.angle import AngleEncoder
+        rng = np.random.default_rng(0)
+        data = rng.uniform(0, np.pi, (20, 2))
+        labels = (rng.integers(0, 2, 20) * 2 - 1).astype(float)
+        ds = Dataset(data=data, feature_names=["a", "b"], labels=labels)
+        result = kernel_alignment(AngleEncoder(), ds, max_samples=5, seed=0)
+        # result may be float or None, but subsampling code path is exercised
+        assert result is None or isinstance(result, float)
+
+    def test_handles_2d_labels(self):
+        # 2D label array → y = y[:, 0] branch
+        from quprep.encode.angle import AngleEncoder
+        rng = np.random.default_rng(0)
+        data = rng.uniform(0, np.pi, (20, 2))
+        labels_2d = (rng.integers(0, 2, (20, 1)) * 2 - 1).astype(float)
+        ds = Dataset(data=data, feature_names=["a", "b"], labels=labels_2d)
+        result = kernel_alignment(AngleEncoder(), ds, seed=0)
+        assert result is None or isinstance(result, float)
+
+    def test_returns_none_when_sv_is_none(self):
+        # encoder.encode() succeeds but statevector_from_encoded returns None
+        from quprep.encode.base import BaseEncoder, EncodedResult
+
+        class _UnsupportedEncoder(BaseEncoder):
+            encoding = "unsupported_xyz"
+
+            def encode(self, x):
+                return EncodedResult(
+                    parameters=np.zeros(len(x)),
+                    metadata={"encoding": "unsupported_xyz", "n_qubits": len(x)},
+                )
+
+            @property
+            def n_qubits(self):
+                return None
+
+            @property
+            def depth(self):
+                return None
+
+        ds = _ds(d=2, with_labels=True)
+        result = kernel_alignment(_UnsupportedEncoder(), ds, seed=0)
+        assert result is None
+
 
 # ---------------------------------------------------------------------------
 # score_encoding + EncoderMetrics
@@ -303,6 +396,38 @@ class TestScoreEncoding:
         s = str(m)
         assert "expressibility" in s
         assert "entanglement_capability" in s
+
+    def test_score_encoding_auto_fits_encoder_without_w(self):
+        # score_encoding has an elif branch for encoders that have fit() but no _W
+        # attribute at all (lines 182-186 in kernel.py). Exercise it with a
+        # custom encoder that wraps AngleEncoder but doesn't set _W or _fitted.
+        from quprep.encode.angle import AngleEncoder
+        from quprep.encode.base import BaseEncoder
+
+        _inner = AngleEncoder()
+
+        class _FitOnlyEncoder(BaseEncoder):
+            encoding = "angle"
+
+            def fit(self, dataset):
+                pass  # no _W or _fitted set — stays absent
+
+            def encode(self, x):
+                return _inner.encode(x)
+
+            @property
+            def n_qubits(self):
+                return None
+
+            @property
+            def depth(self):
+                return None
+
+        enc = _FitOnlyEncoder()
+        assert not hasattr(enc, "_W")  # confirms elif branch will fire
+        ds = _ds(d=2, n=20)
+        m = score_encoding(enc, ds, n_samples=20, seed=0)
+        assert isinstance(m, EncoderMetrics)
 
 
 # ---------------------------------------------------------------------------

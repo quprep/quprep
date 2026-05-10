@@ -221,3 +221,89 @@ def test_pipeline_result_type():
     result = Pipeline(encoder=AngleEncoder()).fit_transform(_ds())
     assert isinstance(result, PipelineResult)
     assert result.encoded is not None
+
+
+# ---------------------------------------------------------------------------
+# Scaler.inverse_transform
+# ---------------------------------------------------------------------------
+
+def test_inverse_transform_minmax_roundtrip():
+    ds = _ds()
+    s = Scaler(strategy="minmax")
+    scaled = s.fit_transform(ds)
+    recovered = s.inverse_transform(scaled)
+    np.testing.assert_allclose(recovered.data, ds.data, atol=1e-10)
+
+
+def test_inverse_transform_zscore_roundtrip():
+    ds = _ds()
+    s = Scaler(strategy="zscore")
+    scaled = s.fit_transform(ds)
+    recovered = s.inverse_transform(scaled)
+    np.testing.assert_allclose(recovered.data, ds.data, atol=1e-10)
+
+
+def test_inverse_transform_minmax_pi_roundtrip():
+    ds = _ds()
+    s = Scaler(strategy="minmax_pi")
+    scaled = s.fit_transform(ds)
+    recovered = s.inverse_transform(scaled)
+    np.testing.assert_allclose(recovered.data, ds.data, atol=1e-10)
+
+
+def test_inverse_transform_non_invertible_raises():
+    ds = _ds()
+    s = Scaler(strategy="l2")
+    s.fit(ds)
+    with pytest.raises(ValueError, match="not invertible"):
+        s.inverse_transform(s.transform(ds))
+
+
+def test_inverse_transform_not_fitted_raises():
+    with pytest.raises(NotFittedError):
+        Scaler(strategy="minmax").inverse_transform(_ds())
+
+
+# ---------------------------------------------------------------------------
+# FeatureSelector.get_feature_names_out
+# ---------------------------------------------------------------------------
+
+def test_get_feature_names_out_returns_kept_names():
+    ds = Dataset(
+        data=np.random.default_rng(0).random((20, 4)).astype(np.float64),
+        feature_names=["a", "b", "c", "d"],
+        feature_types=["continuous"] * 4,
+    )
+    sel = FeatureSelector(method="variance", threshold=0.0).fit(ds)
+    names = sel.get_feature_names_out()
+    assert isinstance(names, list)
+    assert all(n in ["a", "b", "c", "d"] for n in names)
+
+
+def test_get_feature_names_out_not_fitted_raises():
+    with pytest.raises(NotFittedError):
+        FeatureSelector().get_feature_names_out()
+
+
+# ---------------------------------------------------------------------------
+# OutlierHandler.outlier_mask_
+# ---------------------------------------------------------------------------
+
+def test_outlier_mask_set_after_transform():
+    rng = np.random.default_rng(0)
+    data = rng.random((30, 3)).astype(np.float64)
+    data[0, 0] = 1000.0  # clear outlier
+    ds = Dataset(data=data, feature_types=["continuous"] * 3)
+    handler = OutlierHandler(method="iqr", action="remove")
+    handler.fit(ds)
+    handler.transform(ds)
+    assert handler.outlier_mask_ is not None
+    assert handler.outlier_mask_.dtype == bool
+    assert handler.outlier_mask_.any()  # at least one outlier detected
+
+
+def test_outlier_mask_none_before_transform():
+    ds = _ds()
+    handler = OutlierHandler()
+    handler.fit(ds)
+    assert handler.outlier_mask_ is None

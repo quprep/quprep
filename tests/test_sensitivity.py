@@ -77,3 +77,21 @@ class TestEncodingSensitivity:
         enc = qd.AngleEncoder()
         result = qd.encoding_sensitivity(enc, ds, epsilon=0.05, n_samples=5)
         assert result.epsilon == 0.05
+
+    def test_nan_rows_skipped(self):
+        rng = np.random.default_rng(0)
+        data = rng.uniform(0, np.pi, (10, 3))
+        data[0, 0] = np.nan
+        ds = _ds(data)
+        enc = qd.AngleEncoder()
+        result = qd.encoding_sensitivity(enc, ds, n_samples=10)
+        assert (result.scores >= 0).all()
+
+    def test_over_qubit_limit_returns_zeros(self):
+        # 13 features → 13 qubits > MAX_QUBITS (12), statevector returns None
+        rng = np.random.default_rng(0)
+        data = rng.uniform(0, np.pi, (10, 13))
+        ds = _ds(data)
+        enc = qd.AngleEncoder()
+        result = qd.encoding_sensitivity(enc, ds, n_samples=5)
+        assert (result.scores == 0).all()

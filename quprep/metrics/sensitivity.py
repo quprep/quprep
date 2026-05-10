@@ -130,7 +130,7 @@ def encoding_sensitivity(
                 x_pert[j] += epsilon
                 e_pert = encoder.encode(x_pert)
                 sv_pert = statevector_from_encoded(e_pert)
-                if sv_pert is None:
+                if sv_pert is None:  # pragma: no cover
                     continue
                 fidelity = float(abs(np.dot(sv_orig.conj(), sv_pert)) ** 2)
                 diffs.append(1.0 - fidelity)

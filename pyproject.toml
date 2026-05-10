@@ -128,9 +128,10 @@ filterwarnings = [
 [tool.coverage.run]
 source = ["quprep"]
 branch = false
-omit = ["*/quprep/__init__.py", "*/reduce/__init__.py", "*/validation/__init__.py", "*/clean/__init__.py", "*/encode/__init__.py", "*/export/__init__.py", "*/ingest/__init__.py", "*/qubo/__init__.py", "*/core/__init__.py"]
+omit = ["*/quprep/__init__.py", "*/reduce/__init__.py", "*/validation/__init__.py", "*/clean/__init__.py", "*/encode/__init__.py", "*/export/__init__.py", "*/ingest/__init__.py", "*/qubo/__init__.py", "*/core/__init__.py", "*/metrics/__init__.py", "*/normalize/__init__.py", "*/preprocess/__init__.py", "*/qubo/problems/__init__.py"]
 
 [tool.coverage.report]
+fail_under = 85
 exclude_lines = [
     "pragma: no cover",
     "if TYPE_CHECKING:",

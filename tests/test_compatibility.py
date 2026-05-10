@@ -37,6 +37,7 @@ class TestCheckCompatibility:
         assert not report.is_compatible
         assert len(report.errors) == 1
         assert "NaN" in report.errors[0]
+        assert "ERROR" in str(report)
 
     def test_angle_ry_out_of_range_warns(self):
         ds = _ds(np.random.default_rng(0).uniform(5, 10, (10, 4)))
@@ -44,6 +45,7 @@ class TestCheckCompatibility:
         assert report.is_compatible
         assert len(report.warnings) == 1
         assert "minmax_pi" in report.warnings[0]
+        assert "WARNING" in str(report)
 
     def test_angle_rx_out_of_range_warns(self):
         ds = _ds(np.random.default_rng(0).uniform(5, 10, (10, 4)))
@@ -139,6 +141,7 @@ class TestVerifyEncoding:
         encoded = enc.encode_batch(ds)
         report = qd.verify_encoding(encoded, enc)
         assert report.passed
+        assert "OK" in str(report)
 
     def test_angle_out_of_range_fail(self):
         data = np.random.default_rng(0).uniform(5, 10, (5, 4))

@@ -198,6 +198,20 @@ class TestNoiseAwarePreprocessorFit:
         assert list(prep.permutation_) == [0]
         assert len(prep.qubit_assignment_) == 1
 
+    def test_entangled_encoding_no_coupling_map_zero_after_swaps(self):
+        # entangled encoding + empty coupling map → lines 281-282
+        profile = NoiseProfile(qubit_error_rates=[0.01, 0.02, 0.03], coupling_map=[])
+        ds = _make_dataset([1.0, 2.0])
+        prep = NoiseAwarePreprocessor(profile, encoding="entangled_angle").fit(ds)
+        assert prep.estimated_swaps_after_ == 0
+
+    def test_single_feature_entangled_encoding_zero_swaps(self):
+        # single feature with entangled encoding → _count_adjacent_swaps returns 0 early (line 437)
+        profile = _linear_profile(3)
+        ds = _make_dataset([2.0])
+        prep = NoiseAwarePreprocessor(profile, encoding="entangled_angle").fit(ds)
+        assert prep.estimated_swaps_after_ == 0
+
 
 # ---------------------------------------------------------------------------
 # NoiseAwarePreprocessor — transform behaviour
@@ -356,6 +370,20 @@ class TestAngleDeadzone:
         ).fit_transform(ds)
         remapped = result.data[:, 0]
         assert np.all(np.diff(remapped) >= 0)
+
+    def test_pm_pi_encoding_deadzone_scales_symmetrically(self):
+        # iqp is in _PM_PI_ENCODINGS → line 349: X = X * (1.0 - 2.0 * deadzone)
+        rng = np.random.default_rng(0)
+        data = rng.uniform(-np.pi, np.pi, (20, 2))
+        ds = Dataset(data=data, feature_names=["a", "b"])
+        profile = _linear_profile(3)
+        deadzone = 0.1
+        prep = NoiseAwarePreprocessor(profile, encoding="iqp", angle_deadzone=deadzone)
+        result = prep.fit_transform(ds)
+        scale = 1.0 - 2.0 * deadzone
+        for i, orig_idx in enumerate(prep.permutation_):
+            expected = data[:, int(orig_idx)] * scale
+            np.testing.assert_allclose(result.data[:, i], expected, atol=1e-10)
 
 
 # ---------------------------------------------------------------------------
