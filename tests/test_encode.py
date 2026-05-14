@@ -999,3 +999,227 @@ class TestQAOAProblemEncoder:
         d = len(x)
         n_pairs = d * (d - 1) // 2
         assert len(result.parameters) == d + n_pairs
+
+
+# ---------------------------------------------------------------------------
+# DenseAngleEncoder
+# ---------------------------------------------------------------------------
+
+class TestDenseAngleEncoder:
+    def test_halves_qubit_count_even(self):
+        from quprep.encode.dense_angle import DenseAngleEncoder
+        enc = DenseAngleEncoder()
+        result = enc.encode(np.array([0.5, 1.0, 1.5, 2.0]))
+        assert result.metadata["n_qubits"] == 2
+        assert len(result.parameters) == 4
+
+    def test_halves_qubit_count_odd(self):
+        from quprep.encode.dense_angle import DenseAngleEncoder
+        enc = DenseAngleEncoder()
+        result = enc.encode(np.array([0.5, 1.0, 1.5]))
+        assert result.metadata["n_qubits"] == 2
+        assert len(result.parameters) == 4
+        assert result.parameters[3] == pytest.approx(0.0)  # zero-padded
+
+    def test_interleaved_parameter_layout(self):
+        from quprep.encode.dense_angle import DenseAngleEncoder
+        enc = DenseAngleEncoder()
+        x = np.array([0.1, 0.2, 0.3, 0.4])
+        result = enc.encode(x)
+        # [r1_0, r2_0, r1_1, r2_1]
+        np.testing.assert_allclose(result.parameters, [0.1, 0.2, 0.3, 0.4])
+
+    def test_encoding_metadata(self):
+        from quprep.encode.dense_angle import DenseAngleEncoder
+        enc = DenseAngleEncoder(first_rotation="rx", second_rotation="ry")
+        result = enc.encode(np.array([1.0, 2.0]))
+        assert result.metadata["encoding"] == "dense_angle"
+        assert result.metadata["first_rotation"] == "rx"
+        assert result.metadata["second_rotation"] == "ry"
+        assert result.metadata["depth"] == 2
+
+    def test_invalid_rotation_raises(self):
+        from quprep.encode.dense_angle import DenseAngleEncoder
+        with pytest.raises(ValueError):
+            DenseAngleEncoder(first_rotation="invalid")
+        with pytest.raises(ValueError):
+            DenseAngleEncoder(second_rotation="invalid")
+
+    def test_empty_input_raises(self):
+        from quprep.encode.dense_angle import DenseAngleEncoder
+        with pytest.raises(ValueError):
+            DenseAngleEncoder().encode(np.array([]))
+
+    @given(
+        npst.arrays(
+            dtype=np.float64,
+            shape=st.integers(min_value=1, max_value=16),
+            elements=st.floats(0.0, np.pi, allow_nan=False, allow_infinity=False),
+        )
+    )
+    @settings(max_examples=50)
+    def test_property_n_qubits_is_ceil_half(self, x):
+        from quprep.encode.dense_angle import DenseAngleEncoder
+        result = DenseAngleEncoder().encode(x)
+        assert result.metadata["n_qubits"] == math.ceil(len(x) / 2)
+
+
+# ---------------------------------------------------------------------------
+# DiscretizedEncoder
+# ---------------------------------------------------------------------------
+
+class TestDiscretizedEncoder:
+    def test_qubit_count(self):
+        from quprep.encode.discretized import DiscretizedEncoder
+        enc = DiscretizedEncoder(bits=4)
+        result = enc.encode(np.array([0.25, 0.75]))
+        assert result.metadata["n_qubits"] == 8
+        assert len(result.parameters) == 8
+
+    def test_binary_output_values(self):
+        from quprep.encode.discretized import DiscretizedEncoder
+        enc = DiscretizedEncoder(bits=4)
+        result = enc.encode(np.array([0.0]))
+        assert set(result.parameters).issubset({0.0, 1.0})
+
+    def test_min_val_encodes_all_zeros(self):
+        from quprep.encode.discretized import DiscretizedEncoder
+        enc = DiscretizedEncoder(bits=4, min_val=0.0, max_val=1.0)
+        result = enc.encode(np.array([0.0]))
+        assert np.all(result.parameters == 0.0)
+
+    def test_max_val_encodes_all_ones(self):
+        from quprep.encode.discretized import DiscretizedEncoder
+        enc = DiscretizedEncoder(bits=4, min_val=0.0, max_val=1.0)
+        result = enc.encode(np.array([1.0]))
+        assert np.all(result.parameters == 1.0)
+
+    def test_decode_roundtrip(self):
+        from quprep.encode.discretized import DiscretizedEncoder
+        enc = DiscretizedEncoder(bits=6)
+        x = np.array([0.1, 0.5, 0.9])
+        result = enc.encode(x)
+        x_hat = enc.decode(result.parameters)
+        precision = result.metadata["precision"]
+        np.testing.assert_allclose(x_hat, x, atol=precision)
+
+    def test_qubo_variables_map(self):
+        from quprep.encode.discretized import DiscretizedEncoder
+        enc = DiscretizedEncoder(bits=3)
+        result = enc.encode(np.array([0.5, 0.5]))
+        qv = result.metadata["qubo_variables"]
+        assert qv[0] == [0, 1, 2]
+        assert qv[1] == [3, 4, 5]
+
+    def test_clipping_out_of_range(self):
+        from quprep.encode.discretized import DiscretizedEncoder
+        enc = DiscretizedEncoder(bits=4, min_val=0.0, max_val=1.0)
+        result_clipped = enc.encode(np.array([2.0]))
+        result_max = enc.encode(np.array([1.0]))
+        np.testing.assert_array_equal(result_clipped.parameters, result_max.parameters)
+
+    def test_invalid_bits_raises(self):
+        from quprep.encode.discretized import DiscretizedEncoder
+        with pytest.raises(ValueError):
+            DiscretizedEncoder(bits=0)
+
+    def test_invalid_range_raises(self):
+        from quprep.encode.discretized import DiscretizedEncoder
+        with pytest.raises(ValueError):
+            DiscretizedEncoder(min_val=1.0, max_val=0.0)
+
+    def test_decode_wrong_length_raises(self):
+        from quprep.encode.discretized import DiscretizedEncoder
+        enc = DiscretizedEncoder(bits=4)
+        with pytest.raises(ValueError):
+            enc.decode(np.array([0.0, 1.0, 0.0]))  # not divisible by 4
+
+    @given(
+        npst.arrays(
+            dtype=np.float64,
+            shape=st.integers(min_value=1, max_value=8),
+            elements=st.floats(0.0, 1.0, allow_nan=False, allow_infinity=False),
+        )
+    )
+    @settings(max_examples=50)
+    def test_property_binary_output(self, x):
+        from quprep.encode.discretized import DiscretizedEncoder
+        result = DiscretizedEncoder(bits=4).encode(x)
+        assert set(result.parameters).issubset({0.0, 1.0})
+
+
+# ---------------------------------------------------------------------------
+# inspect_encoding
+# ---------------------------------------------------------------------------
+
+class TestInspectEncoding:
+    def test_angle_encoder_gates(self):
+        from quprep.encode.angle import AngleEncoder
+        from quprep.encode.inspector import inspect_encoding
+        result = AngleEncoder().encode(np.array([0.5, 1.0, 1.5]))
+        ep = inspect_encoding(result)
+        assert ep.encoding == "angle"
+        assert ep.n_qubits == 3
+        assert len(ep.gates) == 3
+        assert all(g.gate == "Ry" for g in ep.gates)
+        assert ep.gates[0].angle == pytest.approx(0.5)
+        assert ep.gates[0].qubit == 0
+
+    def test_basis_encoder_gates(self):
+        from quprep.encode.basis import BasisEncoder
+        from quprep.encode.inspector import inspect_encoding
+        result = BasisEncoder().encode(np.array([1.0, 0.0, 1.0]))
+        ep = inspect_encoding(result)
+        x_qubits = [g.qubit for g in ep.gates if g.gate == "X"]
+        assert x_qubits == [0, 2]
+
+    def test_amplitude_encoder_gates(self):
+        from quprep.encode.amplitude import AmplitudeEncoder
+        from quprep.encode.inspector import inspect_encoding
+        result = AmplitudeEncoder().encode(np.array([1.0, 0.0, 0.0, 0.0]))
+        ep = inspect_encoding(result)
+        assert len(ep.gates) == 1
+        assert ep.gates[0].gate == "Initialize"
+        assert ep.gates[0].amplitudes is not None
+
+    def test_iqp_encoder_gates(self):
+        from quprep.encode.inspector import inspect_encoding
+        from quprep.encode.iqp import IQPEncoder
+        result = IQPEncoder(reps=1).encode(np.array([0.5, 1.0]))
+        ep = inspect_encoding(result)
+        gate_types = {g.gate for g in ep.gates}
+        assert "H" in gate_types
+        assert "Rz" in gate_types
+        assert "IsingZZ" in gate_types
+
+    def test_dense_angle_encoder_gates(self):
+        from quprep.encode.dense_angle import DenseAngleEncoder
+        from quprep.encode.inspector import inspect_encoding
+        result = DenseAngleEncoder().encode(np.array([0.3, 0.7, 0.5, 0.9]))
+        ep = inspect_encoding(result)
+        assert ep.n_qubits == 2
+        gate_names = [g.gate for g in ep.gates]
+        assert gate_names == ["Ry", "Rz", "Ry", "Rz"]
+
+    def test_discretized_encoder_gates(self):
+        from quprep.encode.discretized import DiscretizedEncoder
+        from quprep.encode.inspector import inspect_encoding
+        result = DiscretizedEncoder(bits=4).encode(np.array([1.0]))
+        ep = inspect_encoding(result)
+        assert all(g.gate == "X" for g in ep.gates)
+
+    def test_summary_returns_string(self):
+        from quprep.encode.angle import AngleEncoder
+        from quprep.encode.inspector import inspect_encoding
+        result = AngleEncoder().encode(np.array([0.5, 1.0]))
+        ep = inspect_encoding(result)
+        s = ep.summary()
+        assert "Encoding" in s
+        assert "Ry" in s
+
+    def test_repr(self):
+        from quprep.encode.angle import AngleEncoder
+        from quprep.encode.inspector import inspect_encoding
+        ep = inspect_encoding(AngleEncoder().encode(np.array([0.5])))
+        assert "EncodingParams" in repr(ep)
+        assert "angle" in repr(ep)

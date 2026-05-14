@@ -157,6 +157,24 @@ def statevector_from_encoded(encoded) -> np.ndarray | None:
             sv.rz(float(rz_a[k]), k)
         return sv.state
 
+    if encoding == "dense_angle":
+        _gate1 = {"ry": sv.ry, "rx": sv.rx, "rz": sv.rz}.get(
+            meta.get("first_rotation", "ry"), sv.ry
+        )
+        _gate2 = {"ry": sv.ry, "rx": sv.rx, "rz": sv.rz}.get(
+            meta.get("second_rotation", "rz"), sv.rz
+        )
+        for k in range(n):
+            _gate1(float(params[2 * k]), k)
+            _gate2(float(params[2 * k + 1]), k)
+        return sv.state
+
+    if encoding == "discretized":
+        idx = int(sum(int(b) * (1 << (n - 1 - i)) for i, b in enumerate(params)))
+        sv.state = np.zeros(1 << n, dtype=complex)
+        sv.state[idx % (1 << n)] = 1.0
+        return sv.state
+
     if encoding == "hamiltonian":
         steps = meta.get("trotter_steps", 4)
         for _ in range(steps):

@@ -116,3 +116,35 @@ All encoders:
 ::: quprep.encode.qaoa_problem.QAOAProblemEncoder
     options:
       show_source: true
+
+---
+
+## DenseAngleEncoder
+
+::: quprep.encode.dense_angle.DenseAngleEncoder
+    options:
+      show_source: true
+
+---
+
+## DiscretizedEncoder
+
+::: quprep.encode.discretized.DiscretizedEncoder
+    options:
+      show_source: true
+
+---
+
+## Circuit parameter inspector
+
+::: quprep.encode.inspector.inspect_encoding
+    options:
+      show_source: false
+
+::: quprep.encode.inspector.EncodingParams
+    options:
+      show_source: false
+
+::: quprep.encode.inspector.GateParam
+    options:
+      show_source: false

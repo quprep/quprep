@@ -1,9 +1,10 @@
 """
 03 — Encoders Compared
 ======================
-All 12 encoders side by side: Angle, Amplitude, Basis,
+All 15 encoders side by side: Angle, Amplitude, Basis,
 EntangledAngle, IQP, ReUpload, Hamiltonian, ZZFeatureMap,
-PauliFeatureMap, RandomFourier, TensorProduct, QAOAProblem.
+PauliFeatureMap, RandomFourier, TensorProduct, QAOAProblem,
+DenseAngle, Discretized — plus the circuit parameter inspector.
 
     uv run python examples/03_encoders.py
 """
@@ -11,6 +12,7 @@ PauliFeatureMap, RandomFourier, TensorProduct, QAOAProblem.
 import numpy as np
 
 import quprep as qd
+from quprep.encode.inspector import inspect_encoding
 from quprep.encode.pauli_feature_map import PauliFeatureMapEncoder
 from quprep.encode.qaoa_problem import QAOAProblemEncoder
 from quprep.encode.random_fourier import RandomFourierEncoder
@@ -197,7 +199,72 @@ print(f"n_pairs        : {enc_qaoa.metadata['n_pairs']}")
 print(f"depth          : {enc_qaoa.metadata['depth']}")
 print(exporter.export(enc_qaoa))
 
-# ── 13. prepare() one-liner — all encoders ────────────────────────────────────
+# ── 13. Dense angle encoding ─────────────────────────────────────────────────
+#
+#   2 features per qubit (Ry + Rz). Uses ⌈d/2⌉ qubits — half of AngleEncoder.
+#   Rotation pair is configurable: first_rotation, second_rotation.
+
+print("=" * 55)
+print("DenseAngleEncoder  (default: Ry + Rz)")
+print("=" * 55)
+
+enc_da = qd.DenseAngleEncoder().encode(feature_vector * np.pi)
+print(f"n_qubits   : {enc_da.metadata['n_qubits']}  (ceil(4/2) = 2)")
+print(f"depth      : {enc_da.metadata['depth']}")
+print(f"parameters : {enc_da.parameters.round(4)}  [ry0, rz0, ry1, rz1]")
+print(exporter.export(enc_da))
+
+# ── 14. Discretized encoding ──────────────────────────────────────────────────
+#
+#   Continuous → fixed-point binary. QUBO-ready.
+#   decode() reconstructs original values within quantization precision.
+
+print("=" * 55)
+print("DiscretizedEncoder  (bits=4)")
+print("=" * 55)
+
+enc_disc = qd.DiscretizedEncoder(bits=4, min_val=0.0, max_val=1.0)
+r_disc = enc_disc.encode(feature_vector)
+print(f"n_qubits        : {r_disc.metadata['n_qubits']}  (4 features × 4 bits)")
+print(f"precision       : {r_disc.metadata['precision']:.4f}")
+print(f"binary params   : {r_disc.parameters.astype(int)}")
+print(f"qubo_variables  : {r_disc.metadata['qubo_variables']}")
+print(f"decoded         : {enc_disc.decode(r_disc.parameters).round(4)}")
+print(exporter.export(r_disc))
+
+# ── 15. Circuit parameter inspector ──────────────────────────────────────────
+#
+#   inspect_encoding() returns a structured EncodingParams object with
+#   per-gate GateParam entries. Works on any EncodedResult.
+
+print("=" * 55)
+print("inspect_encoding() — circuit parameter inspector")
+print("=" * 55)
+
+# Inspect AngleEncoder output
+ep_angle = inspect_encoding(qd.AngleEncoder().encode(x3 * np.pi))
+print("AngleEncoder:")
+print(ep_angle.summary())
+print()
+
+# Inspect IQP output (H + Rz + IsingZZ gates)
+ep_iqp = inspect_encoding(qd.IQPEncoder(reps=1).encode(x3 * np.pi))
+print("IQPEncoder (reps=1):")
+print(ep_iqp.summary())
+print()
+
+# Inspect DenseAngleEncoder output
+ep_da = inspect_encoding(enc_da)
+print("DenseAngleEncoder:")
+print(ep_da.summary())
+print()
+
+# Programmatic access to individual gates
+print("First gate of AngleEncoder:")
+g = ep_angle.gates[0]
+print(f"  gate={g.gate}, qubit={g.qubit}, angle={g.angle:.4f}")
+
+# ── 16. prepare() one-liner — all encoders ────────────────────────────────────
 
 print("=" * 55)
 print("prepare() one-liner — all encoders")
@@ -207,6 +274,7 @@ data = np.random.default_rng(0).uniform(0, 1, size=(10, 3))
 for enc_name in (
     "angle", "basis", "iqp", "reupload", "hamiltonian",
     "zz_feature_map", "tensor_product", "qaoa_problem",
+    "dense_angle", "discretized",
 ):
     result = qd.prepare(data, encoding=enc_name, framework="qasm")
     meta = result.encoded[0].metadata

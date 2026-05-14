@@ -60,9 +60,12 @@ from quprep.core.recommender import PipelineSuggestion, recommend, suggest_pipel
 from quprep.encode.amplitude import AmplitudeEncoder
 from quprep.encode.angle import AngleEncoder
 from quprep.encode.basis import BasisEncoder
+from quprep.encode.dense_angle import DenseAngleEncoder
+from quprep.encode.discretized import DiscretizedEncoder
 from quprep.encode.entangled_angle import EntangledAngleEncoder
 from quprep.encode.graph_state import GraphStateEncoder
 from quprep.encode.hamiltonian import HamiltonianEncoder
+from quprep.encode.inspector import EncodingParams, GateParam, inspect_encoding
 from quprep.encode.iqp import IQPEncoder
 from quprep.encode.pauli_feature_map import PauliFeatureMapEncoder
 from quprep.encode.qaoa_problem import QAOAProblemEncoder
@@ -172,6 +175,8 @@ __all__ = [
     "prepare",
     # Encoders
     "AngleEncoder",
+    "DenseAngleEncoder",
+    "DiscretizedEncoder",
     "EntangledAngleEncoder",
     "GraphStateEncoder",
     "AmplitudeEncoder",
@@ -184,6 +189,10 @@ __all__ = [
     "RandomFourierEncoder",
     "TensorProductEncoder",
     "QAOAProblemEncoder",
+    # Inspector
+    "inspect_encoding",
+    "EncodingParams",
+    "GateParam",
     # Cleaners
     "Imputer",
     "OutlierHandler",
@@ -331,6 +340,8 @@ def prepare(
     from quprep.encode.amplitude import AmplitudeEncoder
     from quprep.encode.angle import AngleEncoder
     from quprep.encode.basis import BasisEncoder
+    from quprep.encode.dense_angle import DenseAngleEncoder
+    from quprep.encode.discretized import DiscretizedEncoder
     from quprep.encode.entangled_angle import EntangledAngleEncoder
     from quprep.encode.hamiltonian import HamiltonianEncoder
     from quprep.encode.iqp import IQPEncoder
@@ -371,6 +382,15 @@ def prepare(
             random_state=kwargs.get("random_state", None),
         ),
         "tensor_product": lambda: TensorProductEncoder(),
+        "dense_angle": lambda: DenseAngleEncoder(
+            first_rotation=kwargs.get("first_rotation", "ry"),
+            second_rotation=kwargs.get("second_rotation", "rz"),
+        ),
+        "discretized": lambda: DiscretizedEncoder(
+            bits=kwargs.get("bits", 4),
+            min_val=kwargs.get("min_val", 0.0),
+            max_val=kwargs.get("max_val", 1.0),
+        ),
         "qaoa_problem": lambda: QAOAProblemEncoder(
             p=kwargs.get("p", 1),
             gamma=kwargs.get("gamma", 0.7853981633974483),   # π/4

@@ -307,6 +307,71 @@ print(result.metadata["n_qubits"])   # ceil(d/2)
 
 ---
 
+### Dense angle encoding
+
+Two rotation gates per qubit (Ry + Rz by default), halving the qubit count
+compared to `AngleEncoder`. No entanglement — depth 2.
+
+$$|\psi_k\rangle = R_2(x_{2k+1})\, R_1(x_{2k})\, |0\rangle$$
+
+| Property | Value |
+|---|---|
+| Qubits | $n = \lceil d/2 \rceil$ |
+| Depth | 2 |
+| NISQ-safe | ✅ Excellent |
+| Best for | Qubit-limited scenarios; paired features on a single qubit |
+
+```python
+import quprep as qd
+
+enc = qd.DenseAngleEncoder()                        # default: Ry + Rz
+enc = qd.DenseAngleEncoder(first_rotation="rx",
+                            second_rotation="rz")   # configurable pair
+result = enc.encode(x)   # x in [0, π]
+print(result.metadata["n_qubits"])   # ceil(d/2)
+print(result.metadata["depth"])      # 2
+```
+
+**Normalization:** `minmax_pi` ($[0, \pi]$). Applied automatically.
+
+---
+
+### Discretized encoding
+
+Quantizes each continuous feature to `bits` binary digits (fixed-point), then
+encodes the result as a computational basis state. Total qubits = d × bits.
+The output binary vector is QUBO-compatible and can be passed directly to
+`quprep.qubo.to_qubo()`.
+
+$$v_i = \operatorname{round}\!\left(\frac{x_i - x_{\min}}{x_{\max} - x_{\min}} \cdot (2^b - 1)\right)$$
+
+| Property | Value |
+|---|---|
+| Qubits | $n = d \times \text{bits}$ |
+| Depth | 1 (X gates only) |
+| NISQ-safe | ✅ Excellent |
+| Best for | QUBO/Ising pipelines; continuous-to-binary relaxations; QAOA warm-start |
+
+```python
+import quprep as qd
+import numpy as np
+
+enc = qd.DiscretizedEncoder(bits=4, min_val=0.0, max_val=1.0)
+result = enc.encode(x)
+print(result.metadata["n_qubits"])        # d * 4
+print(result.metadata["precision"])       # (max - min) / 15
+print(result.metadata["qubo_variables"])  # {0: [0,1,2,3], 1: [4,5,6,7], ...}
+
+# Roundtrip reconstruction
+x_hat = enc.decode(result.parameters)
+```
+
+!!! tip "QUBO integration"
+    `metadata["qubo_variables"]` maps each feature index to its qubit indices.
+    Use this to build QUBO coefficient matrices aligned with the binary variables.
+
+---
+
 ### QAOA problem encoding *(v0.6.0)*
 
 Encodes a feature vector as a QAOA-inspired circuit where features become the cost Hamiltonian parameters. Each feature $x_i$ sets a local field $h_i = \gamma x_i$, and adjacent-pair products $x_i x_{i+1}$ set coupling angles. One layer applies $H^{\otimes d}$, cost unitaries (RZ + CNOT-RZ-CNOT), and a mixer (RX).
@@ -347,14 +412,17 @@ Or follow this decision tree:
 ```
 Is your data binary?
   └─ Yes → Basis encoding (QAOA, combinatorial)
+        Need QUBO variables from continuous data?
+  └─ Yes → Discretized encoding (continuous → binary, QUBO-ready)
   └─ No  → Is qubit count the main constraint?
-              └─ Yes → Amplitude encoding (log₂ d qubits, deep)
+              └─ Yes (log₂ d qubits) → Amplitude encoding (deep)
+              └─ Yes (⌈d/2⌉ qubits) → Dense angle or Tensor product
               └─ No  → What is your task?
                          classification/regression → Angle or IQP
-                         kernel methods            → IQP
+                         kernel methods            → IQP or ZZ feature map
                          high-expressivity QNN      → Data re-uploading
                          physics simulation/VQE     → Hamiltonian
-                         feature correlations       → Entangled Angle
+                         feature correlations       → Entangled angle
                          QAOA warm-start / problem  → QAOA problem
 ```
 
