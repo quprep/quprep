@@ -178,8 +178,7 @@ def score_encoding(
             encoder.fit(dataset)
         except Exception:
             pass
-    # RandomFourierEncoder stores fitted state differently — try fit always.
-    elif hasattr(encoder, "_W") is False and hasattr(encoder, "fit"):
+    elif hasattr(encoder, "_W") and encoder._W is None and hasattr(encoder, "fit"):
         try:
             encoder.fit(dataset)
         except Exception:

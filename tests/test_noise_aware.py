@@ -400,3 +400,40 @@ def test_importable_from_preprocess_module():
     from quprep.preprocess import NoiseAwarePreprocessor, NoiseProfile
     assert NoiseProfile is not None
     assert NoiseAwarePreprocessor is not None
+
+
+# ---------------------------------------------------------------------------
+# H-4 regression: zz_feature_map deadzone must use [0, 2π] formula
+# ---------------------------------------------------------------------------
+
+class TestZZFeatureMapDeadzone:
+    def test_zz_feature_map_in_two_pi_encodings(self):
+        # zz_feature_map must not be in _PI_ENCODINGS (was the bug)
+        assert "zz_feature_map" not in NoiseAwarePreprocessor._PI_ENCODINGS
+        assert "zz_feature_map" in NoiseAwarePreprocessor._TWO_PI_ENCODINGS
+
+    def test_zz_deadzone_output_stays_within_two_pi_range(self):
+        # After deadzone remapping, all values must stay in [deadzone*2π, (1-deadzone)*2π]
+        rng = np.random.default_rng(0)
+        data = rng.uniform(0, 2 * np.pi, (30, 3))
+        ds = Dataset(data=data, feature_names=["a", "b", "c"])
+        profile = _linear_profile(3)
+        deadzone = 0.1
+        prep = NoiseAwarePreprocessor(profile, encoding="zz_feature_map", angle_deadzone=deadzone)
+        result = prep.fit_transform(ds)
+        lo = deadzone * 2.0 * np.pi
+        hi = (1.0 - deadzone) * 2.0 * np.pi
+        assert result.data.min() >= lo - 1e-10
+        assert result.data.max() <= hi + 1e-10
+
+    def test_zz_deadzone_does_not_extrapolate(self):
+        # With the old [0,π] formula, a value of 2π would map to 2*(hi-lo)+lo > hi
+        # With the correct [0,2π] formula it maps to hi exactly.
+        data = np.array([[2 * np.pi, np.pi]])
+        ds = Dataset(data=data, feature_names=["a", "b"])
+        profile = _linear_profile(2)
+        deadzone = 0.05
+        prep = NoiseAwarePreprocessor(profile, encoding="zz_feature_map", angle_deadzone=deadzone)
+        result = prep.fit_transform(ds)
+        hi = (1.0 - deadzone) * 2.0 * np.pi
+        assert result.data.max() <= hi + 1e-10

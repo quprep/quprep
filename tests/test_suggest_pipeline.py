@@ -210,3 +210,37 @@ class TestPreprocessingReport:
         report = qd.preprocessing_report(ds)
         assert "PreprocessingReport" in str(report)
         assert "PreprocessingReport" in repr(report)
+
+
+# ---------------------------------------------------------------------------
+# H-2 regression: suggest_pipeline normalizer for pauli_feature_map / qaoa_problem
+# ---------------------------------------------------------------------------
+
+class TestSuggestPipelineNormalizer:
+    def _force_encoder(self, ds, method: str):
+        import unittest.mock as mock
+
+        from quprep.core.recommender import EncodingRecommendation, suggest_pipeline
+        fake_rec = EncodingRecommendation(
+            method=method, score=100.0, qubits=ds.n_features,
+            depth="O(d)", nisq_safe=True, reason="forced for test",
+        )
+        with mock.patch("quprep.core.recommender.recommend", return_value=fake_rec):
+            return suggest_pipeline(ds)
+
+    def test_pauli_feature_map_gets_pm_pi_normalizer(self):
+        # H-2 regression: pauli_feature_map needs [-π,π] → minmax_pm_pi, not minmax_pi
+        rng = np.random.default_rng(0)
+        ds = _ds(rng.uniform(0, 1, (20, 3)))
+        suggestion = self._force_encoder(ds, "pauli_feature_map")
+        assert suggestion.normalizer == "minmax_pm_pi", (
+            f"Expected minmax_pm_pi, got {suggestion.normalizer!r}"
+        )
+
+    def test_qaoa_problem_gets_pm_pi_normalizer(self):
+        rng = np.random.default_rng(0)
+        ds = _ds(rng.uniform(0, 1, (20, 3)))
+        suggestion = self._force_encoder(ds, "qaoa_problem")
+        assert suggestion.normalizer == "minmax_pm_pi", (
+            f"Expected minmax_pm_pi, got {suggestion.normalizer!r}"
+        )

@@ -173,7 +173,7 @@ _ENCODINGS: dict[str, dict] = {
     "random_fourier": {
         "nisq_safe": True,
         "depth": "O(n_components)",
-        "qubit_fn": lambda d: d,
+        "qubit_fn": lambda d: min(d, 10),  # n_components is user-set; 10 is a safe default
         "task_scores": {
             "classification": 8,
             "regression": 9,
@@ -191,7 +191,7 @@ _ENCODINGS: dict[str, dict] = {
     "tensor_product": {
         "nisq_safe": True,
         "depth": "O(d)",
-        "qubit_fn": lambda d: d,
+        "qubit_fn": lambda d: int(np.ceil(d / 2)),  # 2 features per qubit (Ry + Rz)
         "task_scores": {
             "classification": 7,
             "regression": 7,
@@ -993,6 +993,8 @@ def suggest_pipeline(
         "iqp": "iqp",
         "zz_feature_map": "zz_feature_map",
         "hamiltonian": "hamiltonian",
+        "pauli_feature_map": "pauli_feature_map",
+        "qaoa_problem": "qaoa_problem",
     }
     enc_key = _enc_key_map.get(enc_rec.method, "angle_ry")
     normalizer = ENCODING_NORMALIZER_MAP.get(enc_key, "minmax_pi")

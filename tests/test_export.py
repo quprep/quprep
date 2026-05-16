@@ -1079,6 +1079,41 @@ class TestQASMExporterV060:
         assert "rx(" in qasm
         assert "cx " in qasm
 
+    # C-1 regression: IQP QASM angles must use -2x convention (Havlíček 2019)
+    def test_iqp_qasm_angle_convention(self):
+        from quprep.encode.iqp import IQPEncoder
+        x = np.array([0.5, 1.0, 1.5])
+        encoded = IQPEncoder(reps=1).encode(x)
+        qasm = QASMExporter().export(encoded)
+        # Single-qubit Rz angles must be -2*x[i], not x[i]
+        assert "rz(-1.0)" in qasm   # -2 * 0.5
+        assert "rz(-2.0)" in qasm   # -2 * 1.0
+        assert "rz(-3.0)" in qasm   # -2 * 1.5
+        # The raw positive values must NOT appear as standalone rz angles
+        assert "rz(0.5)" not in qasm
+        assert "rz(1.0)" not in qasm
+        assert "rz(1.5)" not in qasm
+
+    # C-2 regression: mixed-Pauli pairs must emit basis-change rotations
+    def test_pauli_feature_map_qasm_mixed_paulis(self):
+        enc = PauliFeatureMapEncoder(paulis=["Z", "XZ", "ZX", "XY", "YX", "YZ", "ZY"], reps=1)
+        x = np.array([0.5, 1.0])
+        encoded = enc.encode(x)
+        qasm = QASMExporter().export(encoded)
+        # XZ / ZX: H on one qubit must appear
+        assert "h " in qasm
+        # XY / YX / YZ / ZY: rz(-π/2) basis change must appear
+        assert "rz(-1.5707963267948966)" in qasm
+
+    def test_pauli_feature_map_qasm_yy_basis_change(self):
+        enc = PauliFeatureMapEncoder(paulis=["Z", "YY"], reps=1)
+        x = np.array([0.5, 1.0])
+        encoded = enc.encode(x)
+        qasm = QASMExporter().export(encoded)
+        # YY: rz(-π/2) pre and rz(+π/2) post must both appear
+        assert "rz(-1.5707963267948966)" in qasm
+        assert "rz(1.5707963267948966)" in qasm
+
 
 # ---------------------------------------------------------------------------
 # BraketExporter

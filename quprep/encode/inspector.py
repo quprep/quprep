@@ -159,7 +159,7 @@ def _parse_gates(
         return [GateParam(gate=gname, qubit=i, angle=float(params[i])) for i in range(n)]
 
     if enc in ("dense_angle", "tensor_product"):
-        first_rot = meta.get("first_rotation") or ("ry" if meta.get("ry_angles") else "ry")
+        first_rot = meta.get("first_rotation", "ry")
         r1 = _ROTATION_GATE.get(first_rot, "Ry")
         r2 = _ROTATION_GATE.get(meta.get("second_rotation", "rz"), "Rz")
         if enc == "tensor_product":

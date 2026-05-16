@@ -196,14 +196,18 @@ class NoiseAwarePreprocessor:
 
     # Encodings whose data lives in [0, π] — deadzone compresses into [δπ, (1−δ)π]
     _PI_ENCODINGS: frozenset[str] = frozenset({
-        "angle", "entangled_angle", "tensor_product", "zz_feature_map",
+        "angle", "entangled_angle", "tensor_product",
+    })
+    # Encodings whose data lives in [0, 2π] — deadzone compresses into [2δπ, 2(1−δ)π]
+    _TWO_PI_ENCODINGS: frozenset[str] = frozenset({
+        "zz_feature_map",
     })
     # Encodings whose data lives in [−π, π] — deadzone scales symmetrically
     _PM_PI_ENCODINGS: frozenset[str] = frozenset({
         "iqp", "reupload", "pauli_feature_map", "qaoa_problem",
     })
-    # Union used for topology-reordering guard (same logic applies to both)
-    _ANGLE_ENCODINGS: frozenset[str] = _PI_ENCODINGS | _PM_PI_ENCODINGS
+    # Union used for topology-reordering guard (same logic applies to all)
+    _ANGLE_ENCODINGS: frozenset[str] = _PI_ENCODINGS | _TWO_PI_ENCODINGS | _PM_PI_ENCODINGS
     _ENTANGLED_ENCODINGS: frozenset[str] = frozenset({
         "entangled_angle", "iqp", "zz_feature_map",
         "pauli_feature_map", "reupload",
@@ -345,6 +349,10 @@ class NoiseAwarePreprocessor:
                 lo = self.angle_deadzone * np.pi
                 hi = (1.0 - self.angle_deadzone) * np.pi
                 X = lo + (X / np.pi) * (hi - lo)
+            elif self.encoding in self._TWO_PI_ENCODINGS:
+                lo = self.angle_deadzone * 2.0 * np.pi
+                hi = (1.0 - self.angle_deadzone) * 2.0 * np.pi
+                X = lo + (X / (2.0 * np.pi)) * (hi - lo)
             elif self.encoding in self._PM_PI_ENCODINGS:
                 X = X * (1.0 - 2.0 * self.angle_deadzone)
 

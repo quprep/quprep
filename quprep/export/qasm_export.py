@@ -147,14 +147,14 @@ class QASMExporter:
             # Hadamard layer
             for i in range(d):
                 lines.append(f"h q[{i}];")
-            # Single-qubit Z phase
+            # Single-qubit Z phase: Havlíček 2019 exp(i·x·Z); Rz(θ)=exp(-i·θ/2·Z) → θ=-2x
             for i in range(d):
-                lines.append(f"rz({float(x[i])}) q[{i}];")
-            # ZZ interactions via CX decomposition
+                lines.append(f"rz({-2.0 * float(x[i])}) q[{i}];")
+            # ZZ interactions: exp(i·x_i·x_j·ZZ); IsingZZ(θ)=exp(-i·θ/2·ZZ) → θ=-2·x_i·x_j
             pair_idx = 0
             for i in range(d):
                 for j in range(i + 1, d):
-                    angle = float(pairs[pair_idx])
+                    angle = -2.0 * float(pairs[pair_idx])
                     lines.append(f"cx q[{i}], q[{j}];")
                     lines.append(f"rz({angle}) q[{j}];")
                     lines.append(f"cx q[{i}], q[{j}];")
@@ -207,8 +207,23 @@ class QASMExporter:
         pair_terms = encoded.metadata.get("pair_terms", {})
         lines = ["OPENQASM 3.0;", 'include "stdgates.inc";', f"qubit[{d}] q;"]
         _gate = {"X": "rx", "Y": "ry", "Z": "rz"}
-        _conj_pre = {"XX": "h", "YY": "rx(1.5707963267948966)", "ZZ": None}
-        _conj_post = {"XX": "h", "YY": "rx(-1.5707963267948966)", "ZZ": None}
+        # Per-qubit basis-change gates: (gate_on_i, gate_on_j); None = no gate.
+        # Mirrors _simulate.py: X→Z via H; Y→Z via rz(-π/2).
+        _H = "h"
+        _SY = "rz(-1.5707963267948966)"
+        _SY_INV = "rz(1.5707963267948966)"
+        _basis_pre: dict[str, tuple] = {
+            "XX": (_H, _H),     "YY": (_SY, _SY),       "ZZ": (None, None),
+            "XZ": (_H, None),   "ZX": (None, _H),
+            "XY": (_H, _SY),    "YX": (_SY, _H),
+            "YZ": (_SY, None),  "ZY": (None, _SY),
+        }
+        _basis_post: dict[str, tuple] = {
+            "XX": (_H, _H),         "YY": (_SY_INV, _SY_INV),   "ZZ": (None, None),
+            "XZ": (_H, None),       "ZX": (None, _H),
+            "XY": (_H, _SY_INV),    "YX": (_SY_INV, _H),
+            "YZ": (_SY_INV, None),  "ZY": (None, _SY_INV),
+        }
         for _ in range(reps):
             for i in range(d):
                 lines.append(f"h q[{i}];")
@@ -217,18 +232,20 @@ class QASMExporter:
                 for i, angle in enumerate(angles):
                     lines.append(f"{gate}({float(angle)}) q[{i}];")
             for pauli, entries in pair_terms.items():
-                pre = _conj_pre.get(pauli)
-                post = _conj_post.get(pauli)
+                pre = _basis_pre.get(pauli, (None, None))
+                post = _basis_post.get(pauli, (None, None))
                 for i, j, angle in entries:
-                    if pre:
-                        lines.append(f"{pre} q[{i}];")
-                        lines.append(f"{pre} q[{j}];")
+                    if pre[0]:
+                        lines.append(f"{pre[0]} q[{i}];")
+                    if pre[1]:
+                        lines.append(f"{pre[1]} q[{j}];")
                     lines.append(f"cx q[{i}], q[{j}];")
                     lines.append(f"rz({float(angle)}) q[{j}];")
                     lines.append(f"cx q[{i}], q[{j}];")
-                    if post:
-                        lines.append(f"{post} q[{i}];")
-                        lines.append(f"{post} q[{j}];")
+                    if post[0]:
+                        lines.append(f"{post[0]} q[{i}];")
+                    if post[1]:
+                        lines.append(f"{post[1]} q[{j}];")
         return "\n".join(lines) + "\n"
 
     def _export_qaoa_problem(self, encoded) -> str:

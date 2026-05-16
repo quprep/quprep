@@ -429,6 +429,19 @@ class TestScoreEncoding:
         m = score_encoding(enc, ds, n_samples=20, seed=0)
         assert isinstance(m, EncoderMetrics)
 
+    def test_score_encoding_auto_fits_random_fourier(self):
+        # H-1 regression: score_encoding must auto-fit RandomFourierEncoder.
+        # Before the fix the second branch checked `hasattr(enc, "_W") is False`
+        # which evaluated False because _W=None is set in __init__, so encode()
+        # raised RuntimeError("Call fit() before encode.").
+        from quprep.encode.random_fourier import RandomFourierEncoder
+        enc = RandomFourierEncoder(n_components=4, random_state=0)
+        assert enc._W is None  # unfitted: _W is None before fit()
+        ds = _ds(d=3, n=30)
+        m = score_encoding(enc, ds, n_samples=20, seed=0)
+        # The fix ensures no RuntimeError("Call fit() before encode.") is raised.
+        assert isinstance(m, EncoderMetrics)
+
 
 # ---------------------------------------------------------------------------
 # recommend() use_metrics integration
