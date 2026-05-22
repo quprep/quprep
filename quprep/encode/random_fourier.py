@@ -102,7 +102,7 @@ class RandomFourierEncoder(BaseEncoder):
         Z = np.sqrt(2.0 / self.n_components) * np.cos(self._W @ X.T + self._b[:, None])
         self._z_min = float(Z.min())
         self._z_max = float(Z.max())
-        self._is_fitted = True
+        self._fitted = True
         return self
 
     def encode(self, x: np.ndarray) -> EncodedResult:

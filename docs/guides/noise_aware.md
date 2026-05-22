@@ -103,9 +103,11 @@ prep = qd.NoiseAwarePreprocessor(
 ```
 
 !!! warning "Normalise first"
-    `angle_deadzone` remaps values assuming they are in `[0, π]`. Apply
-    `Scaler(method="minmax_pi")` **before** `NoiseAwarePreprocessor` in the pipeline,
-    or use it standalone after normalisation.
+    `angle_deadzone` remaps values within the encoder's target range. Apply the
+    correct normaliser **before** `NoiseAwarePreprocessor`:
+
+    - Angle-family encodings (`angle`, `iqp`, `pauli_feature_map`, …) → `Scaler('minmax_pi')` → `[0, π]`
+    - `zz_feature_map` → `Scaler('minmax_2pi')` → `[0, 2π]`
 
 ---
 

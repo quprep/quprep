@@ -24,6 +24,9 @@ def _max_features_for_encoding(encoding: str, qubit_budget: int) -> int:
     if encoding in ("amplitude",):
         # amplitude needs log2(d) qubits → d = 2^qubits, but cap at 512
         return min(2**qubit_budget, 512)
+    if encoding in ("tensor_product", "dense_angle"):
+        # 2 features per qubit (encode 2 angles per qubit via Rx·Ry)
+        return qubit_budget * 2
     # angle, basis, iqp, reupload, hamiltonian: 1 feature per qubit
     return qubit_budget
 

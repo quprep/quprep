@@ -122,8 +122,8 @@ def suggest_qubits(
     amp_qubits = max(1, math.ceil(math.log2(max(d, 2))))
 
     if task == "qaoa":
-        hint = "basis"
-        hint_reason = "basis encoding maps naturally to QAOA binary variables"
+        hint = "qaoa_problem"
+        hint_reason = "qaoa_problem encoding directly maps data onto QAOA cost Hamiltonian angles"
     elif task == "kernel":
         if n_qubits <= 8:
             hint = "iqp"

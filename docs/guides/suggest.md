@@ -106,7 +106,7 @@ suggestion = qd.suggest_qubits("data.csv", task="classification")
 
 suggestion.n_qubits        # recommended qubit count
 suggestion.n_features      # original feature count before any reduction
-suggestion.encoding_hint   # e.g. "angle", "basis", "iqp"
+suggestion.encoding_hint   # e.g. "angle", "iqp", "qaoa_problem"
 suggestion.nisq_safe       # True if n_qubits ≤ 20
 suggestion.reasoning       # human-readable explanation
 suggestion.warning         # set if reduction is recommended, else None
@@ -128,7 +128,7 @@ The `task` parameter adjusts which encoding is recommended:
 | `"regression"` | `angle` |
 | `"kernel"` (≤ 8 features) | `iqp` |
 | `"kernel"` (> 8 features) | `angle` |
-| `"qaoa"` | `basis` |
+| `"qaoa"` | `qaoa_problem` |
 | `"simulation"` | `hamiltonian` |
 
 Valid task values: `"classification"`, `"regression"`, `"qaoa"`, `"kernel"`, `"simulation"`.
@@ -138,7 +138,7 @@ qd.suggest_qubits("data.csv", task="kernel")
 # QubitSuggestion(n_qubits=8, encoding_hint='iqp', nisq_safe=True)
 
 qd.suggest_qubits("data.csv", task="qaoa")
-# QubitSuggestion(n_qubits=8, encoding_hint='basis', nisq_safe=True)
+# QubitSuggestion(n_qubits=8, encoding_hint='qaoa_problem', nisq_safe=True)
 ```
 
 ---

@@ -695,9 +695,9 @@ class Pipeline:
                 cost=None, audit_log=self._last_audit_log, drift_report=drift, stages=stages,
             )
 
-        if hasattr(self.encoder, "fit") and not getattr(self.encoder, "_is_fitted", False):
+        if hasattr(self.encoder, "fit") and not getattr(self.encoder, "_fitted", False):
             self.encoder.fit(dataset.data)
-            self.encoder._is_fitted = True
+            self.encoder._fitted = True
         encoded = self.encoder.encode_batch(dataset)
 
         if self.exporter is None:

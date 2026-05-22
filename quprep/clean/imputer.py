@@ -159,6 +159,8 @@ class Imputer:
         -------
         Dataset
         """
+        # fit() learns fill values; transform() applies them (or drops rows for "drop").
+        # The same dataset reference is intentional — fit() never mutates dataset in-place.
         return self.fit(dataset).transform(dataset)
 
     def _apply_imputation(self, data: np.ndarray) -> np.ndarray:

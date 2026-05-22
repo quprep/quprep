@@ -98,7 +98,7 @@ class ZZFeatureMapEncoder(BaseEncoder):
                 "encoding": "zz_feature_map",
                 "n_qubits": d,
                 "reps": self.reps,
-                "depth": d * d * self.reps,
+                "depth": self.reps * (2 + 3 * d * (d - 1) // 2),
                 "single_angles": single_angles.tolist(),
                 "pair_angles": pair_angles.tolist(),
                 "pairs": pairs,

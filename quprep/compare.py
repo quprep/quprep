@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 
 from quprep.validation.cost import CostEstimate, estimate_cost
 
-_ALL_ENCODINGS = [
+_ALL_ENCODINGS: list[str] = [
     "angle",
     "amplitude",
     "basis",
@@ -178,7 +178,9 @@ def compare_encodings(
     include : list[str] or None
         Encoder names to include. If ``None``, all 12 encoders are compared.
         Valid names: ``"angle"``, ``"amplitude"``, ``"basis"``, ``"iqp"``,
-        ``"reupload"``, ``"entangled_angle"``, ``"hamiltonian"``.
+        ``"reupload"``, ``"entangled_angle"``, ``"hamiltonian"``,
+        ``"qaoa_problem"``, ``"zz_feature_map"``, ``"pauli_feature_map"``,
+        ``"random_fourier"``, ``"tensor_product"``.
     exclude : list[str] or None
         Encoder names to exclude. Applied after *include*.
     task : str or None
@@ -217,7 +219,7 @@ def compare_encodings(
         if unknown:
             raise ValueError(
                 f"Unknown encoder(s): {sorted(unknown)}. "
-                f"Valid names: {sorted(encoders)}"
+                f"Valid names: {sorted(_ALL_ENCODINGS)}"
             )
         encoders = {k: v for k, v in encoders.items() if k in include}
 

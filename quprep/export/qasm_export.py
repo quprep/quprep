@@ -71,7 +71,8 @@ class QASMExporter:
         if encoding == "pauli_feature_map":
             return self._export_pauli_feature_map(encoded)
         if encoding == "random_fourier":
-            return self._export_angle(encoded)  # angles are already in [0,π]
+            # RFF output is angle-encoded; requires minmax_pi normalizer
+            return self._export_angle(encoded)
         if encoding == "tensor_product":
             return self._export_tensor_product(encoded)
         if encoding == "qaoa_problem":
@@ -307,6 +308,9 @@ class QASMExporter:
         return "\n".join(lines) + "\n"
 
     def _export_graph_state(self, encoded) -> str:
+        # encoded.parameters holds the flattened upper-triangle adjacency matrix,
+        # consumed by the numpy simulator. The QASM circuit is derived from edges
+        # in metadata (H per qubit, CZ per edge) and does not use parameters directly.
         n = encoded.metadata["n_qubits"]
         edges = encoded.metadata.get("edges", [])
         lines = [

@@ -150,14 +150,14 @@ class NoiseAwarePreprocessor:
         ``'pauli_feature_map'``, ``'reupload'``, ``'tensor_product'``.
         Unknown values are treated as single-qubit (no SWAP pressure).
     angle_deadzone : float
-        Fraction of ``[0, π]`` to exclude at each pole.  For example,
-        ``0.05`` remaps data from ``[0, π]`` to ``[0.05π, 0.95π]``, keeping
-        all encoded angles at least 5 % away from the computational-basis
-        poles.  Must be in ``[0, 0.5)``.  Default ``0`` (no remapping).
-        Only applied when ``encoding`` uses rotation angles.  The input
-        data must already be normalised to ``[0, π]`` for this to be
-        meaningful; use :class:`~quprep.normalize.scalers.Scaler` with
-        ``method='minmax_pi'`` before applying this transformer.
+        Fraction of the encoding range to exclude at each pole.  For example,
+        ``0.05`` remaps data from ``[0, π]`` to ``[0.05π, 0.95π]`` for
+        angle-family encodings, keeping all angles at least 5 % from the
+        computational-basis poles.  Must be in ``[0, 0.5)``.  Default ``0``
+        (no remapping).  Only applied when ``encoding`` uses rotation angles.
+        The input must already be normalised to ``[0, π]`` for angle-family
+        encodings (use ``Scaler('minmax_pi')``) or to ``[0, 2π]`` for
+        ``zz_feature_map`` (use ``Scaler('minmax_2pi')``).
 
     Attributes
     ----------

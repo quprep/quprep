@@ -135,8 +135,7 @@ class QAOAProblemEncoder(BaseEncoder):
 
         # Depth calculation
         if self.connectivity == "linear":
-            # H(1) + per layer: RZ(1) + CNOT-RZ-CNOT(3) + RX(1) = 5 + H init
-            depth = 1 + 5 * self.p
+            depth = 1 + self.p * (d + 3 * len(pairs))
         else:
             # Full connectivity serialized: each pair ~3 gates deep
             depth = 1 + (1 + 3 * len(pairs) + 1) * self.p

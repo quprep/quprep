@@ -962,8 +962,8 @@ class TestQAOAProblemEncoder:
         x = np.array([0.1, 0.2, 0.3])
         result = enc.encode(x)
         assert result.metadata["p"] == 3
-        # depth = 1 + 5*p = 16
-        assert result.metadata["depth"] == 1 + 5 * 3
+        # d=3, linear pairs=(0,1),(1,2) → depth = 1 + p*(d + 3*n_pairs)
+        assert result.metadata["depth"] == 1 + 3 * (3 + 3 * 2)
 
     def test_result_is_encoded_result(self):
         enc = QAOAProblemEncoder()

@@ -180,10 +180,12 @@ class DriftDetector:
             else:
                 std_ratio = 1.0
 
+            # Use a small epsilon on the reciprocal check to avoid floating-point
+            # false positives when std_ratio is marginally below 1/std_threshold.
             is_drifted = (
                 mean_shift_sigmas > self.mean_threshold
                 or std_ratio > self.std_threshold
-                or (std_ratio > 0 and (1.0 / std_ratio) > self.std_threshold)
+                or (std_ratio > 0 and (1.0 / std_ratio) > self.std_threshold + 1e-9)
             )
 
             feature_stats[name] = {

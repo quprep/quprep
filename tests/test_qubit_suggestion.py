@@ -115,10 +115,10 @@ class TestWarning:
 # ---------------------------------------------------------------------------
 
 class TestEncodingHint:
-    def test_qaoa_suggests_basis(self):
+    def test_qaoa_suggests_qaoa_problem(self):
         arr = _arr(n_features=5)
         result = suggest_qubits(arr, task="qaoa")
-        assert result.encoding_hint == "basis"
+        assert result.encoding_hint == "qaoa_problem"
 
     def test_kernel_small_suggests_iqp(self):
         arr = _arr(n_features=6)

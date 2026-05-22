@@ -81,7 +81,7 @@ class IQPEncoder(BaseEncoder):
                 "encoding": "iqp",
                 "n_qubits": d,
                 "reps": self.reps,
-                "depth": d * d * self.reps,
+                "depth": self.reps * (2 + 3 * d * (d - 1) // 2),
                 "n_pairs": len(pairs),
             },
         )

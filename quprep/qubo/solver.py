@@ -62,6 +62,9 @@ def solve_brute(qubo, max_n: int = 20) -> SolveResult:
     -------
     SolveResult
         Best solution found, its energy, and the number of states evaluated.
+        ``SolveResult.x`` uses LSB-first ordering: ``x[0]`` corresponds to
+        bit 0 (the least-significant bit of each enumerated integer). Ensure
+        your QUBO matrix Q is built with the same variable ordering.
 
     Raises
     ------
