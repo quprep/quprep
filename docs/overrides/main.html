@@ -15,5 +15,42 @@
         MathJax.typesetPromise();
       });
     });
+
+    /* Wrap the nav drawer title text in a span so CSS gradient can target
+       just the text while the parent keeps a solid background (blocks
+       scroll-through without background-clip:text on the container).
+       Also inject a sticky fade div just below the title so nav items
+       dissolve smoothly as they scroll behind it. */
+    document$.subscribe(function() {
+      function injectFade(navSelector, wrapText) {
+        document.querySelectorAll(navSelector + ' > .md-nav__title').forEach(function(title) {
+          if (wrapText && !title.querySelector('.md-nav__title-text')) {
+            title.childNodes.forEach(function(node) {
+              if (node.nodeType === 3 && node.textContent.trim()) {
+                var span = document.createElement('span');
+                span.className = 'md-nav__title-text';
+                span.textContent = node.textContent;
+                title.replaceChild(span, node);
+              }
+            });
+          }
+
+          if (!title.parentNode.querySelector('.md-nav__title-fade')) {
+            var fade = document.createElement('div');
+            fade.className = 'md-nav__title-fade';
+            title.parentNode.insertBefore(fade, title.nextSibling);
+          }
+
+          var fade = title.parentNode.querySelector('.md-nav__title-fade');
+          requestAnimationFrame(function() {
+            var h = title.getBoundingClientRect().height;
+            fade.style.top = (h > 0 ? h : title.offsetHeight) + 'px';
+          });
+        });
+      }
+
+      injectFade('.md-nav--primary', true);
+      injectFade('.md-nav--secondary', false);
+    });
   </script>
 {% endblock %}

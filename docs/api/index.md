@@ -18,7 +18,7 @@ Everything else is accessed via submodules.
 ```python
 import quprep as qd
 
-qd.__version__         # "0.9.0"
+qd.__version__         # "0.10.0"
 qd.prepare(...)
 qd.Pipeline(...)
 qd.recommend(...)
@@ -55,6 +55,25 @@ qd.BarrenPlateauReport
 
 # Class imbalance (v0.9.0)
 qd.ImbalanceHandler()
+
+# New encoders (v0.10.0)
+qd.DenseAngleEncoder()
+qd.DiscretizedEncoder()
+
+# Quantum-specific preprocessing (v0.10.0)
+qd.check_compatibility(...)
+qd.CompatibilityReport
+qd.verify_encoding(...)
+qd.VerificationReport
+qd.encoding_sensitivity(...)
+qd.SensitivityResult
+qd.suggest_pipeline(...)
+qd.PipelineSuggestion
+qd.preprocessing_report(...)
+qd.PreprocessingReport
+qd.inspect_encoding(...)
+qd.EncodingParams
+qd.GateParam
 ```
 
 ---
@@ -75,6 +94,9 @@ qd.ImbalanceHandler()
 | `quprep.encode.random_fourier` | `RandomFourierEncoder` |
 | `quprep.encode.tensor_product` | `TensorProductEncoder` |
 | `quprep.encode.qaoa_problem` | `QAOAProblemEncoder` |
+| `quprep.encode.dense_angle` | `DenseAngleEncoder` |
+| `quprep.encode.discretized` | `DiscretizedEncoder` |
+| `quprep.encode.inspector` | `inspect_encoding`, `EncodingParams`, `GateParam` |
 | `quprep.encode.base` | `BaseEncoder`, `EncodedResult` |
 | `quprep.export.qasm_export` | `QASMExporter` |
 | `quprep.export.qiskit_export` | `QiskitExporter` |
@@ -93,14 +115,17 @@ qd.ImbalanceHandler()
 | `quprep.ingest.huggingface_ingester` | `HuggingFaceIngester` |
 | `quprep.ingest.kaggle_ingester` | `KaggleIngester` |
 | `quprep.ingest.openml_ingester` | `OpenMLIngester` |
-| `quprep.ingest.profiler` | `profile`, `DatasetProfile` |
+| `quprep.ingest.profiler` | `profile`, `DatasetProfile`, `preprocessing_report`, `PreprocessingReport` |
 | `quprep.preprocess.noise_aware` | `NoiseProfile`, `NoiseAwarePreprocessor` |
-| `quprep.metrics` | `expressibility`, `entanglement_capability`, `kernel_alignment`, `EncoderMetrics`, `score_encoding`, `detect_barren_plateau`, `BarrenPlateauReport` |
+| `quprep.metrics` | `expressibility`, `entanglement_capability`, `kernel_alignment`, `EncoderMetrics`, `score_encoding`, `detect_barren_plateau`, `BarrenPlateauReport`, `encoding_sensitivity`, `SensitivityResult` |
 | `quprep.preprocess.window` | `WindowTransformer` |
 | `quprep.core.dataset` | `Dataset` |
 | `quprep.core.fingerprint` | `fingerprint_pipeline`, `FingerprintResult` |
+| `quprep.core.recommender` | `recommend`, `suggest_pipeline`, `PipelineSuggestion` |
+| `quprep.core.qubit_suggestion` | `suggest_qubits`, `QubitSuggestion` |
 | `quprep.compare` | `compare_encodings`, `ComparisonResult` |
 | `quprep.validation` | `DataSchema`, `FeatureSpec`, `SchemaViolationError`, `validate_dataset`, `warn_qubit_mismatch`, `QuPrepWarning` |
+| `quprep.validation.compatibility` | `check_compatibility`, `CompatibilityReport`, `verify_encoding`, `VerificationReport` |
 | `quprep.validation.cost` | `CostEstimate`, `estimate_cost` |
 | `quprep.qubo` | `to_qubo`, `QUBOResult`, `qubo_to_ising`, `ising_to_qubo`, `IsingResult` |
 | `quprep.qubo.problems` | `max_cut`, `knapsack`, `tsp`, `portfolio`, `graph_color`, `scheduling`, `number_partition` |

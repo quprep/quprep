@@ -64,19 +64,43 @@
 nav.md-nav--primary label.md-nav__title a.md-nav__button.md-logo {
   display: none !important;
 }
-/* Apply gradient text matching the desktop header title */
+/* Font styling on the container — NO background-clip:text here so the
+   element keeps its solid background and blocks items scrolling behind it.
+   Gradient is applied only to the inner .md-nav__title-text span (injected
+   by main.html JS), which is a normal inline element inside the solid container. */
 .md-nav--primary > .md-nav__title {
   font-family: 'Ubuntu', system-ui, sans-serif !important;
   font-weight: 700 !important;
   letter-spacing: -0.025em !important;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Gradient text on the injected span only */
+.md-nav__title-text {
   background-image: linear-gradient(135deg, hsl(263, 70%, 50%), hsl(38, 92%, 50%));
   -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
   background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
-[data-md-color-scheme="slate"] .md-nav--primary > .md-nav__title {
+[data-md-color-scheme="slate"] .md-nav__title-text {
   background-image: linear-gradient(135deg, hsl(263, 70%, 60%), hsl(38, 92%, 55%));
+}
+
+/* Gradient fade below the sticky title — injected div via main.html JS.
+   position:sticky at top:2.4rem (= title height) so it always sits just
+   below the "QuPrep" title regardless of scroll position. */
+.md-nav__title-fade {
+  position: sticky;
+  top: 0;
+  height: 1.5rem;
+  pointer-events: none;
+  z-index: 100;
+}
+[data-md-color-scheme="slate"] .md-nav__title-fade {
+  background: linear-gradient(to bottom, hsl(243, 47%, 7%), transparent);
+}
+[data-md-color-scheme="default"] .md-nav__title-fade {
+  background: linear-gradient(to bottom, hsl(240, 20%, 99%), transparent);
 }
 
 /* Header font — Ubuntu matches quprep.org navbar */

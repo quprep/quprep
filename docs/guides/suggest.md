@@ -77,11 +77,7 @@ What the report checks:
 
 ---
 
-## Qubit suggestion (simple)
-
----
-
-## Basic usage (suggest_qubits)
+## Qubit suggestion
 
 ```python
 import quprep as qd

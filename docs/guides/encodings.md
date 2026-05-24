@@ -390,7 +390,7 @@ enc = QAOAProblemEncoder(p=1, connectivity="linear")
 result = enc.encode(x)   # x in [-π, π]
 print(result.metadata["local_angles"])    # γ·xᵢ per qubit
 print(result.metadata["coupling_angles"]) # γ·xᵢxⱼ per pair
-print(result.metadata["depth"])           # 1 + 5·p
+print(result.metadata["depth"])           # 1 + p·(d + 3·(d−1)) for linear connectivity
 ```
 
 **Normalization:** `minmax_pm_pi` ($[-\pi, \pi]$). Applied automatically.
@@ -425,6 +425,32 @@ Is your data binary?
                          feature correlations       → Entangled angle
                          QAOA warm-start / problem  → QAOA problem
 ```
+
+---
+
+## Inspecting encoded circuits
+
+`inspect_encoding` gives a structured Python view of rotation angles and gate parameters after encoding — without parsing QASM strings:
+
+```python
+import numpy as np
+import quprep as qd
+
+x = np.array([0.5, 1.0, 1.5, 2.0])
+enc = qd.AngleEncoder(rotation="ry")
+result = enc.encode(x)
+
+params = qd.inspect_encoding(result)
+print(params.n_qubits)        # 4
+print(params.encoding)        # "angle"
+for g in params.gates:
+    print(g.gate, g.qubit, g.angle)
+# Ry  0  0.5
+# Ry  1  1.0
+# ...
+```
+
+`EncodingParams.gates` is a list of `GateParam` objects with fields `gate` (str), `qubit` (int), `angle` (float or None), `control` (int or None for entangled pairs), and `amplitudes` (ndarray or None for amplitude encoding). Works for all encoders; `angle` is `None` for non-rotation gates.
 
 ---
 

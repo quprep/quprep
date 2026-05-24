@@ -89,6 +89,9 @@ QuPrep converts classical datasets into quantum-circuit-ready format. It is not 
 | **Class imbalance** | v0.9.0 | `ImbalanceHandler` — random oversample/undersample, SMOTE, ADASYN as a `clean/` stage |
 | **Barren plateau detection** | v0.9.0 | `detect_barren_plateau()` — analytical gradient variance bound before training; risk levels + mitigation suggestions |
 | **Streaming ingestion** | v0.9.0 | `CSVIngester.stream()`, `NumpyIngester.stream()`, `Pipeline.stream()` — process datasets larger than RAM in chunks |
+| **API polish** | v0.10.0 | `Scaler.inverse_transform()`, `OutlierHandler.outlier_mask_`, `FeatureSelector.get_feature_names_out()`, `LDAReducer.explained_variance_ratio_`, `CategoricalEncoder` high-cardinality grouping, `PipelineResult.stages` per-step snapshots |
+| **Quantum preprocessing** | v0.10.0 | `check_compatibility()`, `verify_encoding()`, `encoding_sensitivity()`, `suggest_pipeline()`, `preprocessing_report()`, `inspect_encoding()` — quantum-aware dataset audit and circuit inspection |
+| **New encoders** | v0.10.0 | `DenseAngleEncoder` (2 features/qubit via Ry+Rz), `DiscretizedEncoder` (continuous → binary, QUBO-ready) |
 
 ---
 
