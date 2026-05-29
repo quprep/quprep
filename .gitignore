@@ -51,6 +51,8 @@ jats/
 .ipynb_checkpoints/
 *.ipynb
 !examples/*.ipynb
+!examples/tutorials/*.ipynb
+!examples/how-to/*.ipynb
 
 # Distribution
 MANIFEST
