@@ -89,6 +89,8 @@ class QASMExporter:
                 "which cannot be expressed as a simple QASM snippet. "
                 "Use QiskitExporter for amplitude encoding."
             )
+        if encoded.circuit_fn is not None:
+            return encoded.circuit_fn()
         raise ValueError(
             f"Unknown encoding '{encoding}'. "
             "Supported: angle, entangled_angle, basis, iqp, zz_feature_map, "
