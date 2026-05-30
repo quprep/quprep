@@ -36,7 +36,7 @@ Recommendation::
     rec = qd.recommend(df, task="classification", qubits=8)
 """
 
-__version__ = "0.9.0"
+__version__ = "0.10.0"
 __author__ = "Hasarindu Perera"
 __license__ = "Apache-2.0"
 

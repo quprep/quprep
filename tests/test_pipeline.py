@@ -324,7 +324,7 @@ class TestPrepare:
 
     def test_version_accessible(self):
         import quprep
-        assert quprep.__version__ == "0.9.0"
+        assert quprep.__version__ == "0.10.0"
 
 
 # ---------------------------------------------------------------------------
@@ -873,3 +873,42 @@ class TestPipelineFunctionalCoverage:
         with patch.dict(sys.modules, {"pandas": None}):
             result = p.transform(X)
         assert result is not None
+
+    # LDA guard: labels supplied via LDAReducer init (not Dataset.labels)
+    def test_lda_guard_labels_on_reducer_init(self, simple_dataset):
+        """LDAReducer(labels=y) should work without Dataset.labels being set.
+
+        Regression guard: the pipeline guard must check both dataset.labels
+        and reducer.labels before raising ValueError, not just dataset.labels.
+        """
+        from quprep.reduce.lda import LDAReducer
+        n = simple_dataset.n_samples
+        labels = np.array([i % 3 for i in range(n)])
+        result = Pipeline(
+            reducer=LDAReducer(n_components=1, labels=labels),
+            encoder=AngleEncoder(),
+        ).fit_transform(simple_dataset)
+        assert len(result.encoded) == n
+
+    def test_lda_guard_labels_on_dataset(self):
+        """LDAReducer() with Dataset.labels set should work."""
+        from quprep.reduce.lda import LDAReducer
+        rng = np.random.default_rng(0)
+        data = rng.uniform(0, 1, (30, 4))
+        ds = Dataset(
+            data=data,
+            feature_names=["a", "b", "c", "d"],
+            feature_types=["continuous"] * 4,
+            labels=np.array([i % 3 for i in range(30)]),
+        )
+        result = Pipeline(
+            reducer=LDAReducer(n_components=1),
+            encoder=AngleEncoder(),
+        ).fit_transform(ds)
+        assert len(result.encoded) == 30
+
+    def test_lda_guard_raises_when_no_labels_anywhere(self, simple_dataset):
+        """LDAReducer with no labels on reducer or dataset must raise ValueError."""
+        from quprep.reduce.lda import LDAReducer
+        with pytest.raises(ValueError, match="LDAReducer requires"):
+            Pipeline(reducer=LDAReducer(n_components=1)).fit_transform(simple_dataset)

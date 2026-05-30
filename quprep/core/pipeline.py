@@ -538,6 +538,7 @@ class Pipeline:
         Also populates ``self._last_audit_log`` and ``self._last_cost``.
         """
         audit: list[dict] = []
+        stages: dict = {"input": dataset}
 
         if self.preprocessor is not None:
             _preprocessors = (
@@ -554,6 +555,7 @@ class Pipeline:
                     "n_samples_in": n_s_in, "n_features_in": n_f_in,
                     "n_samples_out": dataset.n_samples, "n_features_out": dataset.n_features,
                 })
+                stages[f"after_{label}"] = dataset
 
         if self.cleaner is not None:
             from quprep.clean.selector import FeatureSelector
@@ -568,21 +570,28 @@ class Pipeline:
                 "n_samples_in": n_s_in, "n_features_in": n_f_in,
                 "n_samples_out": dataset.n_samples, "n_features_out": dataset.n_features,
             })
+            stages["after_cleaner"] = dataset
 
         if self.reducer is not None:
             n_s_in, n_f_in = dataset.n_samples, dataset.n_features
             from quprep.reduce.lda import LDAReducer
-            if isinstance(self.reducer, LDAReducer) and dataset.labels is None:
+            if (isinstance(self.reducer, LDAReducer)
+                    and dataset.labels is None
+                    and getattr(self.reducer, "labels", None) is None):
                 raise ValueError(
                     "Pipeline with LDAReducer requires Dataset.labels to be set."
                 )
-            self.reducer.fit(dataset)
+            if isinstance(self.reducer, LDAReducer):
+                self.reducer.fit(dataset, labels=dataset.labels)
+            else:
+                self.reducer.fit(dataset)
             dataset = self.reducer.transform(dataset)
             audit.append({
                 "stage": "reducer",
                 "n_samples_in": n_s_in, "n_features_in": n_f_in,
                 "n_samples_out": dataset.n_samples, "n_features_out": dataset.n_features,
             })
+            stages["after_reducer"] = dataset
 
         self._resolved_normalizer = self.normalizer
         if self._resolved_normalizer is None and self.encoder is not None:
@@ -600,6 +609,7 @@ class Pipeline:
                 "n_samples_in": n_s_in, "n_features_in": n_f_in,
                 "n_samples_out": dataset.n_samples, "n_features_out": dataset.n_features,
             })
+            stages["after_normalizer"] = dataset
 
         # Fit drift detector on the post-reduction feature matrix
         if self.drift_detector is not None:
@@ -619,6 +629,7 @@ class Pipeline:
             self._last_cost = None
 
         self._last_audit_log = audit if audit else None
+        self._last_stages = stages
         return dataset
 
     def _apply_stages(self, dataset) -> PipelineResult:

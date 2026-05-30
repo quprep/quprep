@@ -12,6 +12,62 @@ QuPrep uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.10.0] — 2026-05-31
+
+### Added
+
+**API consistency (sklearn-compatible contract)**
+- `FeatureSelector.get_feature_names_out()` — returns selected feature names; compatible with sklearn `Pipeline`
+- `Scaler.inverse_transform()` — invert `minmax`, `minmax_pi`, `minmax_2pi`, `minmax_pm_pi`, `zscore` scalers; raises `ValueError` for non-invertible strategies (`l2`, `binary`, `pm_one`)
+- `LDAReducer.explained_variance_ratio_` — populated after `fit()`; mirrors `PCAReducer.explained_variance_ratio_`
+- `OutlierHandler.outlier_mask_` — boolean array (`True` = outlier row); populated after `transform()`
+- `CategoricalEncoder` — new `cardinality_threshold` parameter groups high-cardinality columns; `min_frequency` groups rare values as `"_other"`; emits `QuPrepWarning` on high-cardinality columns
+- `PipelineResult.stages` — dict of intermediate `Dataset` snapshots keyed by `"input"`, `"after_cleaner"`, `"after_reducer"`, `"after_normalizer"`; for per-stage debugging
+
+**Quantum-specific preprocessing**
+- `check_compatibility(encoder, dataset)` + `CompatibilityReport` — pre-encoding compatibility check; NaN is a hard error; per-encoder range validation (Ry→`[0,π]`, Rx→`[−π,π]`, ZZ→`[0,2π]`, Basis→`{0,1}`); exported as `qd.check_compatibility`, `qd.CompatibilityReport`
+- `verify_encoding(encoded, encoder)` + `VerificationReport` — post-encoding invariant checker; amplitude → unit norm (|‖ψ‖−1| < 1e-6), angle → value range, basis → binary; exported as `qd.verify_encoding`, `qd.VerificationReport`
+- `encoding_sensitivity(enc, ds)` + `SensitivityResult` — perturbs each feature by epsilon, measures infidelity 1−|⟨ψ|ψ′⟩|²; `.most_sensitive(n)` helper; exported as `qd.encoding_sensitivity`, `qd.SensitivityResult`
+- `suggest_pipeline(dataset, task, qubits)` + `PipelineSuggestion.build()` — full pipeline recommender; imputer strategy via skewness proxy, IQR outlier detection, PCA when `n_features > qubit_budget`, normalizer from `ENCODING_NORMALIZER_MAP`; exported as `qd.suggest_pipeline`, `qd.PipelineSuggestion`
+- `preprocessing_report(dataset, encoder, qubit_budget)` + `PreprocessingReport` — structured dataset audit; checks NaN, outliers, qubit budget, class imbalance (>3:1), and encoder compatibility; exported as `qd.preprocessing_report`, `qd.PreprocessingReport`
+- `inspect_encoding(encoded)` → `EncodingParams` — structured Python view of rotation angles and gate parameters; programmatic inspection without parsing QASM strings; exported as `qd.inspect_encoding`, `qd.EncodingParams`, `qd.GateParam`
+
+**New encoders**
+- `DenseAngleEncoder` — 2 features per qubit (Ry + Rz); halves qubit count vs `AngleEncoder`; configurable rotation pair via `first_rotation` / `second_rotation`; QASM export supported; exported as `qd.DenseAngleEncoder`
+- `DiscretizedEncoder` — continuous → binary string with configurable precision (`bits`, `min_val`, `max_val`); QUBO-ready binary output; exported as `qd.DiscretizedEncoder`
+
+**Examples**
+- Examples fully restructured into two Diataxis categories, each available as a verified `.py` script and a Jupyter notebook with Colab / Binder / qBraid launch buttons:
+  - **Tutorials** (`examples/tutorials/`) — three beginner-friendly end-to-end walkthroughs: your first quantum-ready dataset, real-world messy data, and end-to-end with a framework
+  - **How-to guides** (`examples/how-to/`) — twelve task-focused guides covering encoder selection, framework export, circuit inspection, external data loading, non-tabular data, class imbalance, pre-encoding validation, data drift detection, encoding quality, noise-aware preprocessing, QUBO solving, and custom encoder authoring
+
+### Fixed
+
+- `QASMExporter._export_iqp()` emitted `rz(x_i)` instead of `rz(−2·x_i)` per Havlíček 2019 — QASM IQP rotation angles were wrong by a factor of −2
+- `QASMExporter._export_pauli_feature_map()` missing basis-change gates for all 6 mixed-Pauli pairs (XZ, ZX, XY, YX, YZ, ZY were silently treated as ZZ)
+- `score_encoding()` never auto-fit `RandomFourierEncoder` before calling `encode()` — raised `NotFittedError` on unfitted encoder
+- `suggest_pipeline()` mapped `pauli_feature_map` and `qaoa_problem` encodings to wrong normalizers
+- Encoding recommender `qubit_fn` wrong for `tensor_product` (returned `d` instead of `ceil(d/2)`) and `random_fourier` (always returned 1 instead of `min(d, 10)`)
+- `NoiseAwarePreprocessor` angle dead-zone applied `[0,π]` formula to `zz_feature_map` which uses `[0,2π]`
+- `inspector.py` `ry_angles and "ry" or "ry"` always evaluated to `"ry"` regardless of input — replaced with `meta.get("first_rotation", "ry")`
+- IQP and ZZ feature map `depth` metadata inflated — corrected from `d²·reps` to `reps·(2 + 3·d·(d−1)//2)`
+- `compare_encodings()` docstring listed only 7 of 12 valid encoder names
+- `QAOAProblemEncoder` linear connectivity depth ignored feature count — corrected from `1 + 5·p` to `1 + p·(d + 3·len(pairs))`
+- `RandomFourierEncoder` used `_is_fitted` flag; rest of codebase uses `_fitted` — standardised
+- QASM exporter comment for `random_fourier` falsely claimed output angles are always `[0,π]`
+- `HardwareAwareReducer` returned `qubit_budget` features for `tensor_product` / `dense_angle` (2 features per qubit) — corrected to `qubit_budget * 2`
+- `_ALL_ENCODINGS` in `compare.py` was dead code — wired into validation error message
+- `DriftDetector` reciprocal std-ratio check susceptible to float false positives near threshold boundary — added `+ 1e-9` epsilon
+- `Imputer.fit_transform()` same-dataset reference looked like a defensive-coding issue — clarifying comment added
+- `suggest_qubits()` QAOA encoding hint returned `"basis"` instead of `"qaoa_problem"`
+- `NoiseAwarePreprocessor.angle_deadzone` docstring mentioned only `[0,π]`; `zz_feature_map` uses `[0,2π]`
+- `QASMExporter._export_graph_state()` ignored `encoded.parameters` without explanation — comment added
+- `solve_brute()` LSB-first bit ordering was undocumented — added to docstring
+- `Pipeline` with `LDAReducer(labels=y)` raised `ValueError("Dataset.labels to be set")` even when labels were supplied at reducer init — guard now checks both `dataset.labels` and `reducer.labels`; `_fit_stages` threads `dataset.labels` to `LDAReducer.fit()`
+- `QASMExporter.export()` raised `ValueError` for any encoder registered via `@register_encoder` — the exporter now falls back to `encoded.circuit_fn()` before raising, so custom encoders work with `QASMExporter` out of the box
+
+---
+
 ## [0.9.0] — 2026-05-01
 
 ### Added
@@ -353,7 +409,8 @@ First public release. Covers the full ingest → clean → normalize → encode 
 
 ---
 
-[Unreleased]: https://github.com/quprep/quprep/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/quprep/quprep/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/quprep/quprep/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/quprep/quprep/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/quprep/quprep/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/quprep/quprep/compare/v0.6.0...v0.7.0
