@@ -62,6 +62,12 @@ class TestParser:
         with pytest.raises(SystemExit):
             build_parser().parse_args(["convert", "data.csv", "--encoding", "banana"])
 
+    @pytest.mark.parametrize("encoding", ["dense_angle", "discretized"])
+    def test_v010_encodings_accepted(self, encoding):
+        # Regression: v0.10.0 encoders were missing from the CLI --encoding choices.
+        args = build_parser().parse_args(["convert", "data.csv", "--encoding", encoding])
+        assert args.encoding == encoding
+
     def test_invalid_framework_rejected(self):
         with pytest.raises(SystemExit):
             build_parser().parse_args(["convert", "data.csv", "--framework", "not_a_framework"])

@@ -4,6 +4,8 @@
 from quprep.encode.amplitude import AmplitudeEncoder
 from quprep.encode.angle import AngleEncoder
 from quprep.encode.basis import BasisEncoder
+from quprep.encode.dense_angle import DenseAngleEncoder
+from quprep.encode.discretized import DiscretizedEncoder
 from quprep.encode.entangled_angle import EntangledAngleEncoder
 from quprep.encode.hamiltonian import HamiltonianEncoder
 from quprep.encode.iqp import IQPEncoder
@@ -180,6 +182,49 @@ def test_entangled_large_warns():
 
 # ---------------------------------------------------------------------------
 # Fallback — unknown encoder type
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# DenseAngleEncoder — 2 features per qubit (regression: was hitting the
+# generic fallback and reporting n_qubits = d instead of ceil(d/2))
+# ---------------------------------------------------------------------------
+
+def test_dense_angle_cost_even():
+    c = _cost(DenseAngleEncoder(), 6)
+    assert c.encoding == "dense_angle"
+    assert c.n_qubits == 3          # ceil(6/2), not 6
+    assert c.circuit_depth == 2
+    assert c.gate_count == 6
+    assert c.two_qubit_gates == 0
+    assert c.nisq_safe is True
+
+
+def test_dense_angle_cost_odd():
+    c = _cost(DenseAngleEncoder(), 5)
+    assert c.n_qubits == 3          # ceil(5/2)
+
+
+# ---------------------------------------------------------------------------
+# DiscretizedEncoder — d * bits qubits (regression: was hitting the generic
+# fallback and reporting n_qubits = d instead of d * bits)
+# ---------------------------------------------------------------------------
+
+def test_discretized_cost():
+    c = _cost(DiscretizedEncoder(bits=4), 6)
+    assert c.encoding == "discretized"
+    assert c.n_qubits == 24         # 6 * 4, not 6
+    assert c.circuit_depth == 1
+    assert c.two_qubit_gates == 0
+    assert c.nisq_safe is True
+
+
+def test_discretized_cost_respects_bits():
+    assert _cost(DiscretizedEncoder(bits=8), 3).n_qubits == 24
+    assert _cost(DiscretizedEncoder(bits=2), 3).n_qubits == 6
+
+
+# ---------------------------------------------------------------------------
+# Fallback for unknown encoders
 # ---------------------------------------------------------------------------
 
 def test_fallback_unknown_encoder():

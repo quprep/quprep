@@ -89,6 +89,21 @@ def test_include_unknown_raises(small_array):
         compare_encodings(small_array, include=["angle", "notanencoder"])
 
 
+def test_v010_encoders_includable(small_array):
+    # Regression: dense_angle and discretized were missing from the encoder
+    # registry and raised "Unknown encoder(s)" when included.
+    result = compare_encodings(small_array, include=["dense_angle", "discretized"])
+    names = {r.encoding for r in result.rows}
+    assert names == {"dense_angle", "discretized"}
+
+
+def test_v010_encoders_in_default_set(small_array):
+    # Both v0.10.0 encoders must appear when comparing the full default set.
+    names = {r.encoding for r in compare_encodings(small_array).rows}
+    assert "dense_angle" in names
+    assert "discretized" in names
+
+
 # ---------------------------------------------------------------------------
 # Qubit budget
 # ---------------------------------------------------------------------------

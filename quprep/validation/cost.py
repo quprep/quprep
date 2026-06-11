@@ -298,6 +298,35 @@ def estimate_cost(encoder, n_features: int) -> CostEstimate:
             warning=None,
         )
 
+    from quprep.encode.dense_angle import DenseAngleEncoder
+    if isinstance(encoder, DenseAngleEncoder):
+        # 2 features per qubit (Ry + Rz): d rotations on ⌈d/2⌉ qubits, depth 2
+        return CostEstimate(
+            encoding="dense_angle",
+            n_features=d,
+            n_qubits=math.ceil(d / 2),
+            gate_count=d,
+            circuit_depth=2,
+            two_qubit_gates=0,
+            nisq_safe=True,
+            warning=None,
+        )
+
+    from quprep.encode.discretized import DiscretizedEncoder
+    if isinstance(encoder, DiscretizedEncoder):
+        # Each feature → `bits` qubits set by X gates; depth 1 (all parallel)
+        n_qubits = d * encoder.bits
+        return CostEstimate(
+            encoding="discretized",
+            n_features=d,
+            n_qubits=n_qubits,
+            gate_count=n_qubits,
+            circuit_depth=1,
+            two_qubit_gates=0,
+            nisq_safe=True,
+            warning=None,
+        )
+
     # Fallback for custom/unknown encoders
     return CostEstimate(
         encoding=type(encoder).__name__,
