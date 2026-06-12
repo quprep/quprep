@@ -832,6 +832,15 @@ class TestBenchmarkCommand:
         rc = main(["benchmark", csv_file, "--include", "qaoa_problem", "--samples", "2"])
         assert rc == 0  # warnings don't fail the command
 
+    def test_benchmark_random_fourier_fits(self, csv_file, capsys):
+        # Regression: RandomFourierEncoder needs fit() before encode_batch;
+        # benchmark previously printed an "ERROR: ... must be fitted" row.
+        rc = main(["benchmark", csv_file, "--include", "random_fourier", "--samples", "2"])
+        assert rc == 0
+        out = capsys.readouterr().out
+        assert "random_fourier" in out
+        assert "ERROR" not in out
+
     def test_benchmark_task_recommend_exception(self, csv_file, capsys):
         """Lines 688-689: recommend() failure inside benchmark is non-fatal."""
         from unittest.mock import patch

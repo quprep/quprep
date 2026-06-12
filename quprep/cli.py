@@ -753,6 +753,10 @@ def cmd_benchmark(args) -> int:
         t_ms = float("nan")
         cost = None
         try:
+            # Fit encoders that learn parameters (e.g. RandomFourierEncoder)
+            # before encoding — mirrors Pipeline._encode_export.
+            if hasattr(encoder, "fit") and not getattr(encoder, "_fitted", False):
+                encoder.fit(norm_dataset.data)
             t0 = time.perf_counter()
             encoder.encode_batch(norm_dataset)
             t1 = time.perf_counter()
