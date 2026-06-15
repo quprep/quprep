@@ -2,6 +2,9 @@
 
 Two CLI commands for quickly profiling a dataset and measuring real encoder performance before committing to a full pipeline.
 
+!!! tip "Inspecting a *circuit* (not a dataset)"
+    This page covers the `quprep inspect` CLI, which profiles a **dataset**. To inspect an **encoded circuit** programmatically (rotation angles, per-gate parameters), use `qd.inspect_encoding()` — see [Inspecting encoded circuits](encodings.md#inspecting-encoded-circuits).
+
 ---
 
 ## `quprep inspect` — dataset profile

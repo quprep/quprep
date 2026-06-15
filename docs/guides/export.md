@@ -2,6 +2,16 @@
 
 QuPrep encodes your data into circuit parameters. The exporter converts those parameters into a framework-specific circuit object.
 
+Every example on this page assumes an `encoded_result` — a single `EncodedResult` produced by encoding one sample:
+
+```python
+import quprep as qd
+
+result = qd.prepare("data.csv", encoding="angle")
+encoded_result = result.encoded[0]   # one EncodedResult
+# encoded_list = result.encoded      # all samples, for the *_batch helpers
+```
+
 ---
 
 ## OpenQASM 3.0
@@ -60,7 +70,7 @@ paths = qd.batch_export("data.csv", "circuits/", encoding="angle", stem="circuit
 # also works with np.ndarray or pd.DataFrame
 ```
 
-**Supported encodings:** `angle`, `entangled_angle`, `basis`, `iqp`, `zz_feature_map`, `pauli_feature_map`, `random_fourier`, `tensor_product`, `reupload`, `hamiltonian`. Amplitude encoding requires exponential-depth state preparation — use Qiskit for that.
+**Supported encodings:** all encodings except amplitude — `angle`, `entangled_angle`, `dense_angle`, `basis`, `discretized`, `iqp`, `zz_feature_map`, `pauli_feature_map`, `random_fourier`, `tensor_product`, `qaoa_problem`, `reupload`, `hamiltonian`, `graph_state`. Amplitude encoding requires exponential-depth state preparation — use Qiskit for that.
 
 ---
 
@@ -78,7 +88,7 @@ qc = exp.export(encoded_result)   # qiskit.QuantumCircuit
 qc.draw("mpl")
 ```
 
-**Supported encodings:** `angle`, `basis`, `amplitude` (via `StatePreparation`).
+**Supported encodings:** `angle`, `entangled_angle`, `amplitude` (via `StatePreparation`), `basis`, `iqp`, `zz_feature_map`, `pauli_feature_map`, `random_fourier`, `tensor_product`, `qaoa_problem`, `reupload`, `hamiltonian`. (`dense_angle`, `discretized`, and `graph_state` are QASM-only — route them through `framework="qasm"`.)
 
 ```python
 # Export a batch
@@ -127,7 +137,7 @@ qnode = exp.export(encoded_result)   # callable qml.QNode
 output = qnode()                     # run the circuit
 ```
 
-**Supported encodings:** all 7 encodings including amplitude (`qml.AmplitudeEmbedding`).
+**Supported encodings:** `angle`, `entangled_angle`, `amplitude` (`qml.AmplitudeEmbedding`), `basis`, `iqp`, `zz_feature_map`, `pauli_feature_map`, `random_fourier`, `tensor_product`, `qaoa_problem`, `reupload`, `hamiltonian`. (`dense_angle`, `discretized`, `graph_state` are QASM-only.)
 
 ---
 
@@ -147,7 +157,7 @@ circuit = exp.export(encoded_result)   # cirq.Circuit
 print(circuit)
 ```
 
-**Supported encodings:** `angle`, `entangled_angle`, `basis`, `iqp`, `reupload`, `hamiltonian`. Amplitude raises `NotImplementedError` — use QiskitExporter.
+**Supported encodings:** `angle`, `entangled_angle`, `basis`, `iqp`, `zz_feature_map`, `pauli_feature_map`, `random_fourier`, `tensor_product`, `qaoa_problem`, `reupload`, `hamiltonian`. Amplitude raises `NotImplementedError` — use QiskitExporter. (`dense_angle`, `discretized`, `graph_state` are QASM-only.)
 
 ---
 
@@ -186,7 +196,7 @@ circuit = exp.export(encoded_result)   # braket.circuits.Circuit
 print(circuit)
 ```
 
-**Supported encodings:** `angle`, `entangled_angle`, `basis`, `iqp`, `zz_feature_map`, `tensor_product`, `reupload`, `hamiltonian`.
+**Supported encodings:** `angle`, `entangled_angle`, `basis`, `iqp`, `zz_feature_map`, `pauli_feature_map`, `random_fourier`, `tensor_product`, `qaoa_problem`, `reupload`, `hamiltonian`. (`dense_angle`, `discretized`, `graph_state` are QASM-only; amplitude is unsupported — use QiskitExporter.)
 
 ```python
 # Via prepare()
@@ -222,7 +232,7 @@ namespace MyExperiment {
 }
 ```
 
-**Supported encodings:** `angle`, `entangled_angle`, `basis`, `iqp`, `zz_feature_map`, `pauli_feature_map`, `random_fourier`, `tensor_product`, `reupload`, `hamiltonian`.
+**Supported encodings:** `angle`, `entangled_angle`, `basis`, `iqp`, `zz_feature_map`, `pauli_feature_map`, `random_fourier`, `tensor_product`, `qaoa_problem`, `reupload`, `hamiltonian`. (`dense_angle`, `discretized`, `graph_state` are QASM-only; amplitude is unsupported — use QiskitExporter.)
 
 ```python
 # Via prepare()
@@ -262,7 +272,7 @@ Pass directly to `iqm_client.Circuit.from_dict()` when submitting to hardware.
 
 **Gate mapping:** Ry → PRX(θ/2π, 0.25), Rx → PRX(θ/2π, 0), Rz → H·Rx·H (virtual decomposition), CZ → native.
 
-**Supported encodings:** `angle`, `entangled_angle`, `basis`, `iqp`, `zz_feature_map`, `pauli_feature_map`, `random_fourier`, `tensor_product`, `reupload`, `hamiltonian`.
+**Supported encodings:** `angle`, `entangled_angle`, `basis`, `iqp`, `zz_feature_map`, `pauli_feature_map`, `random_fourier`, `tensor_product`, `qaoa_problem`, `reupload`, `hamiltonian`. (`dense_angle`, `discretized`, `graph_state` are QASM-only; amplitude is unsupported — use QiskitExporter.)
 
 ```python
 # Via prepare()
@@ -292,4 +302,4 @@ fig.savefig("circuit.png")
 qd.draw_matplotlib(encoded, filename="circuit.pdf")
 ```
 
-Supports all 7 encodings. The matplotlib diagram shows qubit wires, gate boxes, and CNOT/ZZ connectors.
+Both drawers support all 15 encodings. The matplotlib diagram shows qubit wires, gate boxes, and CNOT/ZZ connectors.

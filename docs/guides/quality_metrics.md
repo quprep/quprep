@@ -123,6 +123,8 @@ Sensitivity analysis is limited to circuits with ≤ 12 qubits (same numpy state
 
 ---
 
-## Reference
+## References
 
 Sim S. et al. "Expressibility and Entangling Capability of Parameterized Quantum Circuits for Hybrid Quantum-Classical Algorithms." *Advanced Quantum Technologies* 2(12), 1900070, 2019. [doi:10.1002/qute.201900070](https://doi.org/10.1002/qute.201900070)
+
+Meyer D.A., Wallach N.R. "Global entanglement in multiparticle systems." *Journal of Mathematical Physics* 43(9), 4273–4278, 2002. [doi:10.1063/1.1497700](https://doi.org/10.1063/1.1497700) — the entanglement-capability measure.

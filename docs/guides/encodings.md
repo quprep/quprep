@@ -68,6 +68,9 @@ print(result.metadata["padded"])     # False
 !!! warning "Not NISQ-safe"
     Amplitude encoding requires exponential-depth state preparation circuits. Avoid on current hardware unless qubit count is the primary constraint.
 
+!!! note "References"
+    Möttönen, Vartiainen, Bergholm, Salomaa (2005). Transformation of quantum states using uniformly controlled rotations. *Quantum Information & Computation*, 5(6), 467–473. [doi:10.26421/QIC5.6-5](https://doi.org/10.26421/QIC5.6-5){target="_blank"}
+
 ---
 
 ### Basis encoding
@@ -277,6 +280,9 @@ result = enc.encode(x)   # always n_components qubits
 
 !!! warning "Requires fit()"
     `RandomFourierEncoder` must be fitted on training data before encoding. Calling `encode()` without `fit()` raises `RuntimeError`.
+
+!!! note "References"
+    Rahimi & Recht (2007). Random Features for Large-Scale Kernel Machines. *Advances in Neural Information Processing Systems (NeurIPS)*, 20. [proceedings](https://proceedings.neurips.cc/paper/2007/hash/013a006f03dbc5392effeb8f18fda755-Abstract.html){target="_blank"}
 
 ---
 

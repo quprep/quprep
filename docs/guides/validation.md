@@ -354,3 +354,7 @@ for check in report.checks:
 ```
 
 For an empty list of encoded samples, `verify_encoding` returns `passed=True` with an empty `checks` list.
+
+## Full preprocessing audit
+
+For a single combined pre-encoding report — NaN fractions, outliers, qubit-budget shortfall, class imbalance, and encoder-range violations in one object — use `preprocessing_report(dataset, encoder=..., qubit_budget=...)`. It returns `n_issues` and a list of human-readable `recommendations`. See the [Auto-suggest guide](suggest.md#preprocessing-report) for details.

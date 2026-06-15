@@ -682,7 +682,7 @@ Then use `CategoricalEncoder` to encode them before encoding:
 
 ```python
 pipeline = qd.Pipeline(
-    cleaner=qd.CategoricalEncoder(method="onehot"),
+    cleaner=qd.CategoricalEncoder(strategy="onehot"),
     encoder=qd.AngleEncoder(),
 )
 ```

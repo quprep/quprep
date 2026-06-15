@@ -210,6 +210,9 @@ from pathlib import Path
 Path("qaoa_maxcut.qasm").write_text(qasm)
 ```
 
+!!! note "References"
+    Farhi, Goldstone, Gutmann (2014). A Quantum Approximate Optimization Algorithm. *arXiv:1411.4028*. [arxiv.org/abs/1411.4028](https://arxiv.org/abs/1411.4028){target="_blank"}
+
 ---
 
 ## Combining QUBOs

@@ -70,7 +70,7 @@ QuPrep converts classical datasets into quantum-circuit-ready format. It is not 
 | **Normalize** | v0.1.0 | Auto-selected per encoding (L2, MinMax, Z-score, binary) |
 | **Encode** | v0.1.0 | Angle, Amplitude, Basis |
 | **Export** | v0.1.0 | OpenQASM 3.0, Qiskit |
-| **Reduce** | v0.2.0 | PCA, LDA, DFT, t-SNE, UMAP, hardware-aware |
+| **Reduce** | v0.2.0 | PCA, LDA, Spectral (DFT), t-SNE, UMAP, hardware-aware |
 | **Encode+** | v0.2.0 | IQP, Entangled Angle, Data re-uploading, Hamiltonian |
 | **Export+** | v0.2.0 | PennyLane, Cirq, TKET, ASCII + matplotlib visualization |
 | **Recommend** | v0.2.0 | Automatic encoding selection for your dataset and task |

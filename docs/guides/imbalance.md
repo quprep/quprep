@@ -73,6 +73,11 @@ handler = qd.ImbalanceHandler(strategy="adasyn")
 ds_bal = handler.fit_transform(ds)
 ```
 
+!!! note "References"
+    Chawla, Bowyer, Hall, Kegelmeyer (2002). SMOTE: Synthetic Minority Over-sampling Technique. *Journal of Artificial Intelligence Research*, 16, 321–357. [doi:10.1613/jair.953](https://doi.org/10.1613/jair.953){target="_blank"}
+
+    He, Bai, Garcia, Li (2008). ADASYN: Adaptive synthetic sampling approach for imbalanced learning. *IEEE International Joint Conference on Neural Networks (IJCNN)*, 1322–1328. [doi:10.1109/IJCNN.2008.4633969](https://doi.org/10.1109/IJCNN.2008.4633969){target="_blank"}
+
 ---
 
 ## Controlling the target ratio
