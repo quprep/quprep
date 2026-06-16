@@ -16,7 +16,7 @@ CSV / DataFrame / NumPy / images / text / graphs  →  QuPrep  →  circuit-read
 
 - Ingest tabular data, time series, images, text, and graphs — all in the same pipeline API
 - Clean, normalize, and reduce dimensionality to fit your hardware qubit budget
-- Encode data into circuits using 13 encoding methods (Angle, Amplitude, IQP, ZZFeatureMap, GraphState, and more)
+- Encode data into circuits using 15 encoding methods (Angle, Amplitude, IQP, ZZFeatureMap, GraphState, and more)
 - Recommend, compare, and auto-select the best encoding for your dataset and task
 - Export circuits to 8 frameworks: OpenQASM 3.0, Qiskit, PennyLane, Cirq, TKET, Braket, Q#, IQM
 - Formulate combinatorial optimization problems as QUBO / Ising models; export as QAOA circuit templates for your quantum framework
@@ -74,12 +74,13 @@ print(result.circuit)
 
 ```python
 import quprep as qd
+from quprep.export.pennylane_export import PennyLaneExporter  # pip install quprep[pennylane]
 
 pipeline = qd.Pipeline(
     cleaner=qd.Imputer(),
     reducer=qd.PCAReducer(n_components=8),
     encoder=qd.IQPEncoder(reps=2),
-    exporter=qd.PennyLaneExporter(),   # pip install quprep[pennylane]
+    exporter=PennyLaneExporter(),
 )
 result = pipeline.fit_transform("data.csv")
 qnode = result.circuit   # callable qml.QNode
@@ -91,8 +92,8 @@ qnode = result.circuit   # callable qml.QNode
 import quprep as qd
 
 # Time series — sliding window then encode
-from quprep.ingest.time_series_ingester import TimeSeriesIngester
-from quprep.clean.window_transformer import WindowTransformer
+from quprep.ingest.timeseries_ingester import TimeSeriesIngester
+from quprep.preprocess.window import WindowTransformer
 
 result = qd.Pipeline(
     preprocessor=WindowTransformer(window_size=5, step=1),
@@ -152,6 +153,8 @@ result = qd.Pipeline(encoder=GraphStateEncoder()).fit_transform(
 | Pauli Feature Map | n = d | O(d² · reps) | ⚠️ Medium | Configurable kernel methods |
 | Random Fourier | n_components | O(1) | ✅ Excellent | RBF kernel approximation |
 | Tensor Product | ⌈d/2⌉ | O(1) | ✅ Excellent | Qubit-efficient encoding |
+| Dense Angle | ⌈d/2⌉ | O(1) | ✅ Excellent | Paired features on a single qubit |
+| Discretized | d × bits | O(1) | ✅ Excellent | QUBO/Ising pipelines, continuous → binary |
 | QAOA Problem | n = d | O(p) | ✅ Good | QAOA warm-start, problem-inspired maps |
 | Graph State | n = nodes | O(edges) | ✅ Good | Graph-structured data (lossless) |
 
